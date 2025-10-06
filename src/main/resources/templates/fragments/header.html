@@ -1,0 +1,90 @@
+<header th:fragment="appHeader">
+    <style>
+        /* Modern, Clean Base Styles */
+        :root {
+            --primary-color: #1F2937; /* Dark Gray/Slate for header */
+            --accent-color: #10B981; /* Green/Teal for highlights */
+            --text-color: #374151; /* Darker text */
+            --light-bg: #F9FAFB; /* Light background for body */
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* --- Header Styles --- */
+        .navbar { 
+            background-color: var(--primary-color); 
+            padding: 1rem 2rem; 
+            color: white; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-title a { 
+            font-size: 1.75rem; 
+            font-weight: 700; 
+            color: var(--accent-color); 
+            text-decoration: none; 
+            transition: color 0.3s;
+        }
+        .navbar-title a:hover {
+            color: #6EE7B7; 
+        }
+        .navbar-links {
+            display: flex;
+            align-items: center;
+        }
+        .navbar-user {
+            margin-left: 1.5rem;
+            color: #D1D5DB; 
+        }
+
+        /* --- Global Body & Container Styles --- */
+        body {
+            font-family: var(--font-family);
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            margin: 0;
+        }
+        /* CHANGE: Use a wide padding, but remove max-width and margin: auto */
+        .content-container {
+            width: 100%; /* Full width */
+            padding: 2rem;
+            box-sizing: border-box; /* Include padding in the element's total width and height */
+        }
+        
+        /* --- Back Navigation --- */
+        .page-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .back-link {
+            text-decoration: none;
+            color: var(--accent-color);
+            font-weight: 600;
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .back-link svg {
+            margin-right: 0.25rem;
+        }
+        h2 {
+            font-size: 1.75rem;
+            color: var(--text-color);
+            margin: 0;
+        }
+
+    </style>
+    <nav class="navbar">
+        <div class="navbar-title">
+            <a href="/" th:text="${appName}">EverRich</a>
+        </div>
+        <div class="navbar-links">
+            <span class="navbar-user">👤 User Profile</span>
+        </div>
+    </nav>
+</header>

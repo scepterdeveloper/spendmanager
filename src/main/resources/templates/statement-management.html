@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${appName} + ' - Statement Management'">EverRich - Statement Management</title>
+    <style>
+        /* General Styles */
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+        .upload-section {
+            background-color: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Message/Alert Styling */
+        .alert-success { background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; padding: 1rem; border-radius: 0.25rem; margin-bottom: 1rem; }
+        .alert-error { background-color: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 1rem; border-radius: 0.25rem; margin-bottom: 1rem; }
+        #loading-spinner { display: none; margin-top: 1rem; color: var(--accent-color); font-weight: 600; }
+
+        /* Style for the Upload Button */
+        #uploadButton { 
+            padding: 0.75rem 1.5rem; 
+            background-color: var(--accent-color); 
+            color: white; 
+            border: none; 
+            border-radius: 0.25rem; 
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        #uploadButton:hover {
+            background-color: #059669; 
+        }
+
+        /* Table Styling (from statements-list.html) */
+        .data-table {
+            width: 100%;
+            border-collapse: separate; 
+            border-spacing: 0;
+            margin-top: 1rem;
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border-radius: 0.5rem;
+            overflow: hidden; 
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .data-table th {
+            background-color: #E5E7EB;
+            font-weight: 600;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            font-size: 0.875rem;
+        }
+        .data-table tbody tr:hover {
+            background-color: #F9FAFB;
+        }
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Status Color Coding */
+        .status-completed { color: #059669; font-weight: 600; } 
+        .status-failed { color: #DC2626; font-weight: 600; } 
+        .status-processing { color: #F59E0B; } 
+        
+        .action-link {
+             color: var(--accent-color);
+             text-decoration: none;
+             font-weight: 500;
+        }
+        .action-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="fragments/header :: appHeader"></div>
+    <div class="content-container">
+        
+        <div class="page-header">
+            <a href="/" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                Back
+            </a>
+            <h2>Statement Management</h2>
+        </div>
+
+        <div class="upload-section">
+            <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--primary-color);">Upload New Statement (PDF)</h3>
+            
+            <div id="message-container"></div>
+            
+            <form id="uploadForm" style="margin-top: 1rem; display: flex; align-items: center;">
+                <input type="file" id="fileInput" name="file" accept="application/pdf" required style="padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 0.25rem; margin-right: 1rem; flex-grow: 1;">
+                <button type="submit" id="uploadButton">
+                    Upload and Start Processing
+                </button>
+            </form>
+            
+            <div id="loading-spinner">Processing your file... Please wait or navigate to **<a href="#statement-list-section" style="color: var(--accent-color);">the list below</a>** to check progress.</div>
+        </div>
+
+        <div id="statement-list-section">
+            <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--primary-color);">Uploaded Statement History</h3>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>File Name</th>
+                        <th>Upload Time</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="stmt : ${statements}">
+                        <td th:text="${stmt.id}">12345...</td>
+                        <td th:text="${stmt.originalFileName}">BankStatement.pdf</td>
+                        <td th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">01 Jan 2025 10:00</td>
+                        
+                        <td th:text="${stmt.status}" th:classappend="${stmt.status.name() == 'COMPLETED' ? 'status-completed' : 
+                                                                      stmt.status.name() == 'FAILED' ? 'status-failed' : 'status-processing'}">PROCESSING</td>
+                        
+                        <td>
+                            <a th:if="${stmt.status.name() == 'COMPLETED'}" 
+                               th:href="@{/statements/{id}(id=${stmt.id})}" class="action-link">View Details</a>
+                            <span th:unless="${stmt.status.name() == 'COMPLETED'}" class="status-processing">Not Available</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault(); 
+
+            const fileInput = document.getElementById('fileInput');
+            const button = document.getElementById('uploadButton');
+            const spinner = document.getElementById('loading-spinner');
+            const messageContainer = document.getElementById('message-container');
+            
+            messageContainer.innerHTML = '';
+            spinner.style.display = 'block';
+            button.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/api/statement/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json().then(data => ({
+                status: response.status,
+                body: data
+            })))
+            .then(result => {
+                spinner.style.display = 'none';
+                button.disabled = false;
+                
+                if (result.status >= 200 && result.status < 300) {
+                    // Success: Add message and prompt refresh
+                    messageContainer.innerHTML = 
+                        `<div class="alert-success">${result.body.message} Refresh the page or click <a href="/statements" class="action-link">here</a> to see the new statement in the list below.</div>`;
+                    fileInput.value = ''; 
+                } else {
+                    // Error
+                    messageContainer.innerHTML = 
+                        `<div class="alert-error">Upload Error: ${result.body.message || 'An unknown error occurred.'}</div>`;
+                }
+            })
+            .catch(error => {
+                spinner.style.display = 'none';
+                button.disabled = false;
+                console.error('Network Error:', error);
+                messageContainer.innerHTML = 
+                    `<div class="alert-error">A network error prevented the upload.</div>`;
+            });
+        });
+    </script>
+</body>
+</html>

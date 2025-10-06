@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${appName} + ' - Manage Categories'">EverRich - Manage Categories</title>
+    <style>
+        /* Existing Styles (Truncated for brevity) */
+        :root { 
+            --accent-color: #047857; 
+            --primary-color: #1F2937; 
+        } 
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .data-table th {
+            background-color: #F3F4F6;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.25rem;
+            box-sizing: border-box;
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #059669; 
+        }
+        .btn-delete {
+            background-color: #EF4444; 
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: opacity 0.3s;
+        }
+        .btn-delete:hover {
+            opacity: 0.8;
+        }
+        .btn-edit {
+             background-color: #3B82F6; 
+             color: white;
+             padding: 0.5rem 1rem;
+             border-radius: 0.25rem;
+             text-decoration: none;
+             font-size: 0.875rem;
+             margin-right: 10px;
+        }
+        .btn-cancel {
+            background-color: #6B7280; 
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            margin-left: 10px;
+            transition: background-color 0.3s;
+        }
+        .btn-cancel:hover {
+            background-color: #4B5563;
+        }
+        
+        /* Collapsible Header Styles */
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            padding: 10px; 
+            border: 1px solid #D1FAE5; 
+            border-radius: 0.5rem;
+            background-color: #F0FDFA; 
+            transition: background-color 0.2s;
+        }
+        .collapsible-header:hover {
+            background-color: #E0F5F2; 
+        }
+
+        .collapsible-header h3 {
+            margin: 0;
+            color: var(--accent-color); 
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            font-size: 1.125rem; 
+        }
+        
+        /* Ensure ALL interactive elements within the header use the ACCENT color */
+        .collapsible-header h3, 
+        .collapsible-header .icon,
+        .llm-icon, 
+        .manual-icon {
+            color: var(--accent-color); 
+        }
+
+        .collapsible-header .icon {
+            margin-left: 10px;
+            transition: transform 0.2s;
+        }
+        .collapsible-header.collapsed .icon {
+            transform: rotate(-90deg);
+        }
+        .llm-icon, .manual-icon {
+            margin-right: 10px;
+        }
+        
+        /* Unified Content Wrapper Style */
+        .content-wrapper {
+            border: 1px solid #E5E7EB;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            background-color: white; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        }
+        
+        /* Toast & Modal Styles (Retained) */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .toast {
+            min-width: 250px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 0.5rem;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateY(-20px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success {
+            background-color: #10B981;
+        }
+        .toast.error {
+            background-color: #F87171;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .modal-buttons button {
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 0.25rem;
+            font-weight: 600;
+        }
+        #modal-confirm-btn {
+            background-color: #EF4444;
+            color: white;
+            border: none;
+        }
+        #modal-cancel-btn {
+            background-color: #D1D5DB;
+            color: #1F2937;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/header :: appHeader}"></div>
+    
+    <div id="toast-container"></div>
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message"></p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn">Yes, I'm Sure</button>
+                <button id="modal-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="content-container">
+        
+        <div class="page-header">
+            <a href="/" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                Back
+            </a>
+            <h2>Manage Categories</h2>
+        </div>
+
+        <div class="collapsible-header" id="llm-header">
+            <h3>
+                <span class="llm-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+                </span>
+                Let AI Suggest Categories for You!
+            </h3>
+            <span class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+        </div>
+        
+        <div class="content-wrapper" id="llm-content">
+            <p>Define your categories based on your lifestyle or a sample bank statement text.</p>
+            
+            <div class="form-group">
+                <label for="llm-input">Input Context or Statement Text</label>
+                <textarea id="llm-input" rows="3" placeholder="e.g., 'middle-class family in New York City' or paste a few lines of transaction data..."></textarea>
+            </div>
+            
+            <button id="suggest-button" class="btn-primary">Ask AI</button>
+            <span id="loading-message" style="display: none; margin-left: 10px;">Generating suggestions...</span>
+
+            <div id="suggestions-area" style="display:none; margin-top: 1rem;">
+                <h4>Recommended Categories (<span id="suggestion-count">0</span>)</h4>
+                <table class="data-table" id="suggestions-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th><input type="checkbox" id="select-all-suggestions" checked> Select</th> </tr>
+                    </thead>
+                    <tbody id="suggestions-body">
+                        </tbody>
+                </table>
+                
+                <div style="margin-top: 1rem;">
+                    <button id="accept-button" class="btn-primary">Accept Selected and Merge</button> <button id="reject-button" class="btn-delete" style="margin-left: 10px;">Reject / Clear Suggestions</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="collapsible-header" id="manual-header">
+            <h3>
+                <span class="manual-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                </span>
+                <span th:text="${newCategory.id != null ? 'Edit Category #' + newCategory.id : 'Add a Category by Yourself'}">Add a Category by Yourself</span>
+            </h3>
+            <span class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+        </div>        
+
+        <div class="content-wrapper" id="manual-form-content">
+            <form th:action="@{/categories}" th:object="${newCategory}" method="post">
+                
+                <input type="hidden" th:field="*{id}" />
+                
+                <div class="form-group">
+                    <label for="name">Name (e.g., Groceries)</label>
+                    <input type="text" id="name" th:field="*{name}" required />
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description (How should the LLM interpret this?)</label>
+                    <textarea id="description" th:field="*{description}" rows="2" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn-primary">
+                    <span th:text="${newCategory.id != null ? 'Update Category' : 'Save Category'}">Save Category</span>
+                </button>
+
+                <a th:if="${newCategory.id != null}" th:href="@{/categories}" class="btn-cancel">
+                    Cancel Edit
+                </a>
+            </form>
+        </div>
+
+        <h3>Existing Categories</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="category : ${categories}">
+                    <td th:text="${category.id}">1</td>
+                    <td th:text="${category.name}">Groceries</td>
+                    <td th:text="${category.description}">Supermarket purchases, food, consumables.</td>
+                    <td>
+                        <a th:href="@{/categories/edit/{id}(id=${category.id})}" class="btn-edit">
+                            Edit
+                        </a>
+                        
+                        <form th:action="@{/categories/{id}/delete(id=${category.id})}" method="post" style="display: inline;" class="delete-category-form">
+                            <button type="button" class="btn-delete" data-category-id="${category.id}">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${categories.empty}">
+                    <td colspan="4">No categories defined yet. Please add a new one above.</td>
+                </tr>
+            </tbody>
+        </table>
+        
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // UI Elements
+            const llmHeader = document.getElementById('llm-header');
+            const llmContent = document.getElementById('llm-content');
+            const manualHeader = document.getElementById('manual-header'); 
+            const manualContent = document.getElementById('manual-form-content'); 
+            const inputArea = document.getElementById('llm-input');
+            const suggestButton = document.getElementById('suggest-button');
+            const loadingMessage = document.getElementById('loading-message');
+            const suggestionsArea = document.getElementById('suggestions-area');
+            const suggestionsBody = document.getElementById('suggestions-body');
+            const suggestionCount = document.getElementById('suggestion-count');
+            const acceptButton = document.getElementById('accept-button');
+            const rejectButton = document.getElementById('reject-button');
+            const selectAllCheckbox = document.getElementById('select-all-suggestions'); // 🟢 NEW
+            const deleteButtons = document.querySelectorAll('.btn-delete');
+            const modal = document.getElementById('confirmation-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+            const modalCancelBtn = document.getElementById('modal-cancel-btn');
+            const toastContainer = document.getElementById('toast-container');
+
+            let currentSuggestions = [];
+            let confirmAction = null; 
+
+            // --- Notification and Modal Helpers ---
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                }, 5000);
+            }
+
+            function showModal(message, callback) {
+                modalMessage.textContent = message;
+                confirmAction = callback;
+                modal.style.display = 'flex';
+            }
+
+            // Modal button handlers
+            modalConfirmBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (confirmAction) {
+                    confirmAction(true);
+                }
+            };
+
+            modalCancelBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (confirmAction) {
+                    confirmAction(false);
+                }
+                confirmAction = null;
+            };
+
+            // --- Category Deletion Logic (Using Modal) ---
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const form = button.closest('form');
+                    
+                    showModal(
+                        'Are you sure you want to delete this category? This cannot be undone and will affect existing transactions!', 
+                        (confirmed) => {
+                            if (confirmed) {
+                                form.submit();
+                            } else {
+                                showToast('Deletion cancelled.', 'error');
+                            }
+                        }
+                    );
+                });
+            });
+
+
+            // --- Section Collapse Logic ---
+            
+            const isEditMode = document.querySelector('input[name="id"]').value !== "";
+            
+            // Set initial state
+            llmContent.style.display = 'none';
+            llmHeader.classList.add('collapsed');
+            
+            if (!isEditMode) {
+                 manualContent.style.display = 'none';
+                 manualHeader.classList.add('collapsed');
+            } else {
+                 manualHeader.classList.remove('collapsed');
+            }
+           
+            // Toggle function for any collapsible section
+            function toggleSection(header, content) {
+                 const isCollapsed = content.style.display === 'none';
+                 content.style.display = isCollapsed ? 'block' : 'none';
+                 header.classList.toggle('collapsed');
+            }
+
+            llmHeader.addEventListener('click', () => {
+                 toggleSection(llmHeader, llmContent);
+            });
+            
+            manualHeader.addEventListener('click', () => {
+                 if (!isEditMode) {
+                    toggleSection(manualHeader, manualContent);
+                 } else {
+                    showToast("Please use 'Cancel Edit' to hide the form.", 'error');
+                 }
+            });
+
+            // Function to collapse the LLM section and clear results
+            const resetLlmSection = (message, type) => {
+                currentSuggestions = [];
+                suggestionsArea.style.display = 'none';
+                llmContent.style.display = 'none';
+                llmHeader.classList.add('collapsed');
+                selectAllCheckbox.checked = true; // Reset select all to checked
+                if (message) showToast(message, type);
+            };
+
+
+            // --- LLM Suggestion Logic ---
+            suggestButton.addEventListener('click', async () => {
+                const input = inputArea.value.trim();
+                if (input.length < 10) {
+                    showToast('Please provide a meaningful context or sample statement text (min 10 characters).', 'error');
+                    return;
+                }
+
+                suggestionsArea.style.display = 'none';
+                loadingMessage.style.display = 'inline';
+                suggestButton.disabled = true;
+
+                try {
+                    const response = await fetch('/categories/api/suggest?input=' + encodeURIComponent(input), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('LLM suggestion API failed. Status: ' + response.status);
+                    }
+
+                    currentSuggestions = await response.json();
+                    renderSuggestions(currentSuggestions);
+                    showToast(`AI generated ${currentSuggestions.length} suggestions. Review below.`);
+
+                } catch (error) {
+                    console.error('Error fetching suggestions:', error);
+                    resetLlmSection('Failed to get suggestions from AI. Check console logs.', 'error');
+                } finally {
+                    loadingMessage.style.display = 'none';
+                    suggestButton.disabled = false;
+                }
+            });
+
+            // --- Accept/Merge Logic ---
+            acceptButton.addEventListener('click', async () => {
+                // 🟢 NEW: Filter down to only selected suggestions
+                const selectedSuggestions = Array.from(suggestionsBody.querySelectorAll('.suggestion-checkbox:checked'))
+                    .map(checkbox => {
+                        // Find the index of the suggestion in the original array
+                        const index = parseInt(checkbox.dataset.index);
+                        return currentSuggestions[index];
+                    });
+                
+                if (selectedSuggestions.length === 0) {
+                     showToast('Please select at least one category to merge.', 'error');
+                     return;
+                }
+                
+                showModal(
+                    `Are you sure you want to merge ${selectedSuggestions.length} selected categories into your existing list? Duplicates will be skipped.`,
+                    async (confirmed) => {
+                        if (!confirmed) {
+                            showToast('Category merge cancelled.', 'error');
+                            return; // Do not reset the section if they just cancelled
+                        }
+
+                        try {
+                            // 🟢 NEW: Send only the selected suggestions
+                            const response = await fetch('/categories/api/merge', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(selectedSuggestions)
+                            });
+
+                            const result = await response.json();
+
+                            if (response.ok) {
+                                resetLlmSection(`${result.newCount} new categories merged successfully!`, 'success');
+                                setTimeout(() => { window.location.href = '/categories'; }, 1000);
+                            } else {
+                                showToast('Merge failed: ' + result.message, 'error');
+                                resetLlmSection();
+                            }
+                        } catch (error) {
+                            console.error('Error merging categories:', error);
+                            showToast('An error occurred during the merge operation.', 'error');
+                            resetLlmSection();
+                        }
+                    }
+                );
+            });
+            
+            // --- Select All/Deselect All Logic ---
+            selectAllCheckbox.addEventListener('change', function() {
+                 const isChecked = this.checked;
+                 suggestionsBody.querySelectorAll('.suggestion-checkbox').forEach(cb => {
+                     cb.checked = isChecked;
+                 });
+            });
+            
+            // --- Reject/Clear Logic ---
+            rejectButton.addEventListener('click', () => {
+                resetLlmSection('Suggestions cleared and AI assistance section collapsed.', 'error');
+            });
+            
+            // Helper function to render suggestions in the table
+            function renderSuggestions(suggestions) {
+                suggestionsBody.innerHTML = '';
+                suggestionCount.textContent = suggestions.length;
+                
+                if (suggestions.length === 0) {
+                    suggestionsBody.innerHTML = '<tr><td colspan="3">AI returned no suggestions.</td></tr>';
+                } else {
+                    suggestions.forEach((s, index) => { // 🟢 Added index
+                        const row = suggestionsBody.insertRow();
+                        row.insertCell().textContent = s.name;
+                        row.insertCell().textContent = s.description;
+                        
+                        // 🟢 NEW Select Checkbox Cell
+                        const selectCell = row.insertCell();
+                        selectCell.innerHTML = `<input type="checkbox" class="suggestion-checkbox" data-index="${index}" checked>`;
+                        
+                        // Set background for visibility
+                        row.style.backgroundColor = '#ecfdf5';
+                    });
+                    
+                    // Add event listeners to individual checkboxes
+                    suggestionsBody.querySelectorAll('.suggestion-checkbox').forEach(cb => {
+                        cb.addEventListener('change', function() {
+                            // If any checkbox is unchecked, uncheck the "Select All" header
+                            if (!this.checked) {
+                                selectAllCheckbox.checked = false;
+                            } else {
+                                // If all are checked, check the "Select All" header
+                                const allChecked = Array.from(suggestionsBody.querySelectorAll('.suggestion-checkbox')).every(c => c.checked);
+                                selectAllCheckbox.checked = allChecked;
+                            }
+                        });
+                    });
+                    
+                    selectAllCheckbox.checked = true; // Default to all selected
+                }
+                suggestionsArea.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${appName} + ' - Dashboard'">EverRich - Dashboard</title>
+    <style>
+        /* Define a basic grid for the tiles */
+        .tile-grid {
+            display: flex;
+            gap: 20px; /* Space between tiles */
+            flex-wrap: wrap; /* Allows tiles to wrap on smaller screens */
+        }
+        
+        .dashboard-tile {
+            background-color: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            width: 400px; /* Tile width maintained */
+            
+            /* Added Flex properties to handle layout better */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        /* Title block to align icon and title */
+        .dashboard-title-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 0.5rem;
+        }
+        .dashboard-tile-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        /* Style for the short description under the title */
+        .tile-short-description {
+             color: #6B7280; /* Neutral gray for description text */
+             font-size: 1rem;
+             margin-bottom: 1.5rem; /* Space before the new feature buttons */
+        }
+        
+        /* Container for the feature buttons */
+        .dashboard-actions-grid {
+            display: flex; /* Use flexbox for fluid layout */
+            flex-wrap: wrap; /* Allow buttons to wrap */
+            gap: 15px; /* Space between the button cards */
+            margin-top: 1rem;
+            /* Ensure buttons in a partial row align to the left */
+            justify-content: flex-start; 
+        }
+        
+        /* 🟢 REVISED: Green Button Theme for Feature Cards */
+        .feature-card {
+            width: 185px; 
+            flex: 0 0 auto; /* Stop it from growing/shrinking */
+            
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.8rem 0.5rem; 
+            background-color: var(--accent-color); /* 🟢 Primary green background */
+            border: 1px solid var(--accent-color); /* 🟢 Green border */
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-sizing: border-box; 
+        }
+        
+        /* 🟢 REVISED: Hover state for Green Buttons */
+        .feature-card:hover {
+            background-color: #059669; /* Slightly darker green on hover */
+            border-color: #059669; /* Match darker green border */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        /* Configuration Tile Button stretched to fill space */
+        .dashboard-tile:nth-child(2) .dashboard-actions-grid {
+            gap: 0; 
+        }
+        
+        .feature-card.full-width {
+            flex-grow: 1; 
+            width: auto; 
+            flex: 1 1 100%; 
+            align-self: center; 
+        }
+
+        /* 🟢 REVISED: Label Color for Green Buttons (should be white) */
+        .feature-card-label {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: white; /* 🟢 White text for labels */
+        }
+        
+        /* Description Color for Green Buttons (should be light gray for contrast) */
+        .feature-card-description {
+            font-size: 0.8rem;
+            color: #E5E7EB; /* 🟢 Light gray for description text on green background */
+            text-align: center;
+        }
+        
+        /* Specific colors for "Create", "Upload", "Review" are no longer needed for labels
+           as all labels are now white. Removing previous specific color overrides. */
+        /* #create-btn .feature-card-label { color: white; } 
+           #upload-btn .feature-card-label { color: white; } 
+           #review-btn .feature-card-label { color: white; } */
+
+        
+        /* Removed old button styling (retained) */
+        .dashboard-actions a {
+            display: none; 
+        }
+        
+        /* Styles for the success/error info popup (retained) */
+        .info-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateY(-20px);
+        }
+        .info-popup.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .info-popup.success {
+            background-color: #047857; /* Accent color green */
+        }
+        .info-popup.error {
+            background-color: #DC2626; /* Red */
+        }
+
+        /* Styles for the warning popup (retained) */
+        .warning-popup {
+            background-color: #FBBF24; 
+            border: 1px solid #D97706;
+            color: #78350F; 
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            max-width: 400px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            z-index: 10000;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+        }
+        .warning-popup.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .warning-popup h4 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #D97706;
+            margin-bottom: 0.75rem;
+        }
+        .warning-popup .popup-actions {
+            margin-top: 1rem;
+            text-align: right;
+        }
+        .warning-popup .popup-actions a,
+        .warning-popup .popup-actions button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: 10px;
+            border: none;
+        }
+        .warning-popup .popup-actions .btn-go {
+            background-color: #D97706;
+            color: white;
+        }
+        .warning-popup .popup-actions .btn-go:hover {
+            background-color: #B45309;
+        }
+        .warning-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 9999;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="fragments/header :: appHeader"></div>
+
+    <div th:if="${message}" 
+         id="info-popup" 
+         th:classappend="${messageType == 'success' ? 'success' : 'error'}" 
+         class="info-popup">
+        <span th:text="${message}"></span>
+    </div>
+
+    <div id="category-data" th:attr="data-category-count=${categoryCount}"></div>
+
+    <div class="content-container">
+        
+        <div class="tile-grid" style="margin-top: 1rem;">
+            
+            <div class="dashboard-tile">
+                <div>
+                    <div class="dashboard-title-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-color);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+                        <div class="dashboard-tile-title">Manage Transactions</div>
+                    </div>
+                    <p class="tile-short-description">Create transactions manually or by bank statement upload / Search, review and maintain them</p>
+                </div>
+
+                <div class="dashboard-actions-grid">
+                    
+                    <a th:href="@{/transactions/add}" id="create-btn" class="feature-card category-check-btn">
+                        <span class="feature-card-label">Create</span>
+                        <span class="feature-card-description">Create a transaction manually</span>
+                    </a>
+                    
+                    <a th:href="@{/statements}" id="upload-btn" class="feature-card category-check-btn">
+                        <span class="feature-card-label">Upload</span>
+                        <span class="feature-card-description">Upload transactions using statements</span>
+                    </a>
+
+                    <a th:href="@{/transactions}" id="review-btn" class="feature-card">
+                        <span class="feature-card-label">Review</span>
+                        <span class="feature-card-description">Search, review and edit existing records</span>
+                    </a>
+                    
+                </div>
+            </div>
+            
+            <div class="dashboard-tile">
+                <div class="dashboard-title-block">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-color);"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"></path><path d="M12 6v6l4 2"></path></svg>
+                    <div class="dashboard-tile-title">Configuration</div>
+                </div>
+                <div class="dashboard-actions-grid">
+                    <a href="/categories" class="feature-card full-width">
+                        <span class="feature-card-label">Manage Categories</span>
+                        <span class="feature-card-description">Define and edit expense/income categories</span>
+                    </a>
+                </div>
+            </div>        
+        </div>
+        
+    </div>
+
+    <div id="category-warning-popup" class="warning-popup">
+        <h4>Category Required</h4>
+        <p>To create or upload transactions, you must first define at least one category.</p>
+        <div class="popup-actions">
+            <button onclick="closeWarningPopup()" class="btn-cancel">Cancel</button>
+            <a href="/categories" class="btn-go">Go to Categories</a>
+        </div>
+    </div>
+    <div id="warning-popup-overlay" class="warning-popup-overlay" onclick="closeWarningPopup()"></div>
+
+    <script th:if="${message}">
+        document.addEventListener('DOMContentLoaded', function() {
+            var popup = document.getElementById('info-popup');
+            if (popup) {
+                setTimeout(function() {
+                    popup.classList.add('show');
+                }, 50);
+                setTimeout(function() {
+                    popup.classList.remove('show');
+                }, 4000);
+                setTimeout(function() {
+                    popup.remove();
+                }, 4550);
+            }
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoryCount = parseInt(document.getElementById('category-data').dataset.categoryCount);
+            const checkButtons = document.querySelectorAll('.category-check-btn');
+            const warningPopup = document.getElementById('category-warning-popup');
+            const overlay = document.getElementById('warning-popup-overlay');
+            
+            checkButtons.forEach(button => {
+                button.addEventListener('click', function(event) {
+                    if (categoryCount === 0) {
+                        event.preventDefault(); // Stop navigation
+                        showWarningPopup();
+                    }
+                });
+            });
+
+            window.showWarningPopup = function() {
+                warningPopup.classList.add('active');
+                overlay.style.display = 'block';
+            };
+
+            window.closeWarningPopup = function() {
+                warningPopup.classList.remove('active');
+                overlay.style.display = 'none';
+            };
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${appName} + ' - Statement Details'">Categorized Transactions</title>
+    <style>
+        /* Local styles for the transaction table */
+        .data-table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0;
+            margin-top: 1rem; 
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden; 
+        }
+        .data-table th, .data-table td { 
+            border-bottom: 1px solid #E5E7EB; 
+            padding: 1rem; 
+            text-align: left; 
+        }
+        .data-table th { 
+            background-color: #F3F4F6; 
+            font-weight: 600;
+        }
+        
+        .amount-negative { color: #DC2626; font-weight: 500; } 
+        .amount-positive { color: #059669; font-weight: 500; } 
+        
+        /* Message box style */
+        .alert-success { background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; padding: 1rem; border-radius: 0.25rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <div th:replace="fragments/header :: appHeader"></div>
+    <div class="content-container">
+        
+        <div class="page-header">
+            <a href="/statements" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                Back
+            </a>
+            <h2>Statement Details: <span th:text="${statement.originalFileName}">BankStatement.pdf</span></h2>
+        </div>
+
+        <div th:if="${message}" class="alert-success">
+            <p th:text="${message}"></p>
+        </div>
+
+        <p style="margin-top: 1rem; color: #6B7280;">
+            Status: <span th:text="${statement.status}">COMPLETED</span> | 
+            Uploaded: <span th:text="${#temporals.format(statement.uploadDateTime, 'dd MMM yyyy HH:mm')}"></span>
+        </p>
+
+        <table class="data-table" th:if="${!transactions.empty}">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="transaction : ${transactions}">
+                    <td th:text="${transaction.date}">01.01.2025</td>
+                    <td th:text="${transaction.description}">Transaction Description</td>
+                    
+                    <td th:classappend="${transaction.amount < 0 ? 'amount-negative' : 'amount-positive'}">
+                        <span th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">100.00</span> €
+                    </td>
+                    
+                    <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div th:if="${transactions.empty}">
+            <p>No transactions were processed for this statement.</p>
+        </div>
+        
+    </div>
+</body>
+</html>
