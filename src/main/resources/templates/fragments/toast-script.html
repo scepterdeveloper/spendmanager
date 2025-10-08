@@ -1,0 +1,27 @@
+<div id="toast-container"></div> 
+
+<script th:fragment="toastScript">
+    document.addEventListener('DOMContentLoaded', function () {
+        const toastContainer = document.getElementById('toast-container');  
+
+        // --- Notification Helper --- 
+        window.showToast = function(message, type = 'success') { 
+            const toast = document.createElement('div'); 
+            // NOTE: The styles for .toast, .success, and .error must be present in the main CSS file 
+            // (e.g., in a separate style sheet or in the <style> block of the page).
+            toast.className = `toast ${type}`; 
+            toast.textContent = message; 
+            toastContainer.appendChild(toast); 
+
+            setTimeout(() => { 
+                toast.classList.add('show'); 
+            }, 10); 
+
+            setTimeout(() => { 
+                toast.classList.remove('show'); 
+                toast.addEventListener('transitionend', () => toast.remove()); 
+            }, 5000); 
+        };
+        // --- End Notification Helper --- 
+    });
+</script>

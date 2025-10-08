@@ -25,14 +25,12 @@ import com.everrich.spendmanager.service.CategoryService;
 @Controller 
 public class PdfController {
 
-    private final PdfProcessor pdfProcessor;
     private final TransactionService transactionService;
     private final StatementService statementService;
     private final CategoryService categoryService; 
 
     public PdfController(PdfProcessor pdfProcessor, TransactionService transactionService, 
                          StatementService statementService, CategoryService categoryService) {
-        this.pdfProcessor = pdfProcessor;
         this.transactionService = transactionService;
         this.statementService = statementService;
         this.categoryService = categoryService; 

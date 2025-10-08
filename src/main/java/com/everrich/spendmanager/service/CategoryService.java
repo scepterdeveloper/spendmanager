@@ -47,9 +47,17 @@ public class CategoryService {
     public List<CategorySuggestion> suggestCategories(String input) {
 
         String promptText = """
-                You are an expert financial assistant. Your task is to recommend a list of 10 to 15 useful financial categories and their descriptions.
+                You are an expert financial assistant. Your task is to recommend a list of useful financial categories and their descriptions 
+                for an individual, or a family, or a small business etc. The categories should cover the aspects of income, expenses, investments,
+                debts or loans etc. The granularity of the categories could be decided based on the additional user input. The common practices and 
+                norms based on the country, region, age group, profession etc. could also be factored in to make the categories very real-life like 
+                and ready to consume. However, try to keep the number of categories to a reasonable number (10-20) by focussing on efficient generalization 
+                and grouping. Please include a category "Uncategorized" always.
 
-                Base your suggestions on the following user input, which is either a life context or raw bank statement data:
+                The user may choose to provide the content of a bank statement or some kind of sample data also as the input. Please intepret the 
+                input and act accordingly.
+
+                The user input is the following:
                 ---
                 {input}
                 ---

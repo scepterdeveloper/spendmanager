@@ -108,13 +108,6 @@
             text-align: center;
         }
         
-        /* Specific colors for "Create", "Upload", "Review" are no longer needed for labels
-           as all labels are now white. Removing previous specific color overrides. */
-        /* #create-btn .feature-card-label { color: white; } 
-           #upload-btn .feature-card-label { color: white; } 
-           #review-btn .feature-card-label { color: white; } */
-
-        
         /* Removed old button styling (retained) */
         .dashboard-actions a {
             display: none; 
@@ -263,7 +256,25 @@
                         <span class="feature-card-description">Define and edit expense/income categories</span>
                     </a>
                 </div>
-            </div>        
+            </div>
+            
+            <div class="dashboard-tile">
+                <div>
+                    <div class="dashboard-title-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-color);"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-4"></path></svg>
+                        <div class="dashboard-tile-title">Insights</div>
+                    </div>
+                    <p class="tile-short-description">Analyze transactions and draw insights</p>
+                </div>
+                
+                <div class="dashboard-actions-grid">
+                    <a th:href="@{/insights}" class="feature-card full-width category-check-btn">
+                        <span class="feature-card-label">Run Analysis</span>
+                        <span class="feature-card-description">View spending charts and cumulative totals</span>
+                    </a>
+                </div>
+            </div>
+            
         </div>
         
     </div>
@@ -298,6 +309,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const categoryCount = parseInt(document.getElementById('category-data').dataset.categoryCount);
+            // I've added the category-check-btn class to the Insights tile link
+            // since analysis is meaningless without categories.
             const checkButtons = document.querySelectorAll('.category-check-btn');
             const warningPopup = document.getElementById('category-warning-popup');
             const overlay = document.getElementById('warning-popup-overlay');

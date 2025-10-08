@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
@@ -31,6 +32,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("endDate") LocalDate endDate,
             @Param("categoryIds") List<Long> categoryIds,
             @Param("query") String query); 
+
+    /**
+     * Custom query to fetch all transactions within a date range and specific categories.
+     * Corrected to use 't.categoryEntity.id' based on the entity structure.
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.date BETWEEN :startDate AND :endDate AND t.categoryEntity.id IN :categoryIds")
+    List<Transaction> findByDateRangeAndCategories(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("categoryIds") List<Long> categoryIds);
+
+    // Helper methods for the "Entire Timeframe" bounds (no change needed here)
+    @Query("SELECT MIN(t.date) FROM Transaction t")
+    Optional<LocalDate> findMinDate();
+
+    @Query("SELECT MAX(t.date) FROM Transaction t")
+    Optional<LocalDate> findMaxDate();
     
     List<Transaction> findByStatementId(Long statementId);
 }
