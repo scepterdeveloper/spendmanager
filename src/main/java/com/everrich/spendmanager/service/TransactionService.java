@@ -87,7 +87,10 @@ public class TransactionService {
         
         String template = """
             You are a helpful assistant that categorizes financial transactions.
-            Your task is to review the provided text from a bank statement, identify each transaction, and assign it to one of the following categories, strictly using the exact category NAME provided.
+            Your task is to review the provided text from a bank statement, identify each transaction, and assign it to one of the following categories, 
+            strictly using the exact category NAME provided. Consider the description of the categories to gather more context information to do a categorization 
+            as precise as possible. If you realize that a minus symbol is used in the bank statement to indicate amounts of outgoing transactions (expense), please
+            convert it to a positive number while creating the transaction. 
             
             Available Categories:
             {category_list}
