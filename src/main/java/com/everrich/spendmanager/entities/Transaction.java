@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,6 +26,7 @@ public class Transaction {
     
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate date;
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     private double amount;
     

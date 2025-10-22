@@ -11,31 +11,34 @@ import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    @Query("SELECT t FROM Transaction t " +
-           "LEFT JOIN FETCH t.categoryEntity c " +
-           "WHERE " +
-           // 🟢 FIX 1: Ignore StartDate if it is LocalDate.MIN (used for Entire Timeframe / Missing Start Date)
-           "(:startDate = com.everrich.spendmanager.service.DateUtils.MIN_DATE OR t.date >= :startDate) AND " + 
-           // 🟢 FIX 2: Ignore EndDate if it is LocalDate.MAX (used for Entire Timeframe / Missing End Date)
-           "(:endDate = com.everrich.spendmanager.service.DateUtils.MAX_DATE OR t.date <= :endDate) AND " + 
-           
-           "(:categoryIds IS NULL OR t.categoryEntity.id IN :categoryIds) AND " +
-           
-           // Full-Text Search Logic (retained and confirmed correct)
-           "(:query IS NULL OR " +
-           "  LOWER(t.description) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "  LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))" +
-           ") " +
-           "ORDER BY t.date DESC")
+    @Query(
+        value = "SELECT t.* " + // SELECT ONLY FROM THE TRANSACTION TABLE
+                "FROM transaction t " +
+                "LEFT JOIN category c ON c.id = t.category_id " + // Keep the JOIN for filtering purposes
+                "WHERE " +
+                // Date filters
+                "(:startDate = '1900-01-01' OR t.date >= CAST(:startDate AS date)) AND " +
+                "(:endDate = '9999-12-31' OR t.date <= CAST(:endDate AS date)) AND " +
+                // Category filter - NOTE: It now filters on c.id but only selects t.*
+                "(CAST(:categoryIds AS text) IS NULL OR c.id IN (:categoryIds)) AND " +
+                // Text Search Fix
+                "(:query IS NULL OR " +
+                "  LOWER(t.description::text) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                "  LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))" +
+                ") " +
+                "ORDER BY t.date DESC",
+        nativeQuery = true)
     List<Transaction> findFiltered(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("categoryIds") List<Long> categoryIds,
-            @Param("query") String query); 
+            @Param("query") String query);
 
+    //-------------------------------------------------------------------------
+    
     /**
      * Custom query to fetch all transactions within a date range and specific categories.
-     * Corrected to use 't.categoryEntity.id' based on the entity structure.
+     * This query remains in JPQL.
      */
     @Query("SELECT t FROM Transaction t WHERE t.date BETWEEN :startDate AND :endDate AND t.categoryEntity.id IN :categoryIds")
     List<Transaction> findByDateRangeAndCategories(
@@ -43,7 +46,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         @Param("endDate") LocalDate endDate,
         @Param("categoryIds") List<Long> categoryIds);
 
-    // Helper methods for the "Entire Timeframe" bounds (no change needed here)
+    // Helper methods for the "Entire Timeframe" bounds
     @Query("SELECT MIN(t.date) FROM Transaction t")
     Optional<LocalDate> findMinDate();
 
@@ -51,4 +54,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Optional<LocalDate> findMaxDate();
     
     List<Transaction> findByStatementId(Long statementId);
+
+    // ⭐ NEW RAG DEPENDENCY METHOD: Fetches all transactions that have a category assigned (Category is NOT NULL)
+    /**
+     * Used by VectorStoreInitializer to find all historical examples for RAG training.
+     * Assumes the Category entity reference field in Transaction is named 'category'. 
+     * If the field is 'categoryEntity', the method name should be findByCategoryEntityIsNotNull().
+     * Sticking to the shorter version based on standard conventions.
+     */
+    List<Transaction> findByCategoryEntityIsNotNull();
 }
