@@ -29,7 +29,16 @@ public class Transaction {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     private double amount;
+    private TransactionOperation operation;
     
+    public TransactionOperation getOperation() {
+        return operation;
+    }
+
+    public void setOperation(TransactionOperation operation) {
+        this.operation = operation;
+    }
+
     @ManyToOne 
     @JoinColumn(name = "category_id")
     private Category categoryEntity;

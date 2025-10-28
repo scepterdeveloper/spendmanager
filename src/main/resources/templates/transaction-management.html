@@ -1,643 +1,695 @@
-<!DOCTYPE html> 
-<html lang="en" xmlns:th="http://www.thymeleaf.org"> 
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 
-<head> 
-    <title th:text="${appName} + ' - Transaction Management'">EverRich - Transaction Management</title> 
-    <style> 
+<head>
+    <title th:text="${appName} + ' - Transaction Management'">EverRich - Transaction Management</title>
+    <style>
         /* ================================================================= 
            1. Application & Layout Consistency (Unique or Overriding Styles) 
-           ================================================================= */ 
-        :root { 
-            --accent-color: #047857; 
-            --primary-color: #1F2937; 
-        } 
-         
-        /* Consistent Header Styling */ 
-        .page-header { 
-            display: flex; 
-            align-items: center; 
-            margin-bottom: 2rem; 
-            padding-bottom: 1rem; 
-            border-bottom: 1px solid #E5E7EB; 
-        } 
-
-        /* Adjusted back-link styling */ 
-        .back-link { 
-            display: inline-flex; 
-            align-items: center; 
-            color: var(--accent-color); 
-            text-decoration: none; 
-            font-weight: 500; 
-            margin-right: 2rem; 
-            font-size: 1rem; 
-        } 
-
-        .back-link svg { 
-            margin-right: 5px; 
-        } 
-
-        .page-header h2 { 
-            color: var(--primary-color); 
-            margin: 0; 
-            font-size: 2rem; 
-            font-weight: 600; 
-        } 
-         
-        /* Unified Content Wrapper Style */ 
-        .content-wrapper { 
-            border: 1px solid #E5E7EB; 
-            padding: 2rem; 
-            border-radius: 0.5rem; 
-            margin-bottom: 2rem; 
-            background-color: white; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-        } 
-
-        /* Form Element Base */ 
-        .form-group label { 
-            display: block; 
-            font-weight: 500; 
-            margin-bottom: 0.5rem; 
-            font-size: 0.95rem; 
-        } 
-
-        select, 
-        input[type="date"], 
-        input[type="text"] { 
-            width: 100%; 
-            padding: 0.75rem; 
-            border: 1px solid #D1D5DB; 
-            border-radius: 0.25rem; 
-            box-sizing: border-box; 
-            font-size: 1rem; 
-        } 
-
-        /* Button Base Styles */ 
-        .btn-filter, 
-        .btn-primary { 
-            background-color: var(--accent-color); 
-            color: white; 
-            padding: 0.75rem 1.5rem; 
-            border: none; 
-            border-radius: 0.25rem; 
-            cursor: pointer; 
-            font-weight: 600; 
-            transition: background-color 0.3s; 
-        } 
-
-        .btn-filter:hover, 
-        .btn-primary:hover { 
-            background-color: #059669; 
-        } 
-
-        .btn-edit { 
-            background-color: #3B82F6; 
-            color: white; 
-            padding: 0.5rem 1rem; 
-            border-radius: 0.25rem; 
-            text-decoration: none; 
-            font-size: 0.875rem; 
-        } 
-
-        .btn-delete { 
-            background-color: #EF4444; 
-            color: white; 
-            padding: 0.5rem 1rem; 
-            border: none; 
-            border-radius: 0.25rem; 
-            cursor: pointer; 
-            font-size: 0.875rem; 
-            transition: opacity 0.3s; 
-        } 
-
-        .btn-delete:hover { 
-            opacity: 0.8; 
-        } 
-
-        /* Data Table */ 
-        .data-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 1rem; 
-            background-color: white; 
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); 
-            border-radius: 0.5rem; 
-            overflow: hidden; 
-            font-size: 0.95rem; 
-        } 
-
-        .data-table th, 
-        .data-table td { 
-            padding: 1rem; 
-            text-align: left; 
-            border-bottom: 1px solid #E5E7EB; 
-        } 
-
-        .data-table th { 
-            background-color: #F3F4F6; 
-            font-weight: 600; 
-            color: var(--primary-color); 
-        } 
-         
-        /* FIX: Ensure Edit/Delete buttons are adjacent */ 
-        .action-buttons-container { 
-            display: flex; 
-            gap: 10px; /* Space between the buttons */ 
-            align-items: center; 
-        } 
-
-        h3 { 
-            font-size: 1.5rem; 
-            margin-bottom: 1rem; 
-            font-weight: 600; 
-            color: var(--primary-color); 
-        } 
-
-        /* Filter Layout */ 
-        .filter-container { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 15px; 
-        } 
-        
-        /* REVISED: Adjust layout for three columns on wider screens */
-        @media (min-width: 768px) { 
-            .filter-container { 
-                grid-template-columns: 1fr 1fr 1fr; /* Now 3 columns */ 
-            } 
-        } 
-
-        .timeframe-group, 
-        .category-group,
-        .search-group { /* New class for search field */
-            grid-column: span 1; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px; 
-        } 
-        
-        /* REVISED: Move filter actions to the end of the second row */
-        @media (min-width: 768px) {
-            .filter-actions { 
-                grid-column: 3 / 4; /* Occupies the third column in the row */
-                grid-row: 2 / 3; /* Places it in the second row */
-                align-self: end; 
-                margin-top: 0; 
-            } 
+           ================================================================= */
+        :root {
+            --accent-color: #047857;
+            --primary-color: #1F2937;
         }
 
-        .filter-row { 
-            display: flex; 
-            gap: 10px; 
-            align-items: flex-end; 
-        } 
+        /* Consistent Header Styling */
+        .page-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #E5E7EB;
+        }
 
-        .filter-col-main { 
-            flex: 1; 
-        } 
+        /* Adjusted back-link styling */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            margin-right: 2rem;
+            font-size: 1rem;
+        }
 
-        .filter-col-date { 
-            flex: 1; 
-            display: flex; 
-            gap: 10px; 
-        } 
+        .back-link svg {
+            margin-right: 5px;
+        }
 
-        .filter-actions { 
-            grid-column: 1 / -1; 
-            text-align: right; 
-            margin-top: 10px; 
-        } 
+        .page-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
 
-        /* Collapsible Category List (Rest of CSS omitted for brevity but retained from original) */ 
-        .category-multi-select-dropdown { 
-            position: absolute; 
-            z-index: 100; 
-            background-color: white; 
-            border: 1px solid #D1D5DB; 
-            border-radius: 0.25rem; 
-            padding: 10px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
-            max-height: 250px; 
-            overflow-y: auto; 
-            min-width: 250px; 
-            margin-top: 5px; 
-        } 
+        /* Unified Content Wrapper Style */
+        .content-wrapper {
+            border: 1px solid #E5E7EB;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
 
-        .category-multi-select-dropdown div { 
-            padding: 3px 0; 
-            line-height: 1.2; 
-        } 
-         
+        /* Form Element Base */
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        select,
+        input[type="date"],
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.25rem;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        /* Button Base Styles */
+        .btn-filter,
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+
+        .btn-filter:hover,
+        .btn-primary:hover {
+            background-color: #059669;
+        }
+
+        .btn-edit {
+            background-color: #3B82F6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .btn-delete {
+            background-color: #EF4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: opacity 0.3s;
+        }
+
+        .btn-delete:hover {
+            opacity: 0.8;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            font-size: 0.95rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .data-table th {
+            background-color: #F3F4F6;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* FIX: Ensure Edit/Delete buttons are adjacent */
+        .action-buttons-container {
+            display: flex;
+            gap: 10px;
+            /* Space between the buttons */
+            align-items: center;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Filter Layout */
+        .filter-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        /* REVISED: Adjust layout for three columns on wider screens */
+        @media (min-width: 768px) {
+            .filter-container {
+                grid-template-columns: 1fr 1fr 1fr;
+                /* Now 3 columns */
+            }
+        }
+
+        .timeframe-group,
+        .category-group,
+        .search-group {
+            /* New class for search field */
+            grid-column: span 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* REVISED: Move filter actions to the end of the second row */
+        @media (min-width: 768px) {
+            .filter-actions {
+                grid-column: 3 / 4;
+                /* Occupies the third column in the row */
+                grid-row: 2 / 3;
+                /* Places it in the second row */
+                align-self: end;
+                margin-top: 0;
+            }
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .filter-col-main {
+            flex: 1;
+        }
+
+        .filter-col-date {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-actions {
+            grid-column: 1 / -1;
+            text-align: right;
+            margin-top: 10px;
+        }
+
+        /* Collapsible Category List (Rest of CSS omitted for brevity but retained from original) */
+        .category-multi-select-dropdown {
+            position: absolute;
+            z-index: 100;
+            background-color: white;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.25rem;
+            padding: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-height: 250px;
+            overflow-y: auto;
+            min-width: 250px;
+            margin-top: 5px;
+        }
+
+        .category-multi-select-dropdown div {
+            padding: 3px 0;
+            line-height: 1.2;
+        }
+
         /* ================================================================= 
            3. Modal and Toast Styles (RETAINED) 
-           ================================================================= */ 
-        #toast-container { 
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            z-index: 1000; 
-        } 
-        .toast { 
-            min-width: 250px; 
-            padding: 15px; 
-            margin-bottom: 10px; 
-            border-radius: 0.5rem; 
-            color: white; 
-            opacity: 0; 
-            transition: opacity 0.5s, transform 0.5s; 
-            transform: translateY(-20px); 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); 
-        } 
-        .toast.show { 
-            opacity: 1; 
-            transform: translateY(0); 
-        } 
-        .toast.success { 
-            background-color: #10B981; 
-        } 
-        .toast.error { 
-            background-color: #F87171; 
-        } 
-        .modal { 
-            display: none; 
-            position: fixed; 
-            z-index: 2000; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.4); 
-            justify-content: center; 
-            align-items: center; 
-        } 
-        .modal-content { 
-            background-color: white; 
-            padding: 20px; 
-            border-radius: 0.5rem; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); 
-            width: 90%; 
-            max-width: 400px; 
-            text-align: center; 
-        } 
-        .modal-buttons { 
-            margin-top: 20px; 
-            display: flex; 
-            justify-content: space-around; 
-        } 
-        .modal-buttons button { 
-            cursor: pointer; 
-            padding: 10px 20px; 
-            border-radius: 0.25rem; 
-            font-weight: 600; 
-        } 
-        #modal-confirm-btn { 
-            background-color: #EF4444; /* Red for Delete */ 
-            color: white; 
-            border: none; 
-        } 
-        #modal-cancel-btn { 
-            background-color: #D1D5DB; /* Gray */ 
-            color: #1F2937; 
-            border: none; 
-        } 
-    </style> 
-</head> 
+           ================================================================= */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
 
-<body> 
-    <div th:replace="fragments/header :: appHeader"></div> 
+        .toast {
+            min-width: 250px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 0.5rem;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateY(-20px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
 
-    <div id="toast-container"></div> 
-    <div id="confirmation-modal" class="modal">  
-        <div class="modal-content"> 
-            <p id="modal-message"></p> 
-            <div class="modal-buttons"> 
-                <button id="modal-confirm-btn">Yes, I'm Sure</button> 
-                <button id="modal-cancel-btn">Cancel</button> 
-            </div> 
-        </div> 
-    </div> 
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
-    <div class="content-container"> 
+        .toast.success {
+            background-color: #10B981;
+        }
 
-        <div class="page-header"> 
-            <a href="/" class="back-link"> 
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> 
-                    <path d="M19 12H5"></path> 
-                    <path d="M12 19l-7-7 7-7"></path> 
-                </svg> 
-                Back 
-            </a> 
-            <h2>Transaction Management</h2> 
-        </div> 
+        .toast.error {
+            background-color: #F87171;
+        }
 
-        <div class="content-wrapper"> 
-            <form id="filter-form" action="/transactions" method="get"> 
-                <div class="filter-container"> 
-                    
-                    <div class="timeframe-group"> 
-                        <label for="timeframe">Timeframe</label> 
-                        <div class="filter-row"> 
-                            <div class="filter-col-main"> 
-                                <select id="timeframe" name="timeframe"> 
-                                    <option value="entire_timeframe" th:selected="${selectedTimeframe == 'entire_timeframe'}"> 
-                                        Entire Timeframe</option>  <option value="current_month" th:selected="${selectedTimeframe == 'current_month'}"> 
-                                        This Month</option> 
-                                    <option value="last_month" th:selected="${selectedTimeframe == 'last_month'}">Last 
-                                        Month</option> 
-                                    <option value="current_year" th:selected="${selectedTimeframe == 'current_year'}"> 
-                                        This Year</option> 
-                                    <option value="date_range" th:selected="${selectedTimeframe == 'date_range'}">Date 
-                                        Range</option> 
-                                </select> 
-                            </div> 
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
 
-                            <div id="date-range-fields" class="filter-col-date" style="display:none;"> 
-                                <input type="date" id="start-date" name="startDate" placeholder="Start Date" 
-                                    th:value="${selectedStartDate != null ? selectedStartDate : ''}"> 
-                                <input type="date" id="end-date" name="endDate" placeholder="End Date" 
-                                    th:value="${selectedEndDate != null ? selectedEndDate : ''}"> 
-                            </div> 
-                        </div> 
-                    </div> 
-                    
-                    <div class="category-group"> 
-                        <label for="category-display">Categories</label> 
-                        <div class="filter-col-main" style="position: relative;"> 
-                            <select id="category-display" name="category-display-toggle"> 
-                                <option value="" disabled selected>Filter Categories (Currently <span 
-                                        id="selected-count">All</span>)</option> 
-                            </select> 
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
 
-                            <div id="category-list-dropdown" class="category-multi-select-dropdown" 
-                                style="display:none;"> 
-                                <div 
-                                    style="display:flex; justify-content: space-between; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #EEE;"> 
-                                    <div> 
-                                        <input type="checkbox" id="select-all-categories" class="category-toggle"> 
-                                        <label for="select-all-categories" style="font-weight:bold;">Select All</label> 
-                                    </div> 
-                                    <div> 
-                                        <input type="checkbox" id="clear-all-categories" class="category-toggle"> 
-                                        <label for="clear-all-categories" style="font-weight:bold;">Clear All</label> 
-                                    </div> 
-                                </div> 
-                                <div th:each="category : ${categories}"> 
-                                    <input type="checkbox" th:id="${'cat-' + category.id}" name="categoryIds" 
-                                        th:value="${category.id}" class="category-checkbox" 
-                                        th:checked="${selectedCategoryIds != null and #lists.contains(selectedCategoryIds, category.id)}"> 
-                                    <label th:for="${'cat-' + category.id}" th:text="${category.name}">Category 
-                                        Name</label> 
-                                </div> 
-                            </div> 
-                        </div> 
-                    </div> 
-                    
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .modal-buttons button {
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 0.25rem;
+            font-weight: 600;
+        }
+
+        #modal-confirm-btn {
+            background-color: #EF4444;
+            /* Red for Delete */
+            color: white;
+            border: none;
+        }
+
+        #modal-cancel-btn {
+            background-color: #D1D5DB;
+            /* Gray */
+            color: #1F2937;
+            border: none;
+        }
+
+        /* Data Table */
+        /* ... existing data-table styles ... */
+
+        /* 🟢 Ensure color styles are defined and specific */
+        .data-table .amount-negative {
+            /* Red color for MINUS operation (debit) */
+            color: #DC2626;
+            font-weight: 600;
+        }
+
+        .data-table .amount-positive {
+            /* Green color for PLUS operation (credit) */
+            color: #059669;
+            font-weight: 600;
+        }
+
+        /* FIX: Ensure Edit/Delete buttons are adjacent */
+        /* ... rest of the CSS ... */
+    </style>
+</head>
+
+<body>
+    <div th:replace="fragments/header :: appHeader"></div>
+
+    <div id="toast-container"></div>
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message"></p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn">Yes, I'm Sure</button>
+                <button id="modal-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-container">
+
+        <div class="page-header">
+            <a href="/" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+                Back
+            </a>
+            <h2>Transaction Management</h2>
+        </div>
+
+        <div class="content-wrapper">
+            <form id="filter-form" action="/transactions" method="get">
+                <div class="filter-container">
+
+                    <div class="timeframe-group">
+                        <label for="timeframe">Timeframe</label>
+                        <div class="filter-row">
+                            <div class="filter-col-main">
+                                <select id="timeframe" name="timeframe">
+                                    <option value="entire_timeframe"
+                                        th:selected="${selectedTimeframe == 'entire_timeframe'}">
+                                        Entire Timeframe</option>
+                                    <option value="current_month" th:selected="${selectedTimeframe == 'current_month'}">
+                                        This Month</option>
+                                    <option value="last_month" th:selected="${selectedTimeframe == 'last_month'}">Last
+                                        Month</option>
+                                    <option value="current_year" th:selected="${selectedTimeframe == 'current_year'}">
+                                        This Year</option>
+                                    <option value="date_range" th:selected="${selectedTimeframe == 'date_range'}">Date
+                                        Range</option>
+                                </select>
+                            </div>
+
+                            <div id="date-range-fields" class="filter-col-date" style="display:none;">
+                                <input type="date" id="start-date" name="startDate" placeholder="Start Date"
+                                    th:value="${selectedStartDate != null ? selectedStartDate : ''}">
+                                <input type="date" id="end-date" name="endDate" placeholder="End Date"
+                                    th:value="${selectedEndDate != null ? selectedEndDate : ''}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="category-group">
+                        <label for="category-display">Categories</label>
+                        <div class="filter-col-main" style="position: relative;">
+                            <select id="category-display" name="category-display-toggle">
+                                <option value="" disabled selected>Filter Categories (Currently <span
+                                        id="selected-count">All</span>)</option>
+                            </select>
+
+                            <div id="category-list-dropdown" class="category-multi-select-dropdown"
+                                style="display:none;">
+                                <div
+                                    style="display:flex; justify-content: space-between; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #EEE;">
+                                    <div>
+                                        <input type="checkbox" id="select-all-categories" class="category-toggle">
+                                        <label for="select-all-categories" style="font-weight:bold;">Select All</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" id="clear-all-categories" class="category-toggle">
+                                        <label for="clear-all-categories" style="font-weight:bold;">Clear All</label>
+                                    </div>
+                                </div>
+                                <div th:each="category : ${categories}">
+                                    <input type="checkbox" th:id="${'cat-' + category.id}" name="categoryIds"
+                                        th:value="${category.id}" class="category-checkbox"
+                                        th:checked="${selectedCategoryIds != null and #lists.contains(selectedCategoryIds, category.id)}">
+                                    <label th:for="${'cat-' + category.id}" th:text="${category.name}">Category
+                                        Name</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="search-group">
                         <label for="full-text-query">Search (Description, Category)</label>
                         <input type="text" id="full-text-query" name="query" placeholder="Enter keywords..."
                             th:value="${selectedQuery != null ? selectedQuery : ''}" />
                     </div>
 
-                    <div class="filter-actions"> 
-                        <button type="submit" class="btn-filter">Apply Filters</button> 
-                    </div> 
-                </div> 
-            </form> 
-        </div> 
+                    <div class="filter-actions">
+                        <button type="submit" class="btn-filter">Apply Filters</button>
+                    </div>
+                </div>
+            </form>
+        </div>
 
-        <h3>Existing Transactions</h3> 
-        <table class="data-table"> 
-            <thead> 
-                <tr> 
-                    <th>Date</th> 
-                    <th>Description</th> 
-                    <th>Amount</th> 
-                    <th>Category</th> 
-                    <th>Actions</th> 
-                </tr> 
-            </thead> 
-            <tbody> 
-                <tr th:each="transaction : ${transactions}"> 
-                    <td th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</td> 
-                    <td th:text="${transaction.description}">Netflix Subscription</td> 
-                    <td th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</td> 
-                    <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td> 
-                    <td> 
-                        <div class="action-buttons-container"> 
+        <h3>Existing Transactions</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Category</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="transaction : ${transactions}">
+                    <td th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</td>
+                    <td th:text="${transaction.description}">Netflix Subscription</td>
+
+                    <td th:classappend="${
+                        transaction.operation != null and transaction.operation.name() == 'MINUS' 
+                        ? 'amount-negative' 
+                        : 'amount-positive'
+                    }">
+                        <span
+                            th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</span>
+                        €
+
+                    </td>
+                    <!--<td th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</td>-->
+                    <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
+                    <td>
+                        <div class="action-buttons-container">
                             <a th:href="@{/transactions/edit/{id}( 
                                     id=${transaction.id},  
                                     timeframe=${selectedTimeframe},  
                                     startDate=${selectedStartDate},  
                                     endDate=${selectedEndDate},  
                                     categoryIds=${selectedCategoryIds},
-                                    query=${selectedQuery})}"  
-                               class="btn-edit"> 
-                                Edit 
-                            </a> 
-                             
-                            <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post" 
-                                class="delete-transaction-form"> 
-                                 
-                                <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" /> 
-                                <input type="hidden" name="startDate" th:if="${selectedStartDate != null}" th:value="${selectedStartDate}" /> 
-                                <input type="hidden" name="endDate" th:if="${selectedEndDate != null}" th:value="${selectedEndDate}" /> 
-                                <input type="hidden" name="query" th:if="${selectedQuery != null}" th:value="${selectedQuery}" />
-                                 
-                                <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}"> 
-                                    <input type="hidden" name="categoryIds" th:value="${catId}" /> 
-                                </div> 
-                                 
-                                <button type="button" class="btn-delete" 
-                                    th:attr="data-transaction-id=${transaction.id}">Delete</button> 
-                            </form> 
-                        </div> 
-                    </td> 
-                    </tr> 
-                <tr th:if="${transactions.empty}"> 
-                    <td colspan="5" style="text-align: center; padding: 2rem;">No transactions match the current filter 
-                        criteria.</td> 
-                </tr> 
-            </tbody> 
-        </table> 
+                                    query=${selectedQuery})}" class="btn-edit">
+                                Edit
+                            </a>
 
-    </div> 
+                            <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post"
+                                class="delete-transaction-form">
 
-    <script> 
-        document.addEventListener('DOMContentLoaded', function () { 
-            const timeframeSelect = document.getElementById('timeframe'); 
-            const dateRangeFields = document.getElementById('date-range-fields'); 
-            const categoryDisplaySelect = document.getElementById('category-display'); 
-            const categoryListDropdown = document.getElementById('category-list-dropdown'); 
-            const selectAllCheckbox = document.getElementById('select-all-categories'); 
-            const clearAllCheckbox = document.getElementById('clear-all-categories'); 
-            const categoryCheckboxes = document.querySelectorAll('.category-checkbox'); 
-            const selectedCountSpan = document.getElementById('selected-count'); 
-            const deleteButtons = document.querySelectorAll('.btn-delete'); 
-            const modal = document.getElementById('confirmation-modal'); 
-            const modalMessage = document.getElementById('modal-message'); 
-            const modalConfirmBtn = document.getElementById('modal-confirm-btn'); 
-            const modalCancelBtn = document.getElementById('modal-cancel-btn'); 
-             
+                                <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}"
+                                    th:value="${selectedTimeframe}" />
+                                <input type="hidden" name="startDate" th:if="${selectedStartDate != null}"
+                                    th:value="${selectedStartDate}" />
+                                <input type="hidden" name="endDate" th:if="${selectedEndDate != null}"
+                                    th:value="${selectedEndDate}" />
+                                <input type="hidden" name="query" th:if="${selectedQuery != null}"
+                                    th:value="${selectedQuery}" />
+
+                                <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
+                                    <input type="hidden" name="categoryIds" th:value="${catId}" />
+                                </div>
+
+                                <button type="button" class="btn-delete"
+                                    th:attr="data-transaction-id=${transaction.id}">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                <tr th:if="${transactions.empty}">
+                    <td colspan="5" style="text-align: center; padding: 2rem;">No transactions match the current filter
+                        criteria.</td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const timeframeSelect = document.getElementById('timeframe');
+            const dateRangeFields = document.getElementById('date-range-fields');
+            const categoryDisplaySelect = document.getElementById('category-display');
+            const categoryListDropdown = document.getElementById('category-list-dropdown');
+            const selectAllCheckbox = document.getElementById('select-all-categories');
+            const clearAllCheckbox = document.getElementById('clear-all-categories');
+            const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+            const selectedCountSpan = document.getElementById('selected-count');
+            const deleteButtons = document.querySelectorAll('.btn-delete');
+            const modal = document.getElementById('confirmation-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+            const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
             // Reference the toast container 
-            const toastContainer = document.getElementById('toast-container');  
+            const toastContainer = document.getElementById('toast-container');
 
-            let confirmAction = null; 
+            let confirmAction = null;
 
             // --- Notification Helper --- 
-            function showToast(message, type = 'success') { 
-                const toast = document.createElement('div'); 
-                toast.className = `toast ${type}`; 
-                toast.textContent = message; 
-                toastContainer.appendChild(toast); 
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
 
-                setTimeout(() => { 
-                    toast.classList.add('show'); 
-                }, 10); 
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
 
-                setTimeout(() => { 
-                    toast.classList.remove('show'); 
-                    toast.addEventListener('transitionend', () => toast.remove()); 
-                }, 5000); 
-            } 
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                }, 5000);
+            }
             // --- End Notification Helper --- 
 
 
             // Function to update the count display in the main category dropdown 
-            function updateCategoryDisplayCount() { 
-                const checkedCount = Array.from(categoryCheckboxes).filter(cb => cb.checked).length; 
-                const totalCount = categoryCheckboxes.length; 
+            function updateCategoryDisplayCount() {
+                const checkedCount = Array.from(categoryCheckboxes).filter(cb => cb.checked).length;
+                const totalCount = categoryCheckboxes.length;
 
-                let text; 
-                if (checkedCount === 0) { 
-                    text = 'None'; 
-                } else if (checkedCount === totalCount) { 
-                    text = 'All'; 
-                } else { 
-                    text = checkedCount; 
-                } 
-                selectedCountSpan.textContent = text; 
-            } 
+                let text;
+                if (checkedCount === 0) {
+                    text = 'None';
+                } else if (checkedCount === totalCount) {
+                    text = 'All';
+                } else {
+                    text = checkedCount;
+                }
+                selectedCountSpan.textContent = text;
+            }
 
             // --- 1. Timeframe Logic (Show/Hide Date Range) --- 
-            function toggleDateRangeFields() { 
+            function toggleDateRangeFields() {
                 // 🟢 UPDATED Logic: Only show date range fields if 'date_range' is selected.
-                if (timeframeSelect.value === 'date_range') { 
-                    dateRangeFields.style.display = 'flex'; 
-                } else { 
-                    dateRangeFields.style.display = 'none'; 
-                } 
-            } 
-            timeframeSelect.addEventListener('change', toggleDateRangeFields); 
-            toggleDateRangeFields(); 
+                if (timeframeSelect.value === 'date_range') {
+                    dateRangeFields.style.display = 'flex';
+                } else {
+                    dateRangeFields.style.display = 'none';
+                }
+            }
+            timeframeSelect.addEventListener('change', toggleDateRangeFields);
+            toggleDateRangeFields();
 
             // --- 2. Category Dropdown Toggle --- 
-            categoryDisplaySelect.addEventListener('mousedown', function (event) { 
-                event.preventDefault(); 
-                categoryListDropdown.style.display = categoryListDropdown.style.display === 'block' ? 'none' : 'block'; 
-            }); 
+            categoryDisplaySelect.addEventListener('mousedown', function (event) {
+                event.preventDefault();
+                categoryListDropdown.style.display = categoryListDropdown.style.display === 'block' ? 'none' : 'block';
+            });
 
             // Close dropdown when clicking outside 
-            document.addEventListener('click', function (event) { 
-                if (categoryListDropdown.style.display === 'block' && 
-                    !categoryListDropdown.contains(event.target) && 
-                    event.target !== categoryDisplaySelect) { 
-                    categoryListDropdown.style.display = 'none'; 
-                } 
-            }); 
+            document.addEventListener('click', function (event) {
+                if (categoryListDropdown.style.display === 'block' &&
+                    !categoryListDropdown.contains(event.target) &&
+                    event.target !== categoryDisplaySelect) {
+                    categoryListDropdown.style.display = 'none';
+                }
+            });
 
             // --- 3. Category Selection Logic --- 
-            selectAllCheckbox.addEventListener('change', function () { 
-                if (this.checked) { 
-                    categoryCheckboxes.forEach(cb => cb.checked = true); 
-                    clearAllCheckbox.checked = false; 
-                } 
-                updateCategoryDisplayCount(); 
-            }); 
+            selectAllCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    categoryCheckboxes.forEach(cb => cb.checked = true);
+                    clearAllCheckbox.checked = false;
+                }
+                updateCategoryDisplayCount();
+            });
 
-            clearAllCheckbox.addEventListener('change', function () { 
-                if (this.checked) { 
-                    categoryCheckboxes.forEach(cb => cb.checked = false); 
-                    selectAllCheckbox.checked = false; 
-                } 
-                updateCategoryDisplayCount(); 
-            }); 
+            clearAllCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    categoryCheckboxes.forEach(cb => cb.checked = false);
+                    selectAllCheckbox.checked = false;
+                }
+                updateCategoryDisplayCount();
+            });
 
-            categoryCheckboxes.forEach(cb => { 
-                cb.addEventListener('change', function () { 
-                    selectAllCheckbox.checked = false; 
-                    clearAllCheckbox.checked = false; 
+            categoryCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function () {
+                    selectAllCheckbox.checked = false;
+                    clearAllCheckbox.checked = false;
 
-                    const allChecked = Array.from(categoryCheckboxes).every(c => c.checked); 
-                    const noneChecked = Array.from(categoryCheckboxes).every(c => !c.checked); 
+                    const allChecked = Array.from(categoryCheckboxes).every(c => c.checked);
+                    const noneChecked = Array.from(categoryCheckboxes).every(c => !c.checked);
 
-                    if (allChecked) { 
-                        selectAllCheckbox.checked = true; 
-                    } 
-                    if (noneChecked) { 
-                        clearAllCheckbox.checked = true; 
-                    } 
-                    updateCategoryDisplayCount(); 
-                }); 
-            }); 
+                    if (allChecked) {
+                        selectAllCheckbox.checked = true;
+                    }
+                    if (noneChecked) {
+                        clearAllCheckbox.checked = true;
+                    }
+                    updateCategoryDisplayCount();
+                });
+            });
 
-            updateCategoryDisplayCount(); 
+            updateCategoryDisplayCount();
 
             // --- 4. Delete Modal Logic --- 
 
-            function showModal(message, callback) { 
-                modalMessage.textContent = message; 
-                confirmAction = callback; 
-                modal.style.display = 'flex'; 
-            } 
+            function showModal(message, callback) {
+                modalMessage.textContent = message;
+                confirmAction = callback;
+                modal.style.display = 'flex';
+            }
 
-            modalConfirmBtn.onclick = () => { 
-                modal.style.display = 'none'; 
-                if (confirmAction) { 
-                    confirmAction(true); 
-                } 
-                confirmAction = null; 
-            }; 
+            modalConfirmBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (confirmAction) {
+                    confirmAction(true);
+                }
+                confirmAction = null;
+            };
 
-            modalCancelBtn.onclick = () => { 
-                modal.style.display = 'none'; 
-                showToast('Deletion cancelled.', 'error');  
-                confirmAction = null; 
-            }; 
+            modalCancelBtn.onclick = () => {
+                modal.style.display = 'none';
+                showToast('Deletion cancelled.', 'error');
+                confirmAction = null;
+            };
 
-            deleteButtons.forEach(button => { 
-                button.addEventListener('click', (event) => { 
-                    const transactionId = button.getAttribute('data-transaction-id'); 
-                    const form = button.closest('form'); 
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const transactionId = button.getAttribute('data-transaction-id');
+                    const form = button.closest('form');
 
-                    showModal( 
-                        'Are you sure you want to delete Transaction ID: ' + transactionId + '? This action cannot be undone.', 
-                        (confirmed) => { 
-                            if (confirmed) { 
-                                form.submit(); 
-                            } 
-                        } 
-                    ); 
-                }); 
-            }); 
+                    showModal(
+                        'Are you sure you want to delete Transaction ID: ' + transactionId + '? This action cannot be undone.',
+                        (confirmed) => {
+                            if (confirmed) {
+                                form.submit();
+                            }
+                        }
+                    );
+                });
+            });
 
             // --- 5. Handle Filter Submission --- 
-            const filterForm = document.getElementById('filter-form'); 
-            filterForm.addEventListener('submit', function (event) { 
+            const filterForm = document.getElementById('filter-form');
+            filterForm.addEventListener('submit', function (event) {
                 // Before submission, disable the redundant 'Select All'/'Clear All' checkboxes 
                 // so their values aren't submitted, only the 'categoryIds' checkboxes are needed.
-                if (clearAllCheckbox.checked || selectAllCheckbox.checked) { 
-                    categoryCheckboxes.forEach(cb => cb.disabled = true); 
+                if (clearAllCheckbox.checked || selectAllCheckbox.checked) {
+                    categoryCheckboxes.forEach(cb => cb.disabled = true);
                 }
             });
-            
+
             // Re-enable checkboxes after a filter submission is complete (e.g., on page load)
-            window.addEventListener('load', function() {
-                 categoryCheckboxes.forEach(cb => cb.disabled = false);
+            window.addEventListener('load', function () {
+                categoryCheckboxes.forEach(cb => cb.disabled = false);
             });
         }); 
-    </script> 
-</body> 
+    </script>
+</body>
 
 </html>

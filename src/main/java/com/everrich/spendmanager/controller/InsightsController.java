@@ -31,6 +31,7 @@ public class InsightsController {
     // URL: /insights
     @GetMapping
     public String showInsightsPage(Model model) {
+        model.addAttribute("appName", "EverRich");
         // Returns the HTML template
         return "insights"; 
     }
