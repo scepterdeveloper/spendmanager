@@ -1,167 +1,125 @@
 package com.everrich.spendmanager.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import com.everrich.spendmanager.entities.TransactionOperation;
 
-import org.springframework.ai.vectorstore.SearchRequest;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.codec.StringCodec;
+import io.lettuce.core.output.CommandOutput;
+import io.lettuce.core.output.StatusOutput;
+import io.lettuce.core.protocol.CommandArgs;
+import io.lettuce.core.protocol.ProtocolKeyword;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 
 @Service
 public class VectorStoreService {
 
-    private final VectorStore vectorStore;
+    // private final VectorStore vectorStore;
     private final ChatClient chatClient;
+    private RedisAdapter redisAdapter;
+    private static final Logger log = LoggerFactory.getLogger(VectorStoreService.class);
 
-    public VectorStoreService(VectorStore vectorStore, ChatClient.Builder chatClientBuilder) {
-        this.vectorStore = vectorStore;
+    public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder.build();
+        this.redisAdapter = redisAdapter;
+        this.createTransactionIndex();
     }
 
-/**
- * Creates Documents from a user's manual category correction and stores them
- * in the VectorStore for future RAG queries. This includes **Data
- * Augmentation** using the Description and the Operation for high retrieval specificity.
- * * @param transactionDescription The raw description to be embedded.
- * @param correctCategory        The human-corrected category (the knowledge).
- * @param amount                 The transaction amount (ignored for indexing).
- * @param operation              🟢 The operation type (PLUS or MINUS).
- */
-public void learnCorrectCategory(String transactionDescription, String correctCategory, double amount, TransactionOperation operation) {
+    private void createTransactionIndex() {
 
-    // 1. 🟢 Apply the cleaning logic to the description before indexing
-    String cleanedDescription = normalizeDescription(transactionDescription);
-    String operationName = operation.name(); // Get the string "PLUS" or "MINUS"
+        log.info("Creating index in Redis...Index Name: " + redisAdapter.getIndexName());
+        RedisClient redisClient = RedisClient.create(RedisURI.create(redisAdapter.getRedisURI()));
+        StatefulRedisConnection<String, String> connection = redisClient.connect();
+        RedisCommands<String, String> syncCommands = connection.sync();
+        ProtocolKeyword ftCreateCommand = new ProtocolKeyword() {
+            public byte[] getBytes() {
+                return "FT.CREATE".getBytes(StandardCharsets.UTF_8);
+            }
+        };
 
-    // 2. 🟢 CONCATENATE ALL KNOWLEDGE: Description | OPERATION | Category
-    // Example content: "paypal europe | MINUS | Internal Transfer - Outgoing"
-    String contentWithOperationAndCategory = cleanedDescription + 
-                                           " | " + operationName + 
-                                           " | " + correctCategory;
+        CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
+        argsBuilder.add(redisAdapter.getIndexName());
+        argsBuilder.add("ON").add("HASH");
+        argsBuilder.add("PREFIX").add(1).add("doc:");
+        argsBuilder.add("SCHEMA");
+        argsBuilder.add("description_op").add("TEXT");
+        argsBuilder.add("content_payload").add("TEXT");
+        argsBuilder.add("category").add("TAG");
+        argsBuilder.add("operation").add("TAG");
+        argsBuilder.add("vector").add("AS").add("vector");
+        argsBuilder.add("VECTOR");
+        argsBuilder.add("FLAT");
+        argsBuilder.add("6");
+        argsBuilder.add("TYPE").add("FLOAT32");
+        argsBuilder.add("DIM").add(redisAdapter.getVectorDimension());
+        argsBuilder.add("DISTANCE_METRIC").add("COSINE");
 
-    // 3. Define the minimal metadata
-    Map<String, Object> metadata = Map.of(
-            "category", correctCategory,
-            "operation", operationName // Store operation in metadata as well (for redundancy)
-    );
+        try {
 
-    // 4. Data Augmentation: Index multiple versions for better retrieval (higher recall)
-    List<Document> documentsToStore = new ArrayList<>();
-    
-    // --- Strategy 1: Full Description + Operation (Search Key) ---
-    // The searchable key includes the operation, but the content holds all the knowledge.
-    String searchKey1 = cleanedDescription + " " + operationName; 
-    
-    // Store the full knowledge string as the content payload.
-    documentsToStore.add(new Document(contentWithOperationAndCategory, metadata));
+            CommandOutput<String, String, String> output = new StatusOutput<>(StringCodec.UTF8);
+            String result = syncCommands.dispatch(ftCreateCommand, output, argsBuilder);
+            log.info("FT.CREATE command executed.");
+            log.info("Result: " + result);
 
-    // --- Strategy 2: Key Vendor Phrases + Operation (CRITICAL for specificity) ---
-    String[] words = cleanedDescription.split(" ");
-    
-    // Index the first two words + Operation (e.g., "paypal europe MINUS")
-    if (words.length >= 2) {
-        String keyPhrase = words[0] + " " + words[1];
-        if (keyPhrase.length() > 5) {
-            String keyPhraseContent = keyPhrase + " | " + operationName + " | " + correctCategory;
-            documentsToStore.add(new Document(keyPhraseContent, metadata));
+        } catch (Exception e) {
+            log.info("Index already exists, or creation failed.");
+        } finally {            
+            connection.close();
+            redisClient.shutdown();
+            log.info("\nConnection closed.");
         }
     }
 
-    // Index the single most important word + Operation (e.g., "paypal MINUS")
-    if (words.length >= 1) {
-        String singleKeyword = words[0];
-        if (singleKeyword.length() > 3) {
-            String singleKeywordContent = singleKeyword + " | " + operationName + " | " + correctCategory;
-            documentsToStore.add(new Document(singleKeywordContent, metadata));
-        }
+    public void learnCorrectCategory(String transactionDescription, String correctCategory, double amount,
+            TransactionOperation operation) {
+
+        // 1. 🟢 Apply the cleaning logic to the description before indexing
+        String cleanedDescription = normalizeDescription(transactionDescription);
+        String operationName = operation.name(); // Get the string "PLUS" or "MINUS"
+        redisAdapter.createDocument(correctCategory, cleanedDescription, operationName);
+
     }
 
-    // 5. Add all generated documents.
-    vectorStore.add(documentsToStore);
+    public String similaritySearch(String description, String operationName) {
 
-    // 🟢 LOGGING: Confirming Vector Store update
-    System.out.println("--- RAG LEARNING EVENT ---");
-    System.out.println("Indexed " + documentsToStore.size() + " documents to Vector Store:");
-    System.out.println("  Content with Operation and Category: '" + contentWithOperationAndCategory + "'");
-    System.out.println("--------------------------");
-}
-    /**
-     * RAG Retrieval (Querying): Cleans the description before searching the
-     * VectorStore.
-     * * @param description The raw transaction description to search for.
-     * 
-     * @param topK The number of nearest documents to retrieve. **Increased to 10**
-     *             for better recall.
-     * @return A list of relevant Document objects (context).
-     */
-    public List<Document> similaritySearch(String description, int topK) {
-        // 1. Apply the same cleaning logic to the query text
         String queryText = normalizeDescription(description);
+        List<RedisDocument> searchResults = redisAdapter.searchDocuments(queryText, operationName);
+        String context = "";
 
-        // 2. Perform the search using the cleaned text
-        return vectorStore.similaritySearch(
-                SearchRequest.builder()
-                        .query(queryText)
-                        .topK(topK)
-                        .build());
-    }
+        for (RedisDocument redisDocument : searchResults) {
 
-    // -------------------------------------------------------------------------
-    // RAG HELPER FUNCTION
-    // -------------------------------------------------------------------------
-
-    /**
-     * PRIVATE HELPER: Cleans transaction text by removing numbers and punctuation.
-     * This must be applied consistently to both indexing and querying text.
-     */
-    private String normalizeDescription_old(String description) {
-
-        if (description == null) {
-            return "";
+            context += "Description: " + redisDocument.getFields().get("description_op") + ", Corrected Category: "
+                    + redisDocument.getFields().get("category") + "\n";
         }
 
-        // 1. Convert to lowercase
-        String cleaned = description.toLowerCase();
-
-        // 2. Remove all digits (0-9)
-        cleaned = cleaned.replaceAll("\\d", "");
-
-        // 3. Remove most common special characters (keeping only letters and spaces)
-        cleaned = cleaned.replaceAll("[^a-z\\s]", " ");
-
-        // 4. Collapse multiple spaces and trim
-        cleaned = cleaned.replaceAll("\\s+", " ").trim();
-
-        return cleaned;
+        return context;
     }
-
-    // Assuming this method exists within a class that has access to ChatClient
-    // chatClient
-    // and LlmGateway (recommended). For simplicity, using raw ChatClient here:
 
     // LLM based
     private String normalizeDescription(String transactionDescription) {
 
         // 1. Define the prompt template string
         String template = """
-                You are an expert financial text processor. Analyze the following raw transaction description and return only the single, most essential vendor or service name that defines the transaction's purpose.
+                You are an expert financial text processor. Analyze the following raw transaction description and return the keywords as a string that best describes the transaction. Below are some samples:
 
-                RULES:
-                1. Return only the core name, nothing else.
-                2. Examples:
+                Examples:
                    - Input: 'UNICREDIT BANK GMBH Kto.0046348710 PER 31.07.25...'
-                   - Output: Unicredit Bank
-                   - Input: 'Yau Yuet Chi INGDDEFF DE83500105175435016080 Le...'
-                   - Output: Yau Yeut Chi
-                   - Input: 'PayPal Europe S.a.r.l. et Cie S.C.A 10436995017...'
-                   - Output: PayPal
+                   - Output: Unicredit Bank GMBH
+                   - Input: 'Bargeldein-/auszahlung Deutsche Bank//Wiesloch/DE 2025-10-23T19:07:36 ...'
+                   - Output: Bargeldein-/auszahlung Deutsche Bank Wiesloch
+                   - Input: 'Überweisung (Echtzeit) Sandeep Joseph COBADEHD055 DE212004115508674269...'
+                   - Output: Überweisung Echtzeit Sandeep Joseph
 
                 Raw Description: {transactionDescription}
                             """;
@@ -180,6 +138,5 @@ public void learnCorrectCategory(String transactionDescription, String correctCa
                 .call()
                 .content()
                 .trim(); // Always good practice to trim the output
-
     }
 }
