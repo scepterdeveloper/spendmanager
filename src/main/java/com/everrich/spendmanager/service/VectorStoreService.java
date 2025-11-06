@@ -40,8 +40,8 @@ public class VectorStoreService {
         if (chatClient == null) {
             log.info("Chat Client is null while wiring VectorStore");
         }
-
-        this.createTransactionIndex();
+        log.info("VectorStore constructor through...");
+        //this.createTransactionIndex();
     }
 
     private void createTransactionIndex() {
