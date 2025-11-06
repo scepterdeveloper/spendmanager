@@ -33,12 +33,27 @@ public class VectorStoreService {
     public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder.build();
         this.redisAdapter = redisAdapter;
+
+        if (redisAdapter == null) {
+            log.info("RedisAdapter is null while wiring VectorStore");
+        }
+        if (chatClient == null) {
+            log.info("Chat Client is null while wiring VectorStore");
+        }
+
         this.createTransactionIndex();
     }
 
     private void createTransactionIndex() {
 
-        log.info("Creating index in Redis...Index Name: " + redisAdapter.getIndexName());
+        try {
+            log.info("Creating index in Redis...Index Name: " + redisAdapter.getIndexName());
+            log.info("Connection Params: Redis URI - " + redisAdapter.getRedisURI());
+
+        } catch (Exception e) {
+            log.info("Error connecting to Redis: " + e.getMessage());
+        }
+
         RedisClient redisClient = RedisClient.create(RedisURI.create(redisAdapter.getRedisURI()));
         StatefulRedisConnection<String, String> connection = redisClient.connect();
         RedisCommands<String, String> syncCommands = connection.sync();
@@ -74,7 +89,7 @@ public class VectorStoreService {
 
         } catch (Exception e) {
             log.info("Index already exists, or creation failed.");
-        } finally {            
+        } finally {
             connection.close();
             redisClient.shutdown();
             log.info("\nConnection closed.");
