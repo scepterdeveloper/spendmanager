@@ -41,44 +41,50 @@ public class VectorStoreService {
             log.info("Chat Client is null while wiring VectorStore");
         }
         log.info("VectorStore constructor through...");
-        //this.createTransactionIndex();
+        this.createTransactionIndex();
     }
 
     private void createTransactionIndex() {
 
+        RedisClient redisClient = null;
+        StatefulRedisConnection<String, String> connection = null;
+        RedisCommands<String, String> syncCommands = null;
+        ProtocolKeyword ftCreateCommand = null;
+        CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
+
         try {
             log.info("Creating index in Redis...Index Name: " + redisAdapter.getIndexName());
             log.info("Connection Params: Redis URI - " + redisAdapter.getRedisURI());
+            redisClient = RedisClient.create(RedisURI.create(redisAdapter.getRedisURI()));
+            connection = redisClient.connect();
+            syncCommands = connection.sync();
+            ftCreateCommand = new ProtocolKeyword() {
+                public byte[] getBytes() {
+                    return "FT.CREATE".getBytes(StandardCharsets.UTF_8);
+                }
+            };
+
+            argsBuilder = new CommandArgs<>(StringCodec.UTF8);
+            argsBuilder.add(redisAdapter.getIndexName());
+            argsBuilder.add("ON").add("HASH");
+            argsBuilder.add("PREFIX").add(1).add("doc:");
+            argsBuilder.add("SCHEMA");
+            argsBuilder.add("description_op").add("TEXT");
+            argsBuilder.add("content_payload").add("TEXT");
+            argsBuilder.add("category").add("TAG");
+            argsBuilder.add("operation").add("TAG");
+            argsBuilder.add("vector").add("AS").add("vector");
+            argsBuilder.add("VECTOR");
+            argsBuilder.add("FLAT");
+            argsBuilder.add("6");
+            argsBuilder.add("TYPE").add("FLOAT32");
+            argsBuilder.add("DIM").add(redisAdapter.getVectorDimension());
+            argsBuilder.add("DISTANCE_METRIC").add("COSINE");
 
         } catch (Exception e) {
             log.info("Error connecting to Redis: " + e.getMessage());
+            return;
         }
-
-        RedisClient redisClient = RedisClient.create(RedisURI.create(redisAdapter.getRedisURI()));
-        StatefulRedisConnection<String, String> connection = redisClient.connect();
-        RedisCommands<String, String> syncCommands = connection.sync();
-        ProtocolKeyword ftCreateCommand = new ProtocolKeyword() {
-            public byte[] getBytes() {
-                return "FT.CREATE".getBytes(StandardCharsets.UTF_8);
-            }
-        };
-
-        CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
-        argsBuilder.add(redisAdapter.getIndexName());
-        argsBuilder.add("ON").add("HASH");
-        argsBuilder.add("PREFIX").add(1).add("doc:");
-        argsBuilder.add("SCHEMA");
-        argsBuilder.add("description_op").add("TEXT");
-        argsBuilder.add("content_payload").add("TEXT");
-        argsBuilder.add("category").add("TAG");
-        argsBuilder.add("operation").add("TAG");
-        argsBuilder.add("vector").add("AS").add("vector");
-        argsBuilder.add("VECTOR");
-        argsBuilder.add("FLAT");
-        argsBuilder.add("6");
-        argsBuilder.add("TYPE").add("FLOAT32");
-        argsBuilder.add("DIM").add(redisAdapter.getVectorDimension());
-        argsBuilder.add("DISTANCE_METRIC").add("COSINE");
 
         try {
 
