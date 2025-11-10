@@ -8,24 +8,12 @@ import org.springframework.stereotype.Service;
 
 import com.everrich.spendmanager.entities.TransactionOperation;
 
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.codec.StringCodec;
-import io.lettuce.core.output.CommandOutput;
-import io.lettuce.core.output.StatusOutput;
-import io.lettuce.core.protocol.CommandArgs;
-import io.lettuce.core.protocol.ProtocolKeyword;
-
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class VectorStoreService {
 
-    // private final VectorStore vectorStore;
     private final ChatClient chatClient;
     private RedisAdapter redisAdapter;
     private static final Logger log = LoggerFactory.getLogger(VectorStoreService.class);
@@ -35,72 +23,17 @@ public class VectorStoreService {
         this.redisAdapter = redisAdapter;
 
         if (redisAdapter == null) {
-            log.info("RedisAdapter is null while wiring VectorStore");
-        }
-        if (chatClient == null) {
-            log.info("Chat Client is null while wiring VectorStore");
-        }
-        log.info("VectorStore constructor through...");
-        this.createTransactionIndex();
-    }
-
-    private void createTransactionIndex() {
-
-        RedisClient redisClient = null;
-        StatefulRedisConnection<String, String> connection = null;
-        RedisCommands<String, String> syncCommands = null;
-        ProtocolKeyword ftCreateCommand = null;
-        CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
-
-        try {
-            log.info("Creating index in Redis...Index Name: " + redisAdapter.getIndexName());
-            log.info("Connection Params: Redis URI - " + redisAdapter.getRedisURI());
-            redisClient = RedisClient.create(RedisURI.create(redisAdapter.getRedisURI()));
-            connection = redisClient.connect();
-            syncCommands = connection.sync();
-            ftCreateCommand = new ProtocolKeyword() {
-                public byte[] getBytes() {
-                    return "FT.CREATE".getBytes(StandardCharsets.UTF_8);
-                }
-            };
-
-            argsBuilder = new CommandArgs<>(StringCodec.UTF8);
-            argsBuilder.add(redisAdapter.getIndexName());
-            argsBuilder.add("ON").add("HASH");
-            argsBuilder.add("PREFIX").add(1).add("doc:");
-            argsBuilder.add("SCHEMA");
-            argsBuilder.add("description_op").add("TEXT");
-            argsBuilder.add("content_payload").add("TEXT");
-            argsBuilder.add("category").add("TAG");
-            argsBuilder.add("operation").add("TAG");
-            argsBuilder.add("vector").add("AS").add("vector");
-            argsBuilder.add("VECTOR");
-            argsBuilder.add("FLAT");
-            argsBuilder.add("6");
-            argsBuilder.add("TYPE").add("FLOAT32");
-            argsBuilder.add("DIM").add(redisAdapter.getVectorDimension());
-            argsBuilder.add("DISTANCE_METRIC").add("COSINE");
-
-        } catch (Exception e) {
-            log.info("Error connecting to Redis: " + e.getMessage());
+            log.error("RedisAdapter is null while wiring VectorStore");
             return;
         }
-
-        try {
-
-            CommandOutput<String, String, String> output = new StatusOutput<>(StringCodec.UTF8);
-            String result = syncCommands.dispatch(ftCreateCommand, output, argsBuilder);
-            log.info("FT.CREATE command executed.");
-            log.info("Result: " + result);
-
-        } catch (Exception e) {
-            log.info("Index already exists, or creation failed.");
-        } finally {
-            connection.close();
-            redisClient.shutdown();
-            log.info("\nConnection closed.");
+        if (chatClient == null) {
+            log.error("Chat Client is null while wiring VectorStore");
+            return;
         }
+        log.info("VectorStore constructor through...");
+        redisAdapter.createTransactionIndex();
     }
+
 
     public void learnCorrectCategory(String transactionDescription, String correctCategory, double amount,
             TransactionOperation operation) {

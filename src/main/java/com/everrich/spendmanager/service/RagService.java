@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import com.everrich.spendmanager.entities.TransactionOperation;
 
-import org.springframework.ai.document.Document;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +13,6 @@ import org.springframework.core.io.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -55,8 +53,6 @@ public class RagService {
         }
         log.info("-------------------------");
 
-        // Get a list of all available categories to restrict the model's output
-        // (Unchanged)
         String availableCategories = categoryService.findAll().stream()
                 .map(c -> c.getName())
                 .collect(Collectors.joining(", "));

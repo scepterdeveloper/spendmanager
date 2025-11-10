@@ -8,6 +8,7 @@ import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.output.ArrayOutput;
 import io.lettuce.core.output.CommandOutput;
 import io.lettuce.core.output.IntegerOutput;
+import io.lettuce.core.output.StatusOutput;
 import io.lettuce.core.protocol.CommandArgs;
 import io.lettuce.core.protocol.ProtocolKeyword;
 
@@ -42,6 +43,8 @@ public class RedisAdapter {
     @Value("${com.everrich.properties.targetvectordimension}")
     private int TARGET_VECTOR_DIMENSION;
 
+    private final RedisClient redisClient;
+
     private static final Logger log = LoggerFactory.getLogger(RedisAdapter.class);
 
     // Define the custom commands (copied from RedisTestController)
@@ -59,6 +62,10 @@ public class RedisAdapter {
         }
     };
 
+    public RedisAdapter(RedisClient redisClient) {
+        this.redisClient = redisClient;
+    }
+
     private byte[] convertFloatsToRedisByteArray(float[] floats) {
         ByteBuffer buffer = ByteBuffer.allocate(floats.length * Float.BYTES);
         // RedisSearch expects little-endian byte order for vector data
@@ -68,6 +75,60 @@ public class RedisAdapter {
             buffer.putFloat(f);
         }
         return buffer.array();
+    }
+
+    public void createTransactionIndex() {
+
+        StatefulRedisConnection<String, String> connection = null;
+        RedisCommands<String, String> syncCommands = null;
+        ProtocolKeyword ftCreateCommand = null;
+        CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
+
+        try {
+            log.info("Creating index in Redis...Index Name: " + INDEX_NAME);
+            connection = redisClient.connect();
+            syncCommands = connection.sync();
+            ftCreateCommand = new ProtocolKeyword() {
+                public byte[] getBytes() {
+                    return "FT.CREATE".getBytes(StandardCharsets.UTF_8);
+                }
+            };
+
+            argsBuilder = new CommandArgs<>(StringCodec.UTF8);
+            argsBuilder.add(INDEX_NAME);
+            argsBuilder.add("ON").add("HASH");
+            argsBuilder.add("PREFIX").add(1).add("doc:");
+            argsBuilder.add("SCHEMA");
+            argsBuilder.add("description_op").add("TEXT");
+            argsBuilder.add("content_payload").add("TEXT");
+            argsBuilder.add("category").add("TAG");
+            argsBuilder.add("operation").add("TAG");
+            argsBuilder.add("vector").add("AS").add("vector");
+            argsBuilder.add("VECTOR");
+            argsBuilder.add("FLAT");
+            argsBuilder.add("6");
+            argsBuilder.add("TYPE").add("FLOAT32");
+            argsBuilder.add("DIM").add(this.TARGET_VECTOR_DIMENSION);
+            argsBuilder.add("DISTANCE_METRIC").add("COSINE");
+
+        } catch (Exception e) {
+            log.error("Error connecting to Redis: " + e.getMessage(), e);
+            return;
+        }
+
+        try {
+
+            CommandOutput<String, String, String> output = new StatusOutput<>(StringCodec.UTF8);
+            String result = syncCommands.dispatch(ftCreateCommand, output, argsBuilder);
+            log.info("FT.CREATE command executed.");
+            log.info("Result: " + result);
+
+        } catch (Exception e) {
+            log.info("Index already exists, or creation failed.");
+        } finally {
+            connection.close();
+            log.info("\nConnection closed.");
+        }
     }
 
     private float[] generateEmbeddingVector(String content, String mode) throws Exception {
@@ -114,9 +175,8 @@ public class RedisAdapter {
     }
 
     public String createDocument(String categoryName, String description, String operation) {
-        RedisClient redisClient = null;
-        StatefulRedisConnection<String, String> connection = null;
 
+        StatefulRedisConnection<String, String> connection = null;
         log.info("Starting creation...with description " + description);
         log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
 
@@ -124,7 +184,6 @@ public class RedisAdapter {
             String searchKey = "doc:" + UUID.randomUUID().toString();
             String contentPayload = description + " " + operation + " " + categoryName;
 
-            redisClient = RedisClient.create(RedisURI.create(REDIS_URI));
             connection = redisClient.connect();
             RedisCommands<String, String> syncCommands = connection.sync();
 
@@ -155,8 +214,6 @@ public class RedisAdapter {
         } finally {
             if (connection != null)
                 connection.close();
-            if (redisClient != null)
-                redisClient.shutdown();
         }
     }
 
@@ -164,7 +221,6 @@ public class RedisAdapter {
 
         log.info("Starting search...with description " + description);
         log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
-        RedisClient redisClient = null;
         StatefulRedisConnection<String, String> connection = null;
         RedisCommands<String, String> syncCommands = null;
 
@@ -172,7 +228,6 @@ public class RedisAdapter {
             float[] queryVectorFloats = generateEmbeddingVector(description + " " + operation, "query");
             byte[] queryVectorByteArray = convertFloatsToRedisByteArray(queryVectorFloats);
 
-            redisClient = RedisClient.create(RedisURI.create(REDIS_URI));
             connection = redisClient.connect();
             syncCommands = connection.sync();
 
@@ -215,8 +270,6 @@ public class RedisAdapter {
             // --- 6. Cleanup ---
             if (connection != null)
                 connection.close();
-            if (redisClient != null)
-                redisClient.shutdown();
             log.info("Connection closed after search.");
         }
 
