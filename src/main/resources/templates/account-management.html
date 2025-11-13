@@ -219,6 +219,65 @@
             color: #1F2937;
             border: none;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 1rem; /* Adjust overall padding */
+            }
+
+            .page-header h2 {
+                font-size: 1.5rem; /* Smaller heading */
+            }
+
+            .data-table-wrapper { /* New wrapper for scrollable table */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+
+            .data-table {
+                min-width: 600px; /* Ensure table content doesn't shrink too much */
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.75rem; /* Smaller padding in table cells */
+                font-size: 0.875rem; /* Smaller font size in table */
+            }
+
+            .btn-primary, .btn-cancel {
+                width: 100%; /* Full width buttons */
+                margin-top: 0.5rem;
+                margin-left: 0; /* Remove left margin for cancel button */
+            }
+
+            .modal-content {
+                width: 95%; /* Slightly wider modal on small screens */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h2 {
+                font-size: 1.25rem; /* Even smaller heading */
+            }
+
+            .collapsible-header h3 {
+                font-size: 1rem; /* Smaller collapsible header title */
+            }
+
+            .form-group label {
+                font-size: 0.9rem; /* Smaller form labels */
+            }
+
+            .form-group input, .form-group textarea {
+                padding: 0.6rem; /* Smaller input padding */
+                font-size: 0.9rem;
+            }
+
+            .btn-edit, .btn-delete {
+                padding: 0.4rem 0.8rem; /* Smaller action buttons */
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -283,36 +342,37 @@
         </div>
 
         <h3>Existing Accounts</h3>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="account : ${accounts}">
-                    <td th:text="${account.id}">1</td>
-                    <td th:text="${account.name}">Checking Account</td>
-                    <td th:text="${account.description}">Main checking account for daily expenses.</td>
-                    <td>
-                        <a th:href="@{/accounts/edit/{id}(id=${account.id})}" class="btn-edit">
-                            Edit
-                        </a>
-                        
-                        <form th:action="@{/accounts/{id}/delete(id=${account.id})}" method="post" style="display: inline;" class="delete-account-form">
-                            <button type="button" class="btn-delete" data-account-id="${account.id}">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                <tr th:if="${accounts.empty}">
-                    <td colspan="4">No accounts defined yet. Please add a new one above.</td>
-                </tr>
-            </tbody>
-        </table>
-        
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="account : ${accounts}">
+                        <td th:text="${account.id}">1</td>
+                        <td th:text="${account.name}">Checking Account</td>
+                        <td th:text="${account.description}">Main checking account for daily expenses.</td>
+                        <td>
+                            <a th:href="@{/accounts/edit/{id}(id=${account.id})}" class="btn-edit">
+                                Edit
+                            </a>
+                            
+                            <form th:action="@{/accounts/{id}/delete(id=${account.id})}" method="post" style="display: inline;" class="delete-account-form">
+                                <button type="button" class="btn-delete" data-account-id="${account.id}">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${accounts.empty}">
+                        <td colspan="4">No accounts defined yet. Please add a new one above.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
     
     <script>

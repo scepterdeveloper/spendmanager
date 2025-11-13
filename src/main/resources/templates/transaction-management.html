@@ -337,6 +337,84 @@
 
         /* FIX: Ensure Edit/Delete buttons are adjacent */
         /* ... rest of the CSS ... */
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 1rem; /* Adjust overall padding */
+            }
+
+            .page-header h2 {
+                font-size: 1.5rem; /* Smaller heading */
+            }
+
+            .filter-container {
+                grid-template-columns: 1fr; /* Stack filter elements */
+            }
+
+            .filter-row {
+                flex-direction: column; /* Stack date inputs */
+                gap: 0.5rem;
+            }
+
+            .filter-col-date input {
+                width: 100%;
+            }
+
+            .filter-actions {
+                text-align: center; /* Center filter button */
+                grid-column: auto;
+                grid-row: auto;
+            }
+
+            .data-table-wrapper { /* New wrapper for scrollable table */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+
+            .data-table {
+                min-width: 600px; /* Ensure table content doesn't shrink too much */
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.75rem; /* Smaller padding in table cells */
+                font-size: 0.875rem; /* Smaller font size in table */
+            }
+
+            .btn-filter, .btn-primary {
+                width: 100%; /* Full width buttons */
+                margin-top: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h2 {
+                font-size: 1.25rem; /* Even smaller heading */
+            }
+
+            .form-group label {
+                font-size: 0.9rem; /* Smaller form labels */
+            }
+
+            select, input[type="date"], input[type="text"] {
+                padding: 0.6rem; /* Smaller input padding */
+                font-size: 0.9rem;
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.6rem; /* Even smaller table padding */
+                font-size: 0.8rem; /* Even smaller table font */
+            }
+
+            .action-buttons-container {
+                flex-direction: column; /* Stack action buttons */
+                gap: 0.5rem;
+            }
+
+            .btn-edit, .btn-delete {
+                width: 100%; /* Full width action buttons */
+            }
+        }
     </style>
 </head>
 
@@ -449,74 +527,75 @@
         </div>
 
         <h3>Transactions</h3>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Category</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="transaction : ${transactions}">
-                    <td th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</td>
-                    <td th:text="${transaction.description}">Netflix Subscription</td>
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Category</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="transaction : ${transactions}">
+                        <td th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</td>
+                        <td th:text="${transaction.description}">Netflix Subscription</td>
 
-                    <td th:classappend="${
-                        transaction.operation != null and transaction.operation.name() == 'MINUS' 
-                        ? 'amount-negative' 
-                        : 'amount-positive'
-                    }">
-                        <span
-                            th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</span>
-                        €
+                        <td th:classappend="${
+                            transaction.operation != null and transaction.operation.name() == 'MINUS' 
+                            ? 'amount-negative' 
+                            : 'amount-positive'
+                        }">
+                            <span
+                                th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</span>
+                            €
 
-                    </td>
-                    <!--<td th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</td>-->
-                    <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
-                    <td>
-                        <div class="action-buttons-container">
-                            <a th:href="@{/transactions/edit/{id}( 
-                                    id=${transaction.id},  
-                                    timeframe=${selectedTimeframe},  
-                                    startDate=${selectedStartDate},  
-                                    endDate=${selectedEndDate},  
-                                    categoryIds=${selectedCategoryIds},
-                                    query=${selectedQuery})}" class="btn-edit">
-                                Edit
-                            </a>
+                        </td>
+                        <!--<td th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</td>-->
+                        <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
+                        <td>
+                            <div class="action-buttons-container">
+                                <a th:href="@{/transactions/edit/{id}( 
+                                        id=${transaction.id},  
+                                        timeframe=${selectedTimeframe},  
+                                        startDate=${selectedStartDate},  
+                                        endDate=${selectedEndDate},  
+                                        categoryIds=${selectedCategoryIds},
+                                        query=${selectedQuery})}" class="btn-edit">
+                                    Edit
+                                </a>
 
-                            <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post"
-                                class="delete-transaction-form">
+                                <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post"
+                                    class="delete-transaction-form">
 
-                                <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}"
-                                    th:value="${selectedTimeframe}" />
-                                <input type="hidden" name="startDate" th:if="${selectedStartDate != null}"
-                                    th:value="${selectedStartDate}" />
-                                <input type="hidden" name="endDate" th:if="${selectedEndDate != null}"
-                                    th:value="${selectedEndDate}" />
-                                <input type="hidden" name="query" th:if="${selectedQuery != null}"
-                                    th:value="${selectedQuery}" />
+                                    <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}"
+                                        th:value="${selectedTimeframe}" />
+                                    <input type="hidden" name="startDate" th:if="${selectedStartDate != null}"
+                                        th:value="${selectedStartDate}" />
+                                    <input type="hidden" name="endDate" th:if="${selectedEndDate != null}"
+                                        th:value="${selectedEndDate}" />
+                                    <input type="hidden" name="query" th:if="${selectedQuery != null}"
+                                        th:value="${selectedQuery}" />
 
-                                <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
-                                    <input type="hidden" name="categoryIds" th:value="${catId}" />
-                                </div>
+                                    <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
+                                        <input type="hidden" name="categoryIds" th:value="${catId}" />
+                                    </div>
 
-                                <button type="button" class="btn-delete"
-                                    th:attr="data-transaction-id=${transaction.id}">Delete</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                <tr th:if="${transactions.empty}">
-                    <td colspan="5" style="text-align: center; padding: 2rem;">No transactions match the current filter
-                        criteria.</td>
-                </tr>
-            </tbody>
-        </table>
-
+                                    <button type="button" class="btn-delete"
+                                        th:attr="data-transaction-id=${transaction.id}">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${transactions.empty}">
+                        <td colspan="5" style="text-align: center; padding: 2rem;">No transactions match the current filter
+                            criteria.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>

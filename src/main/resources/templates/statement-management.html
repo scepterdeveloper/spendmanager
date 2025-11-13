@@ -82,6 +82,73 @@
         .action-link:hover {
             text-decoration: underline;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 1rem; /* Adjust overall padding */
+            }
+
+            .page-header h2 {
+                font-size: 1.5rem; /* Smaller heading */
+            }
+
+            .upload-section {
+                padding: 1.5rem; /* Smaller padding for upload section */
+            }
+
+            .upload-section h3 {
+                font-size: 1.2rem; /* Smaller heading in upload section */
+            }
+
+            #uploadForm > div {
+                flex-direction: column; /* Stack elements in upload form */
+                gap: 1rem;
+            }
+
+            #accountSelect, #fileInput {
+                margin-right: 0; /* Remove margin for stacked elements */
+                width: 100%;
+            }
+
+            #uploadButton {
+                width: 100%; /* Full width upload button */
+            }
+
+            .data-table-wrapper { /* New wrapper for scrollable table */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+
+            .data-table {
+                min-width: 600px; /* Ensure table content doesn't shrink too much */
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.75rem; /* Smaller padding in table cells */
+                font-size: 0.875rem; /* Smaller font size in table */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h2 {
+                font-size: 1.25rem; /* Even smaller heading */
+            }
+
+            .upload-section h3 {
+                font-size: 1rem; /* Even smaller heading in upload section */
+            }
+
+            #accountSelect, #fileInput, #uploadButton {
+                padding: 0.6rem; /* Smaller input/button padding */
+                font-size: 0.9rem;
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.6rem; /* Even smaller table padding */
+                font-size: 0.8rem; /* Even smaller table font */
+            }
+        }
     </style>
 </head>
 <body>
@@ -121,36 +188,37 @@
 
         <div id="statement-list-section">
             <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--primary-color);">Uploaded Statement History</h3>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>File Name</th>
-                        <th>Account</th>
-                        <th>Upload Time</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="stmt : ${statements}">
-                        <td th:text="${stmt.id}">12345...</td>
-                        <td th:text="${stmt.originalFileName}">BankStatement.pdf</td>
-                        <td th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">My Checking Account</td>
-                        <td th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">01 Jan 2025 10:00</td>
-                        
-                        <td th:text="${stmt.status}" th:classappend="${stmt.status.name() == 'COMPLETED' ? 'status-completed' : 
-                                                                      stmt.status.name() == 'FAILED' ? 'status-failed' : 'status-processing'}">PROCESSING</td>
-                        
-                        <td>
-                            <a th:if="${stmt.status.name() == 'COMPLETED'}" 
-                               th:href="@{/statements/{id}(id=${stmt.id})}" class="action-link">View Details</a>
-                            <span th:unless="${stmt.status.name() == 'COMPLETED'}" class="status-processing">Not Available</span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="data-table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>File Name</th>
+                            <th>Account</th>
+                            <th>Upload Time</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="stmt : ${statements}">
+                            <td th:text="${stmt.id}">12345...</td>
+                            <td th:text="${stmt.originalFileName}">BankStatement.pdf</td>
+                            <td th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">My Checking Account</td>
+                            <td th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">01 Jan 2025 10:00</td>
+                            
+                            <td th:text="${stmt.status}" th:classappend="${stmt.status.name() == 'COMPLETED' ? 'status-completed' : 
+                                                                          stmt.status.name() == 'FAILED' ? 'status-failed' : 'status-processing'}">PROCESSING</td>
+                            
+                            <td>
+                                <a th:if="${stmt.status.name() == 'COMPLETED'}" 
+                                   th:href="@{/statements/{id}(id=${stmt.id})}" class="action-link">View Details</a>
+                                <span th:unless="${stmt.status.name() == 'COMPLETED'}" class="status-processing">Not Available</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
         
     </div>

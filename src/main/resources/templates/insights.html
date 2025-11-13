@@ -247,6 +247,80 @@
         #table-view {
              display: block;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 1rem; /* Adjust overall padding */
+            }
+
+            .page-header h2 {
+                font-size: 1.5rem; /* Smaller heading */
+            }
+
+            .data-table-wrapper { /* New wrapper for scrollable table */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+
+            .data-table {
+                min-width: 600px; /* Ensure table content doesn't shrink too much */
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.75rem; /* Smaller padding in table cells */
+                font-size: 0.875rem; /* Smaller font size in table */
+            }
+
+            .btn-filter, .btn-primary {
+                width: 100%; /* Full width buttons */
+                margin-top: 0.5rem;
+            }
+
+            .filter-container {
+                grid-template-columns: 1fr; /* Stack filter elements */
+            }
+
+            .filter-row {
+                flex-direction: column; /* Stack date inputs */
+                gap: 0.5rem;
+            }
+
+            .filter-col-date input {
+                width: 100%;
+            }
+
+            .filter-actions {
+                text-align: center; /* Center filter button */
+                grid-column: auto;
+                grid-row: auto;
+            }
+
+            .visualization-toggles button {
+                width: 100%; /* Full width toggle buttons */
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h2 {
+                font-size: 1.25rem; /* Even smaller heading */
+            }
+
+            .form-group label {
+                font-size: 0.9rem; /* Smaller form labels */
+            }
+
+            select, input[type="date"], input[type="text"] {
+                padding: 0.6rem; /* Smaller input padding */
+                font-size: 0.9rem;
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.6rem; /* Even smaller table padding */
+                font-size: 0.8rem; /* Even smaller table font */
+            }
+        }
     </style>
 </head>
 
@@ -339,18 +413,20 @@
                 </div>
                 
                 <div id="table-view" class="view-container">
-                    <table id="insights-table" class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Category Name</th>
-                                <th>Cumulated Amount</th>
-                                <th>Percentage</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="3" style="text-align: center; padding: 2rem;">Click 'Go' to generate the spending analysis.</td></tr>
-                        </tbody>
-                    </table>
+                    <div class="data-table-wrapper">
+                        <table id="insights-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Category Name</th>
+                                    <th>Cumulated Amount</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="3" style="text-align: center; padding: 2rem;">Click 'Go' to generate the spending analysis.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div id="chart-view" class="view-container chart-area" style="display: none;">

@@ -48,6 +48,42 @@
             border-radius: 0.25rem;
             margin-bottom: 1rem;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 1rem; /* Adjust overall padding */
+            }
+
+            .page-header h2 {
+                font-size: 1.5rem; /* Smaller heading */
+            }
+
+            .data-table-wrapper { /* New wrapper for scrollable table */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            }
+
+            .data-table {
+                min-width: 600px; /* Ensure table content doesn't shrink too much */
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.75rem; /* Smaller padding in table cells */
+                font-size: 0.875rem; /* Smaller font size in table */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h2 {
+                font-size: 1.25rem; /* Even smaller heading */
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.6rem; /* Even smaller table padding */
+                font-size: 0.8rem; /* Even smaller table font */
+            }
+        }
     </style>
 </head>
 
@@ -76,34 +112,36 @@
             Uploaded: <span th:text="${#temporals.format(statement.uploadDateTime, 'dd MMM yyyy HH:mm')}"></span>
         </p>
 
-        <table class="data-table" th:if="${!transactions.empty}">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Category</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="transaction : ${transactions}">
-                    <td th:text="${transaction.date}">01.01.2025</td>
-                    <td th:text="${transaction.description}">Transaction Description</td>
+        <div class="data-table-wrapper">
+            <table class="data-table" th:if="${!transactions.empty}">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Category</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="transaction : ${transactions}">
+                        <td th:text="${transaction.date}">01.01.2025</td>
+                        <td th:text="${transaction.description}">Transaction Description</td>
 
-                    <td th:classappend="${
-                        transaction.operation != null and transaction.operation.name() == 'MINUS' 
-                        ? 'amount-negative' 
-                        : 'amount-positive'
-                    }">
-                        <span
-                            th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</span>
-                        €
+                        <td th:classappend="${
+                            transaction.operation != null and transaction.operation.name() == 'MINUS' 
+                            ? 'amount-negative' 
+                            : 'amount-positive'
+                        }">
+                            <span
+                                th:text="${#numbers.formatDecimal(transaction.amount, 1, 'COMMA', 2, 'POINT')}">5.99</span>
+                            €
 
-                    </td>
-                    <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
-                </tr>
-            </tbody>
-        </table>
+                        </td>
+                        <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
         <div th:if="${transactions.empty}">
             <p>No transactions were processed for this statement.</p>

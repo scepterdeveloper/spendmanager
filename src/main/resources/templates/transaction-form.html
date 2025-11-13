@@ -104,6 +104,48 @@
         .btn-primary:hover {
             background-color: #059669;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 1rem; /* Adjust overall padding */
+            }
+
+            .page-header h2 {
+                font-size: 1.5rem; /* Smaller heading */
+            }
+
+            .form-wrapper {
+                padding: 1.5rem; /* Smaller padding for form wrapper */
+            }
+
+            input[type="text"],
+            input[type="number"],
+            input[type="date"],
+            select,
+            .btn-primary {
+                max-width: 100%; /* Full width on smaller screens */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h2 {
+                font-size: 1.25rem; /* Even smaller heading */
+            }
+
+            .form-group label {
+                font-size: 0.9rem; /* Smaller form labels */
+            }
+
+            input[type="text"],
+            input[type="number"],
+            input[type="date"],
+            select,
+            .btn-primary {
+                padding: 0.6rem; /* Smaller input/button padding */
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 
