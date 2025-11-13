@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import com.everrich.spendmanager.entities.TransactionOperation;
@@ -17,6 +19,10 @@ public class VectorStoreService {
     private final ChatClient chatClient;
     private RedisAdapter redisAdapter;
     private static final Logger log = LoggerFactory.getLogger(VectorStoreService.class);
+
+    @Value("classpath:/prompts/normalize-description-prompt.st")
+    private Resource normalizeDescriptionPromptResource;
+
 
     public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder.build();
@@ -63,26 +69,7 @@ public class VectorStoreService {
     // LLM based
     private String normalizeDescription(String transactionDescription) {
 
-        // 1. Define the prompt template string
-        String template = """
-                You are an expert financial text processor. Analyze the following raw transaction description and return the keywords as a string that best describes the transaction. Below are some samples:
-
-                Examples:
-                   - Input: 'UNICREDIT BANK GMBH Kto.0046348710 PER 31.07.25...'
-                   - Output: Unicredit Bank GMBH
-                   - Input: 'Bargeldein-/auszahlung Deutsche Bank//Wiesloch/DE 2025-10-23T19:07:36 ...'
-                   - Output: Bargeldein-/auszahlung Deutsche Bank Wiesloch
-                   - Input: 'Überweisung (Echtzeit) Sandeep Joseph COBADEHD055 DE212004115508674269...'
-                   - Output: Überweisung Echtzeit Sandeep Joseph
-
-                Raw Description: {transactionDescription}
-                            """;
-
-        PromptTemplate promptTemplate = new PromptTemplate(template);
-
-        // 2. Map the input parameter.
-        // The key MUST exactly match the placeholder in the template:
-        // {transactionDescription}
+        PromptTemplate promptTemplate = new PromptTemplate(normalizeDescriptionPromptResource);
         Map<String, Object> model = Map.of(
                 "transactionDescription", transactionDescription // Corrected key and value
         );

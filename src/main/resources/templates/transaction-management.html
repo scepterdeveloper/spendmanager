@@ -377,15 +377,18 @@
                         <div class="filter-row">
                             <div class="filter-col-main">
                                 <select id="timeframe" name="timeframe">
-                                    <option value="entire_timeframe"
-                                        th:selected="${selectedTimeframe == 'entire_timeframe'}">
-                                        Entire Timeframe</option>
                                     <option value="current_month" th:selected="${selectedTimeframe == 'current_month'}">
                                         This Month</option>
-                                    <option value="last_month" th:selected="${selectedTimeframe == 'last_month'}">Last
+                                    <option value="last_month" th:selected="${selectedTimeframe == 'last_month'}">
+                                        Previous
                                         Month</option>
                                     <option value="current_year" th:selected="${selectedTimeframe == 'current_year'}">
                                         This Year</option>
+                                    <option value="previous_year" th:selected="${selectedTimeframe == 'previous_year'}">
+                                        Previous Year</option>
+                                    <option value="entire_timeframe"
+                                        th:selected="${selectedTimeframe == 'entire_timeframe'}">
+                                        Entire Timeframe</option>
                                     <option value="date_range" th:selected="${selectedTimeframe == 'date_range'}">Date
                                         Range</option>
                                 </select>
@@ -445,7 +448,7 @@
             </form>
         </div>
 
-        <h3>Existing Transactions</h3>
+        <h3>Transactions</h3>
         <table class="data-table">
             <thead>
                 <tr>

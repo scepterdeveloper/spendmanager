@@ -34,6 +34,10 @@
         #uploadButton:hover {
             background-color: #059669; 
         }
+        #uploadButton:disabled {
+            background-color: #9CA3AF; /* Gray out when disabled */
+            cursor: not-allowed;
+        }
 
         /* Table Styling (from statements-list.html) */
         .data-table {
@@ -97,11 +101,19 @@
             
             <div id="message-container"></div>
             
-            <form id="uploadForm" style="margin-top: 1rem; display: flex; align-items: center;">
-                <input type="file" id="fileInput" name="file" accept="application/pdf" required style="padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 0.25rem; margin-right: 1rem; flex-grow: 1;">
-                <button type="submit" id="uploadButton">
-                    Upload and Start Processing
-                </button>
+            <form id="uploadForm" style="margin-top: 1rem;">
+                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                    <select id="accountSelect" name="accountId" required style="padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 0.25rem; flex-grow: 1;">
+                        <option value="">-- Select an Account --</option>
+                        <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"></option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <input type="file" id="fileInput" name="file" accept="application/pdf" required style="padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 0.25rem; margin-right: 1rem; flex-grow: 1;">
+                    <button type="submit" id="uploadButton" disabled title="Please select an account and a file to enable this button.">
+                        Upload and Start Processing
+                    </button>
+                </div>
             </form>
             
             <div id="loading-spinner">Processing your file... Please wait or navigate to **<a href="#statement-list-section" style="color: var(--accent-color);">the list below</a>** to check progress.</div>
@@ -115,6 +127,7 @@
                     <tr>
                         <th>ID</th>
                         <th>File Name</th>
+                        <th>Account</th>
                         <th>Upload Time</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -124,6 +137,7 @@
                     <tr th:each="stmt : ${statements}">
                         <td th:text="${stmt.id}">12345...</td>
                         <td th:text="${stmt.originalFileName}">BankStatement.pdf</td>
+                        <td th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">My Checking Account</td>
                         <td th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">01 Jan 2025 10:00</td>
                         
                         <td th:text="${stmt.status}" th:classappend="${stmt.status.name() == 'COMPLETED' ? 'status-completed' : 
@@ -142,50 +156,75 @@
     </div>
 
     <script>
-        document.getElementById('uploadForm').addEventListener('submit', function(event) {
-            event.preventDefault(); 
-
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadForm = document.getElementById('uploadForm');
             const fileInput = document.getElementById('fileInput');
-            const button = document.getElementById('uploadButton');
+            const accountSelect = document.getElementById('accountSelect');
+            const uploadButton = document.getElementById('uploadButton');
             const spinner = document.getElementById('loading-spinner');
             const messageContainer = document.getElementById('message-container');
-            
-            messageContainer.innerHTML = '';
-            spinner.style.display = 'block';
-            button.disabled = true;
 
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            fetch('/api/statement/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json().then(data => ({
-                status: response.status,
-                body: data
-            })))
-            .then(result => {
-                spinner.style.display = 'none';
-                button.disabled = false;
-                
-                if (result.status >= 200 && result.status < 300) {
-                    // Success: Add message and prompt refresh
-                    messageContainer.innerHTML = 
-                        `<div class="alert-success">${result.body.message} Refresh the page or click <a href="/statements" class="action-link">here</a> to see the new statement in the list below.</div>`;
-                    fileInput.value = ''; 
+            function updateUploadButtonState() {
+                const isAccountSelected = accountSelect.value !== "";
+                const isFileSelected = fileInput.files.length > 0;
+                uploadButton.disabled = !(isAccountSelected && isFileSelected);
+                if (uploadButton.disabled) {
+                    uploadButton.title = "Please select an account and a file to enable this button.";
                 } else {
-                    // Error
-                    messageContainer.innerHTML = 
-                        `<div class="alert-error">Upload Error: ${result.body.message || 'An unknown error occurred.'}</div>`;
+                    uploadButton.title = "";
                 }
-            })
-            .catch(error => {
-                spinner.style.display = 'none';
-                button.disabled = false;
-                console.error('Network Error:', error);
-                messageContainer.innerHTML = 
-                    `<div class="alert-error">A network error prevented the upload.</div>`;
+            }
+
+            // Initial state
+            updateUploadButtonState();
+
+            // Event listeners for changes
+            accountSelect.addEventListener('change', updateUploadButtonState);
+            fileInput.addEventListener('change', updateUploadButtonState);
+
+            uploadForm.addEventListener('submit', function(event) {
+                event.preventDefault(); 
+
+                messageContainer.innerHTML = '';
+                spinner.style.display = 'block';
+                uploadButton.disabled = true; // Disable button during submission
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('accountId', accountSelect.value);
+
+                fetch('/api/statement/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json().then(data => ({
+                    status: response.status,
+                    body: data
+                })))
+                .then(result => {
+                    spinner.style.display = 'none';
+                    // Re-enable button based on current selections after processing
+                    updateUploadButtonState(); 
+                    
+                    if (result.status >= 200 && result.status < 300) {
+                        // Success: Add message and prompt refresh
+                        messageContainer.innerHTML = 
+                            `<div class="alert-success">${result.body.message} Refresh the page or click <a href="/statements" class="action-link">here</a> to see the new statement in the list below.</div>`;
+                        fileInput.value = ''; // Clear file input after successful upload
+                        updateUploadButtonState(); // Update button state after clearing file input
+                    } else {
+                        // Error
+                        messageContainer.innerHTML = 
+                            `<div class="alert-error">Upload Error: ${result.body.message || 'An unknown error occurred.'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    spinner.style.display = 'none';
+                    updateUploadButtonState(); // Re-enable button on network error
+                    console.error('Network Error:', error);
+                    messageContainer.innerHTML = 
+                        `<div class="alert-error">A network error prevented the upload.</div>`;
+                });
             });
         });
     </script>

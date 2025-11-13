@@ -9,9 +9,15 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.reflect.TypeToken;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.everrich.spendmanager.entities.Statement;
+import com.everrich.spendmanager.entities.Account;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,15 +26,12 @@ import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-// NOTE: Assuming DateUtils class is available in the current context
-// as the calculateDateRange method relies on DateUtils.MIN_DATE and DateUtils.MAX_DATE
-// If DateUtils is not imported, the date methods will cause an error.
-// Assuming it's in a package accessible by default or an existing import was removed.
 
 @Service
 public class TransactionService {
@@ -37,29 +40,33 @@ public class TransactionService {
     private final Gson gson;
     private final TransactionRepository transactionRepository;
     private final CategoryService categoryService;
+    private final StatementService statementService; // Inject StatementService
     
-    // 🟢 NEW: Inject RAG and Vector Store Services
     private final RagService ragService;
     private final VectorStoreService vectorStoreService;
     
     private static final String JSON_CODE_FENCE = "```";
     private static final String JSON_MARKER = "json";
 
+    @Value("classpath:/prompts/parse-transactions-prompt.st")
+    private Resource parseTransactionsPromptResource;
+
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
-    // Constructor Injection
     public TransactionService(
             ChatClient.Builder chatClientBuilder, 
             TransactionRepository transactionRepository, 
             CategoryService categoryService,
+            @Lazy StatementService statementService, // Add StatementService to constructor with @Lazy
             RagService ragService,
             VectorStoreService vectorStoreService) {
         
         this.chatClient = chatClientBuilder.build();
         this.transactionRepository = transactionRepository;
         this.categoryService = categoryService;
-        this.ragService = ragService; // 🟢 NEW
-        this.vectorStoreService = vectorStoreService; // 🟢 NEW
+        this.statementService = statementService; // Initialize StatementService
+        this.ragService = ragService;
+        this.vectorStoreService = vectorStoreService;
 
         log.info("Transaction Service Wired Successfully");
         
@@ -75,9 +82,6 @@ public class TransactionService {
         );
     }
 
-    /**
-     * Entry point for processing and categorizing raw transaction text.
-     */
     public List<Transaction> processTransactions(String transactionText) {
         
         // 1. Get the list of all available categories
@@ -152,24 +156,9 @@ public class TransactionService {
     // 🟢 REVISED: Simplified LLM call just for parsing the text into JSON structure.
     private String parseTransactionsWithGemini(String transactionText) {
         
-        String template = """
-            You are a helpful assistant that parses raw bank statement text.
-            Your task is to review the provided text, identify each transaction, and assign a DUMMY category name like 'UNCATEGORIZED'. 
-            The operation field is determined based on the following rules:
-            1. If the amount is a negative amount, set the operation as MINUS, otherwise PLUS.
-            2. If the bank statement has a column to indicate whether the transaction is a Credit or Debit, set the operation as MINUS for credits and PLUS otherwise.
-            
-            Your output MUST be ONLY a JSON array, with each object containing a 'date', 'description', 'amount', 'operation', and 'category'.
-            DO NOT include any other text or explanation. Please only use the dot as the decimal separator for amounts.
 
-            Transactions:
-            {transactions}
-            """;
-
-        PromptTemplate promptTemplate = new PromptTemplate(template);
-
+        PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
         Map<String, Object> model = Map.of("transactions", transactionText);
-
         return chatClient.prompt(promptTemplate.create(model))
                 .call()
                 .content();
@@ -196,11 +185,23 @@ public class TransactionService {
     @Transactional 
     public void saveCategorizedTransactions(Long statementId, List<Transaction> transactions) {
         if (statementId != null && !transactions.isEmpty()) {
+            Statement statement = statementService.getStatementById(statementId);
+            if (statement == null) {
+                log.error("Statement with ID {} not found. Cannot save transactions.", statementId);
+                return;
+            }
+            Account account = statement.getAccount();
+            if (account == null) {
+                log.error("Account not associated with statement ID {}. Cannot save transactions.", statementId);
+                return;
+            }
+
             for (Transaction t : transactions) {
-                t.setStatementId(statementId); 
+                t.setStatementId(statementId);
+                t.setAccount(account); // Set the account for each transaction
             }
             transactionRepository.saveAll(transactions); 
-            log.info("Saved " + transactions.size() + " transactions for statement: " + statementId);
+            log.info("Saved " + transactions.size() + " transactions for statement: " + statementId + " and account: " + account.getName());
         }
     }
     
@@ -265,16 +266,8 @@ public class TransactionService {
 
         switch (timeframe) {
             case "entire_timeframe":
-                // 🟢 UPDATED: Use DateUtils constants for full range
-                // Assuming DateUtils is correctly accessible
-                // If DateUtils is not imported or available, this line will cause an error
-                // For demonstration, these are left as they were in the original working code.
-                // start = DateUtils.MIN_DATE; 
-                // end = DateUtils.MAX_DATE;   
-                
-                // Placeholder to avoid compile error if DateUtils is missing in this context
-                start = LocalDate.MIN; 
-                end = LocalDate.MAX;   
+                start = LocalDate.of(1900, 1, 1);
+                end = LocalDate.of(9999, 12, 31);
                 break;
             case "last_month":
                 YearMonth lastMonth = ym.minusMonths(1);
@@ -285,12 +278,13 @@ public class TransactionService {
                 start = LocalDate.of(today.getYear(), 1, 1);
                 end = today; 
                 break;
+            case "previous_year":
+                LocalDate now = LocalDate.now();
+                start = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear());
+                end = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear());
+                break;
+
             case "date_range":
-                // 🟢 UPDATED: Use DateUtils constants for missing dates in the custom range
-                // start = Optional.ofNullable(startDate).orElse(DateUtils.MIN_DATE);
-                // end = Optional.ofNullable(endDate).orElse(DateUtils.MAX_DATE);
-                
-                // Placeholder
                 start = Optional.ofNullable(startDate).orElse(LocalDate.MIN);
                 end = Optional.ofNullable(endDate).orElse(LocalDate.MAX);
                 break;

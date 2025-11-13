@@ -60,9 +60,6 @@ public class RagService {
         // ----------------------------------------
         // Step 3: Generation (Call the LLM with the context and query)
         // ----------------------------------------
-
-        // 🟢 CRITICAL CHANGE: Augment the description in the final prompt
-        // so the LLM knows the direction (PLUS/MINUS) of the new transaction.
         String newTransactionDescriptionWithOperation = newTransactionDescription + " (Operation: "
                 + newTransactionOperation.name() + ")";
 

@@ -6,6 +6,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 
 @Entity
 public class Statement {
@@ -16,6 +18,10 @@ public class Statement {
     private String originalFileName;
     private LocalDateTime uploadDateTime;
     private StatementStatus status; // Enum: UPLOADING, PROCESSING, COMPLETED, FAILED
+
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
     
     public Long getId() {
         return id;
@@ -40,5 +46,13 @@ public class Statement {
     }
     public StatementStatus getStatus() {
         return status;
+    }
+
+    public Account getAccount() {
+        return account;
+    }
+
+    public void setAccount(Account account) {
+        this.account = account;
     }
 }

@@ -20,20 +20,25 @@ import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.service.PdfProcessor;
 import com.everrich.spendmanager.service.StatementService;
 import com.everrich.spendmanager.service.TransactionService;
-import com.everrich.spendmanager.service.CategoryService; 
+import com.everrich.spendmanager.service.CategoryService;
+import com.everrich.spendmanager.service.AccountService;
+import com.everrich.spendmanager.entities.Account;
 
 @Controller 
 public class PdfController {
 
     private final TransactionService transactionService;
     private final StatementService statementService;
-    private final CategoryService categoryService; 
+    private final CategoryService categoryService;
+    private final AccountService accountService;
 
     public PdfController(PdfProcessor pdfProcessor, TransactionService transactionService, 
-                         StatementService statementService, CategoryService categoryService) {
+                         StatementService statementService, CategoryService categoryService,
+                         AccountService accountService) {
         this.transactionService = transactionService;
         this.statementService = statementService;
-        this.categoryService = categoryService; 
+        this.categoryService = categoryService;
+        this.accountService = accountService;
     }
 
 // -----------------------------------------------------------------------------------
@@ -77,6 +82,10 @@ public class PdfController {
         // Fetch list of statements for the viewing section
         List<Statement> statements = statementService.getAllStatements();
         model.addAttribute("statements", statements);
+
+        // Fetch list of accounts for the selection field
+        List<Account> accounts = accountService.findAll();
+        model.addAttribute("accounts", accounts);
         
         // 🟢 Return the new unified view name
         return "statement-management"; 
@@ -114,15 +123,25 @@ public class PdfController {
      */
     @PostMapping("/api/statement/upload")
     @ResponseBody 
-    public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file,
+                                                                @RequestParam("accountId") Long accountId) {
         
         if (file.isEmpty()) {
             Map<String, String> error = Map.of("status", "error", "message", "Please select a file to upload.");
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         }
 
+        if (accountId == null) {
+            Map<String, String> error = Map.of("status", "error", "message", "Please select an account.");
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+
         try {
-            Statement newStatement = statementService.createInitialStatement(file.getOriginalFilename());
+            // Retrieve the account
+            Account account = accountService.findById(accountId)
+                                .orElseThrow(() -> new IllegalArgumentException("Account not found with ID: " + accountId));
+
+            Statement newStatement = statementService.createInitialStatement(file.getOriginalFilename(), account);
             
             String statementIdString = newStatement.getId().toString();
             

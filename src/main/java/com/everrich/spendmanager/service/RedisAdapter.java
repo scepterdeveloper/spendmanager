@@ -1,7 +1,6 @@
 package com.everrich.spendmanager.service;
 
 import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.codec.StringCodec;
@@ -263,7 +262,7 @@ public class RedisAdapter {
             return formatSearchResults(results);
 
         } catch (Exception e) {
-            System.err.println("Error executing FT.SEARCH command:");
+            log.error("Error executing FT.SEARCH command:" + e.getMessage());
             e.printStackTrace();
             return null;
         } finally {

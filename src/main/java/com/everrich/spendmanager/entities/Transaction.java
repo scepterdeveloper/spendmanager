@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Transient;
+import com.everrich.spendmanager.entities.Account;
 
 @Entity
 public class Transaction {
@@ -42,6 +43,10 @@ public class Transaction {
     @ManyToOne 
     @JoinColumn(name = "category_id")
     private Category categoryEntity;
+
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
     
     @Transient
     private String category;     
@@ -114,5 +119,13 @@ public class Transaction {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public Account getAccount() {
+        return account;
+    }
+
+    public void setAccount(Account account) {
+        this.account = account;
     }
 }
