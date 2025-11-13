@@ -19,13 +19,16 @@
             border-radius: 0.5rem;
             padding: 2rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            width: 400px;
+            /*width: 400px;*/
             /* Tile width maintained */
 
             /* Added Flex properties to handle layout better */
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            min-width: 300px;
+            max-width: 400px;
+            width: 100%;
         }
 
         /* Title block to align icon and title */
@@ -233,11 +236,13 @@
             .tile-grid {
                 flex-direction: column;
                 align-items: center;
+                width: 100%;
             }
 
             .dashboard-tile {
-                width: 90%; /* Make tiles take up most of the width on smaller screens */
-                max-width: 400px; /* Prevent them from becoming too wide on slightly larger mobile devices */
+                width: 100%; /* Make tiles take up most of the width on smaller screens */
+                /*max-width: 400px;*/ /* Prevent them from becoming too wide on slightly larger mobile devices */
+                padding: 1.5rem;
             }
 
             .dashboard-actions-grid {
