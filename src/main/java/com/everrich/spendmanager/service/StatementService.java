@@ -1,11 +1,14 @@
 package com.everrich.spendmanager.service;
 
+import com.everrich.spendmanager.controller.PdfController;
 import com.everrich.spendmanager.entities.Statement;
 import com.everrich.spendmanager.entities.StatementStatus;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.repository.StatementRepository;
 
-import org.springframework.scheduling.annotation.Async; 
+import org.springframework.scheduling.annotation.Async;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Import for data safety
@@ -22,6 +25,8 @@ public class StatementService {
     private final StatementRepository statementRepository;
     private final PdfProcessor pdfProcessor;
     private final TransactionService transactionService;
+
+    private static final Logger log = LoggerFactory.getLogger(StatementService.class);
 
     public StatementService(
         StatementRepository statementRepository, 
@@ -86,9 +91,12 @@ public class StatementService {
         try {
             // 1. Extract Text
             String extractedText = pdfProcessor.extractTextFromPdf(fileBytes);
+            log.info("Extracted Text: " + extractedText);
+            log.info("START: Resolve Categories");
 
             // 2. Process and Categorize
             List<Transaction> transactions = transactionService.processTransactions(extractedText);
+            log.info("No. of Transactions:  " + transactions.size());
 
             // 3. Persist Transactions (TransactionService will use its new JPA Repository)
             transactionService.saveCategorizedTransactions(statementId, transactions);
