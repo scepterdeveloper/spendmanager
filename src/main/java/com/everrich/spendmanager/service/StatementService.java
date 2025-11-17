@@ -29,10 +29,10 @@ public class StatementService {
     private static final Logger log = LoggerFactory.getLogger(StatementService.class);
 
     public StatementService(
-        StatementRepository statementRepository, 
-        PdfProcessor pdfProcessor, 
-        @Lazy TransactionService transactionService) { // Add @Lazy
-        
+            StatementRepository statementRepository,
+            PdfProcessor pdfProcessor,
+            @Lazy TransactionService transactionService) { // Add @Lazy
+
         this.statementRepository = statementRepository;
         this.pdfProcessor = pdfProcessor;
         this.transactionService = transactionService;
@@ -40,8 +40,9 @@ public class StatementService {
 
     /**
      * Creates and persists an initial Statement record in the database.
+     * 
      * @param fileName The original file name.
-     * @param account The account associated with the statement.
+     * @param account  The account associated with the statement.
      * @return The newly created Statement entity.
      */
     public Statement createInitialStatement(String fileName, com.everrich.spendmanager.entities.Account account) {
@@ -50,7 +51,7 @@ public class StatementService {
         statement.setUploadDateTime(LocalDateTime.now());
         statement.setStatus(StatementStatus.PROCESSING); // Start as Processing
         statement.setAccount(account); // Set the associated account
-        
+
         // REPLACEMENT: Use JpaRepository's save() instead of list.add()
         return statementRepository.save(statement);
     }
@@ -73,15 +74,16 @@ public class StatementService {
     }
 
     /**
-     * Runs the long-running PDF processing and LLM categorization in a background thread.
+     * Runs the long-running PDF processing and LLM categorization in a background
+     * thread.
      */
-    //@Async 
-    //@Transactional // Ensures status updates and transaction saving are atomic
+    @Async("transactionProcessingExecutor")
+    // @Transactional // Ensures status updates and transaction saving are atomic
     public void startProcessingAsync(Long statementId, byte[] fileBytes) {
         // Use findById to retrieve the entity managed by the persistence context
         log.info("Start async. processing for Statment with Id: " + statementId);
         Optional<Statement> statementOptional = statementRepository.findById(statementId);
-        
+
         if (statementOptional.isEmpty()) {
             System.err.println("Statement not found for ID: " + statementId);
             return;
@@ -103,14 +105,14 @@ public class StatementService {
 
             // 4. Update Status
             statement.setStatus(StatementStatus.COMPLETED);
-            
-            // JpaRepository.save is not strictly needed here if @Transactional is used 
+
+            // JpaRepository.save is not strictly needed here if @Transactional is used
             // and the entity is managed, but explicitly calling save is safer and clearer.
-            statementRepository.save(statement); 
+            statementRepository.save(statement);
 
         } catch (Exception e) {
             e.printStackTrace();
-            
+
             // 5. Update Status on Failure
             statement.setStatus(StatementStatus.FAILED);
             statementRepository.save(statement); // Persist the failed status
