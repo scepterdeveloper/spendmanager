@@ -119,7 +119,8 @@ public class TransactionService {
             long durationInSeconds = processingDuration.toSeconds();
             long durationInMilliseconds = processingDuration.toMillis();
             log.info(
-                    "Time taken for transaction with description " + t.getDescription() + " - " + durationInSeconds + " Seconds ("
+                    "Time taken for transaction with description " + t.getDescription() + " - " + durationInSeconds
+                            + " Seconds ("
                             + durationInMilliseconds
                             + " Milliseconds)");
 
@@ -177,9 +178,11 @@ public class TransactionService {
         PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
         Map<String, Object> model = Map.of("transactions", transactionText);
         log.info("Going to call LLM for parsing");
-        return chatClient.prompt(promptTemplate.create(model))
+        String LLMOutput = chatClient.prompt(promptTemplate.create(model))
                 .call()
                 .content();
+        log.info("LLM Output: " + LLMOutput);
+        return LLMOutput;
     }
 
     private List<Transaction> resolveCategories(List<Transaction> transactions, List<Category> availableCategories) {

@@ -114,9 +114,6 @@ public class PdfController {
     @ResponseBody
     public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file,
             @RequestParam("accountId") Long accountId) {
-
-        log.info("PDF Controller -> upload");
-
         if (file.isEmpty()) {
             Map<String, String> error = Map.of("status", "error", "message", "Please select a file to upload.");
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);

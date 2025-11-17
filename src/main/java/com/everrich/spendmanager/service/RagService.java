@@ -37,7 +37,7 @@ public class RagService {
 
     public String findBestCategory(String newTransactionDescription, TransactionOperation newTransactionOperation) {
 
-        log.info("Querying Vector Store for: '" + newTransactionDescription + "' with Operation: " + newTransactionOperation.name());
+        //log.info("Querying Vector Store for: '" + newTransactionDescription + "' with Operation: " + newTransactionOperation.name());
         String context = vectorStoreService.similaritySearch(newTransactionDescription, newTransactionOperation.name());
         String availableCategories = categoryService.findAll().stream()
                 .map(c -> c.getName())

@@ -92,7 +92,6 @@ public class StatementService {
         try {
             // 1. Extract Text
             String extractedText = pdfProcessor.extractTextFromPdf(fileBytes);
-            log.info("Extracted Text: " + extractedText);
             log.info("START: Resolve Categories");
 
             // 2. Process and Categorize

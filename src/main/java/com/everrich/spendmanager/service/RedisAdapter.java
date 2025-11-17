@@ -158,7 +158,7 @@ public class RedisAdapter {
                         + ") which does not match expected dimension (" + TARGET_VECTOR_DIMENSION + ").");
             }
 
-            log.info("Real Embedding generated (Task: " + taskType + ", Size: " + floatList.size() + ").");
+            //log.info("Real Embedding generated (Task: " + taskType + ", Size: " + floatList.size() + ").");
 
             float[] vectorFloats = new float[TARGET_VECTOR_DIMENSION];
             for (int i = 0; i < TARGET_VECTOR_DIMENSION; i++) {
@@ -176,8 +176,8 @@ public class RedisAdapter {
     public String createDocument(String categoryName, String description, String operation) {
 
         StatefulRedisConnection<String, String> connection = null;
-        log.info("Starting creation...with description " + description);
-        log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
+        //log.info("Starting creation...with description " + description);
+        //log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
 
         try {
             String searchKey = "doc:" + UUID.randomUUID().toString();
