@@ -23,7 +23,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
@@ -41,10 +43,10 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final CategoryService categoryService;
     private final StatementService statementService; // Inject StatementService
-    
+
     private final RagService ragService;
     private final VectorStoreService vectorStoreService;
-    
+
     private static final String JSON_CODE_FENCE = "```";
     private static final String JSON_MARKER = "json";
 
@@ -54,13 +56,13 @@ public class TransactionService {
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
     public TransactionService(
-            ChatClient.Builder chatClientBuilder, 
-            TransactionRepository transactionRepository, 
+            ChatClient.Builder chatClientBuilder,
+            TransactionRepository transactionRepository,
             CategoryService categoryService,
             @Lazy StatementService statementService, // Add StatementService to constructor with @Lazy
             RagService ragService,
             VectorStoreService vectorStoreService) {
-        
+
         this.chatClient = chatClientBuilder.build();
         this.transactionRepository = transactionRepository;
         this.categoryService = categoryService;
@@ -69,48 +71,71 @@ public class TransactionService {
         this.vectorStoreService = vectorStoreService;
 
         log.info("Transaction Service Wired Successfully");
-        
+
         // Setup Gson with custom date handling (DD.MM.YYYY) for robustness
         this.gson = new GsonBuilder()
-            .registerTypeAdapter(LocalDate.class, (JsonDeserializer<LocalDate>) (json, typeOfT, context) ->
-                LocalDate.parse(json.getAsString(), DateTimeFormatter.ofPattern("dd.MM.yyyy")))
-            .create();
+                .registerTypeAdapter(LocalDate.class,
+                        (JsonDeserializer<LocalDate>) (json, typeOfT, context) -> LocalDate.parse(json.getAsString(),
+                                DateTimeFormatter.ofPattern("dd.MM.yyyy")))
+                .create();
 
         Arrays.asList(
-            "Groceries", "Dining", "Shopping", "Transport", "Utilities",
-            "Healthcare", "Entertainment", "Income", "Other"
-        );
+                "Groceries", "Dining", "Shopping", "Transport", "Utilities",
+                "Healthcare", "Entertainment", "Income", "Other");
     }
 
     public List<Transaction> processTransactions(String transactionText) {
-        
+
+        log.info("==============================================================================");
+        LocalDateTime processingStartTime = LocalDateTime.now();
+        Duration processingDuration = null;
+        log.info(LocalDateTime.now() + ": Statement Processing START");
         // 1. Get the list of all available categories
         List<Category> categories = categoryService.findAll();
-        
-        // 2. Use the LLM to structure the raw text into a list of transactions (date, description, amount).
+
+        // 2. Use the LLM to structure the raw text into a list of transactions (date,
+        // description, amount).
         String parsedJson = parseTransactionsWithGemini(transactionText);
         String cleanJson = cleanLLMResponse(parsedJson);
-        
         List<Transaction> transactions = deserializeTransactions(cleanJson);
-        
-        // 3. Iterate through each parsed transaction and use RAG for precise categorization
+        if (transactions != null)
+            log.info(LocalDateTime.now() + ": No. of trasactions parsed - " + transactions.size());
+
+        // 3. Iterate through each parsed transaction and use RAG for precise
+        // categorization
         for (Transaction t : transactions) {
-            // 🟢 LOGGING: Starting RAG inference
-            log.info("--- TRANSACTION CATEGORIZATION START ---");
-            log.info("Processing transaction: " + t.getDescription());
-            
-            // 🟢 The RAG service provides a single best category name
+
+            log.info("------------------------------------------------------------------------------");
+            log.info(LocalDateTime.now() + ": Resolve Category (with RAG-LLM) START");
+            LocalDateTime resolveCategorytartTime = LocalDateTime.now();
             String categoryName = ragService.findBestCategory(t.getDescription(), t.getOperation());
-            
-            // 🟢 LOGGING: Final category result
-            log.info("Category assigned by RAG: " + categoryName);
-            log.info("----------------------------------------");
-            
-            t.setCategory(categoryName); // Set the best category name
+            t.setCategory(categoryName);
+            processingDuration = Duration.between(resolveCategorytartTime, LocalDateTime.now());
+            long durationInSeconds = processingDuration.toSeconds();
+            long durationInMilliseconds = processingDuration.toMillis();
+            log.info(
+                    "Time taken for transaction with description " + t.getDescription() + " - " + durationInSeconds + " Seconds ("
+                            + durationInMilliseconds
+                            + " Milliseconds)");
+
+            log.info("------------------------------------------------------------------------------");
+            log.info(LocalDateTime.now() + ": Resolve Category (with RAG-LLM) END");
+
         }
-        
-        // 4. Resolve the category name string to the actual Category entity
-        return resolveCategories(transactions, categories); 
+
+        log.info(LocalDateTime.now() + ":  Resolve Category (with RAG-LLM) finished for " + transactions.size()
+                + " transactions");
+
+        processingDuration = Duration.between(processingStartTime, LocalDateTime.now());
+        long durationInSeconds = processingDuration.toSeconds();
+        long durationInMilliseconds = processingDuration.toMillis();
+
+        log.info("Total Time Elapsed from processing START to RAG-LLM Finished - " + durationInSeconds + " Seconds ("
+                + durationInMilliseconds + " Milliseconds)");
+        List<Transaction> processedTransactions = resolveCategories(transactions, categories);
+        log.info("==============================================================================");
+
+        return processedTransactions;
     }
 
     /**
@@ -120,9 +145,7 @@ public class TransactionService {
     @Async
     public void updateVectorStore(Long transactionId, String newCategoryName) {
 
-        log.info("--- MANUAL CATEGORY CORRECTION triggered: " + newCategoryName);
         Optional<Transaction> optionalTransaction = transactionRepository.findById(transactionId);
-
         if (optionalTransaction.isEmpty()) {
             throw new IllegalArgumentException("Transaction with ID " + transactionId + " not found.");
         }
@@ -131,31 +154,20 @@ public class TransactionService {
         Category newCategory = categoryService.findByName(newCategoryName);
 
         if (newCategory == null) {
-             throw new IllegalArgumentException("Category with name " + newCategoryName + " not found.");
+            throw new IllegalArgumentException("Category with name " + newCategoryName + " not found.");
         }
-
-        // 🟢 LOGGING: Confirming the update call and RAG learning trigger
-        log.info("--- MANUAL CATEGORY CORRECTION ---");
-        log.info("Transaction ID: " + transactionId);
-        log.info("Description: '" + transaction.getDescription() + "'");
-        log.info("New Category: " + newCategoryName);
-        log.info("-> Triggering VectorStoreService to learn this correction...");
-        
-        // 1. **RAG LEARNING STEP**: Index the new, corrected knowledge into the Vector Store.
+        // 1. **RAG LEARNING STEP**: Index the new, corrected knowledge into the Vector
+        // Store.
         vectorStoreService.learnCorrectCategory(
-            transaction.getDescription(), 
-            newCategoryName, 
-            transaction.getAmount(),
-            transaction.getOperation()
-        );
-        
-        log.info("Correction saved and RAG learning triggered.");
-        log.info("------------------------------------------");
+                transaction.getDescription(),
+                newCategoryName,
+                transaction.getAmount(),
+                transaction.getOperation());
     }
 
-    // 🟢 REVISED: Simplified LLM call just for parsing the text into JSON structure.
+    // 🟢 REVISED: Simplified LLM call just for parsing the text into JSON
+    // structure.
     private String parseTransactionsWithGemini(String transactionText) {
-        
 
         PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
         Map<String, Object> model = Map.of("transactions", transactionText);
@@ -163,18 +175,18 @@ public class TransactionService {
                 .call()
                 .content();
     }
-    
+
     private List<Transaction> resolveCategories(List<Transaction> transactions, List<Category> availableCategories) {
         Map<String, Category> categoryMap = availableCategories.stream()
                 .collect(Collectors.toMap(c -> c.getName().toLowerCase(), c -> c));
 
         for (Transaction t : transactions) {
-            String categoryName = t.getCategory(); 
-            
+            String categoryName = t.getCategory();
+
             // Use the RAG-determined category name to get the entity
-            Category resolvedCategory = categoryMap.getOrDefault(categoryName.toLowerCase(), 
-                                                                categoryService.findByName("Other"));
-            
+            Category resolvedCategory = categoryMap.getOrDefault(categoryName.toLowerCase(),
+                    categoryService.findByName("Other"));
+
             t.setCategoryEntity(resolvedCategory);
         }
         return transactions;
@@ -182,7 +194,7 @@ public class TransactionService {
 
     // ... (rest of the service methods remain the same) ...
 
-    @Transactional 
+    @Transactional
     public void saveCategorizedTransactions(Long statementId, List<Transaction> transactions) {
         if (statementId != null && !transactions.isEmpty()) {
             Statement statement = statementService.getStatementById(statementId);
@@ -200,11 +212,12 @@ public class TransactionService {
                 t.setStatementId(statementId);
                 t.setAccount(account); // Set the account for each transaction
             }
-            transactionRepository.saveAll(transactions); 
-            log.info("Saved " + transactions.size() + " transactions for statement: " + statementId + " and account: " + account.getName());
+            transactionRepository.saveAll(transactions);
+            log.info("Saved " + transactions.size() + " transactions for statement: " + statementId + " and account: "
+                    + account.getName());
         }
     }
-    
+
     // ... (utility and filter methods) ...
 
     public Optional<Transaction> findById(Long id) {
@@ -215,7 +228,7 @@ public class TransactionService {
     public Transaction saveTransaction(Transaction transaction) {
         return transactionRepository.save(transaction);
     }
-    
+
     @Transactional
     public void deleteTransaction(Long id) {
         transactionRepository.deleteById(id);
@@ -224,24 +237,25 @@ public class TransactionService {
     private String cleanLLMResponse(String rawLLMResponse) {
         String cleaned = rawLLMResponse.trim();
         String fullFenceStart = JSON_CODE_FENCE + JSON_MARKER;
-        
+
         if (cleaned.startsWith(fullFenceStart)) {
             cleaned = cleaned.substring(fullFenceStart.length()).trim();
         }
-        
+
         if (cleaned.endsWith(JSON_CODE_FENCE)) {
             cleaned = cleaned.substring(0, cleaned.lastIndexOf(JSON_CODE_FENCE)).trim();
         }
-        
+
         return cleaned;
     }
-    
+
     private List<Transaction> deserializeTransactions(String json) {
-        Type transactionListType = new TypeToken<List<Transaction>>() {}.getType();
+        Type transactionListType = new TypeToken<List<Transaction>>() {
+        }.getType();
         return gson.fromJson(json, transactionListType);
     }
 
-/**
+    /**
      * Retrieves all transactions associated with a specific statement ID.
      * This method was present in the original TransactionService and is needed
      * to resolve the regression error.
@@ -250,15 +264,21 @@ public class TransactionService {
         if (statementId == null) {
             return List.of();
         }
-        return transactionRepository.findByStatementId(statementId); 
-    }    
-    
-    // You should move this class definition to its own file (e.g., utils/DateRange.java)
-    private record DateRange(LocalDate start, LocalDate end) {
-        public LocalDate getStart() { return start; }
-        public LocalDate getEnd() { return end; }
+        return transactionRepository.findByStatementId(statementId);
     }
-    
+
+    // You should move this class definition to its own file (e.g.,
+    // utils/DateRange.java)
+    private record DateRange(LocalDate start, LocalDate end) {
+        public LocalDate getStart() {
+            return start;
+        }
+
+        public LocalDate getEnd() {
+            return end;
+        }
+    }
+
     private DateRange calculateDateRange(String timeframe, LocalDate startDate, LocalDate endDate) {
         LocalDate start, end;
         LocalDate today = LocalDate.now();
@@ -276,7 +296,7 @@ public class TransactionService {
                 break;
             case "current_year":
                 start = LocalDate.of(today.getYear(), 1, 1);
-                end = today; 
+                end = today;
                 break;
             case "previous_year":
                 LocalDate now = LocalDate.now();
@@ -291,31 +311,30 @@ public class TransactionService {
             case "current_month":
             default:
                 start = ym.atDay(1);
-                end = ym.atEndOfMonth(); 
+                end = ym.atEndOfMonth();
                 break;
         }
 
         return new DateRange(start, end);
     }
-    
+
     public List<Transaction> getFilteredTransactions(
-            String timeframe, 
-            LocalDate customStartDate, 
-            LocalDate customEndDate, 
+            String timeframe,
+            LocalDate customStartDate,
+            LocalDate customEndDate,
             List<Long> categoryIds,
             String query) {
 
         DateRange range = calculateDateRange(timeframe, customStartDate, customEndDate);
-        
+
         List<Long> effectiveCategoryIds = (categoryIds == null || categoryIds.isEmpty()) ? null : categoryIds;
 
         List<Transaction> filteredList = transactionRepository.findFiltered(
-                range.getStart(), 
-                range.getEnd(), 
+                range.getStart(),
+                range.getEnd(),
                 effectiveCategoryIds,
-                query
-        );
-        
+                query);
+
         return filteredList;
     }
 }

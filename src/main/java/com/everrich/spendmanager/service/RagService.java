@@ -1,7 +1,6 @@
 package com.everrich.spendmanager.service;
 
 import org.springframework.ai.chat.client.ChatClient;
-// import org.springframework.ai.vectorstore.VectorStore; // Removed, now using VectorStoreService
 import org.springframework.stereotype.Service;
 
 import com.everrich.spendmanager.entities.TransactionOperation;
@@ -21,7 +20,7 @@ public class RagService {
 
     private final ChatClient chatClient;
     private final CategoryService categoryService;
-    private final VectorStoreService vectorStoreService; // Now injected
+    private final VectorStoreService vectorStoreService;
 
     private static final Logger log = LoggerFactory.getLogger(RagService.class);
 
@@ -38,21 +37,8 @@ public class RagService {
 
     public String findBestCategory(String newTransactionDescription, TransactionOperation newTransactionOperation) {
 
-        log.info("\n>>> RAG INFERENCE START <<<");
         log.info("Querying Vector Store for: '" + newTransactionDescription + "' with Operation: " + newTransactionOperation.name());
-
         String context = vectorStoreService.similaritySearch(newTransactionDescription, newTransactionOperation.name());
-
-
-        // 🟢 LOGGING: The Retrieved Context (Unchanged)
-        log.info("\n--- RETRIEVED CONTEXT ---");
-        if ("".equalsIgnoreCase(context)) {
-            log.info("No similar historical data found. Relying on base model only.");
-        } else {
-            log.info("Context Snippets:\n" + context);
-        }
-        log.info("-------------------------");
-
         String availableCategories = categoryService.findAll().stream()
                 .map(c -> c.getName())
                 .collect(Collectors.joining(", "));
@@ -71,23 +57,9 @@ public class RagService {
                 "categories", availableCategories);
 
         Prompt prompt = promptTemplate.create(promptParameters);
-
-        // 🟢 LOGGING: The Final Prompt and Categories (Unchanged)
-        log.info("\n--- LLM PROMPT DATA ---");
-        // Only log a snippet of the potentially long prompt
-        String promptSnippet = prompt.getContents().substring(0, Math.min(prompt.getContents().length(), 500))
-                + (prompt.getContents().length() > 500 ? "..." : "");
-        log.info("Final Prompt Snippet:\n" + promptSnippet);
-        log.info("Final Prompt: " + prompt);
-        log.info("-----------------------");
-
         String response = chatClient.prompt(prompt)
                 .call()
                 .content();
-
-        // 🟢 LOGGING: The Final Result (Unchanged)
-        log.info("Final LLM Response (Category): " + response.trim());
-        log.info("<<< RAG INFERENCE END >>>\n");
 
         return response.trim();
     }

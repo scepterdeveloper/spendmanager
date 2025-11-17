@@ -218,8 +218,8 @@ public class RedisAdapter {
 
     public List<RedisDocument> searchDocuments(String description, String operation) {
 
-        log.info("Starting search...with description " + description);
-        log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
+        //log.info("Starting search...with description " + description);
+        //log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
         StatefulRedisConnection<String, String> connection = null;
         RedisCommands<String, String> syncCommands = null;
 
@@ -230,8 +230,8 @@ public class RedisAdapter {
             connection = redisClient.connect();
             syncCommands = connection.sync();
 
-            log.info("Connection established for search.");
-            log.info("Query vector size being sent: " + queryVectorByteArray.length + " bytes");
+            //log.info("Connection established for search.");
+            //log.info("Query vector size being sent: " + queryVectorByteArray.length + " bytes");
 
             CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
             argsBuilder.add(this.INDEX_NAME);
@@ -269,7 +269,7 @@ public class RedisAdapter {
             // --- 6. Cleanup ---
             if (connection != null)
                 connection.close();
-            log.info("Connection closed after search.");
+            //log.info("Connection closed after search.");
         }
 
     }
@@ -282,7 +282,7 @@ public class RedisAdapter {
 
         for (int docIndex = 0; docIndex < docsCount; docIndex++) {
             List<Object> doc = (List<Object>) docs.get(docIndex);
-            log.info("Doc Id: " + doc.get(1));
+            //log.info("Doc Id: " + doc.get(1));
             RedisDocument redisDocument = new RedisDocument();
             redisDocument.setDocumentId(doc.get(1).toString());
 
@@ -291,7 +291,7 @@ public class RedisAdapter {
             for (int i = 0; i < fields.size(); i += 2) {
                 String fieldName = fields.get(i).toString();
                 String fieldValue = fields.get(i + 1).toString();
-                log.info(fieldName + ": " + fieldValue);
+                //log.info(fieldName + ": " + fieldValue);
                 redisDocument.addField(fieldName, fieldValue);
             }
             output.add(redisDocument);

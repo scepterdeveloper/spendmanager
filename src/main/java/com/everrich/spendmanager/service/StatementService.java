@@ -79,6 +79,7 @@ public class StatementService {
     @Transactional // Ensures status updates and transaction saving are atomic
     public void startProcessingAsync(Long statementId, byte[] fileBytes) {
         // Use findById to retrieve the entity managed by the persistence context
+        log.info("Start async. processing for Statment with Id: " + statementId);
         Optional<Statement> statementOptional = statementRepository.findById(statementId);
         
         if (statementOptional.isEmpty()) {

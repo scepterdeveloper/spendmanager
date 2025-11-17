@@ -137,7 +137,7 @@ public class PdfController {
             Statement newStatement = statementService.createInitialStatement(file.getOriginalFilename(), account);
 
             String statementIdString = newStatement.getId().toString();
-
+            log.info("START: Call startProcessingAsync for statement with Id: " + statementIdString);
             statementService.startProcessingAsync(newStatement.getId(), file.getBytes());
 
             Map<String, String> success = Map.of(
