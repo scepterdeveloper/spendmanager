@@ -90,14 +90,19 @@ public class TransactionService {
         LocalDateTime processingStartTime = LocalDateTime.now();
         Duration processingDuration = null;
         log.info(LocalDateTime.now() + ": Statement Processing START");
+        log.info("Fetched categories");
         // 1. Get the list of all available categories
         List<Category> categories = categoryService.findAll();
-
+        log.info("Parsing and cleaning START");
         // 2. Use the LLM to structure the raw text into a list of transactions (date,
         // description, amount).
         String parsedJson = parseTransactionsWithGemini(transactionText);
+        log.info("Parsing Done");
         String cleanJson = cleanLLMResponse(parsedJson);
+        log.info("Cleaning Done");
         List<Transaction> transactions = deserializeTransactions(cleanJson);
+        log.info("Transactions Deserialized");
+
         if (transactions != null)
             log.info(LocalDateTime.now() + ": No. of trasactions parsed - " + transactions.size());
 
