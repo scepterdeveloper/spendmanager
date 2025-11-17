@@ -176,6 +176,7 @@ public class TransactionService {
 
         PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
         Map<String, Object> model = Map.of("transactions", transactionText);
+        log.info("Going to call LLM for parsing");
         return chatClient.prompt(promptTemplate.create(model))
                 .call()
                 .content();
