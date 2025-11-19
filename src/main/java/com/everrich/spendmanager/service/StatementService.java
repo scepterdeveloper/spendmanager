@@ -1,7 +1,5 @@
 package com.everrich.spendmanager.service;
 
-import com.everrich.spendmanager.controller.PdfController;
-import com.everrich.spendmanager.entities.Category;
 import com.everrich.spendmanager.entities.Statement;
 import com.everrich.spendmanager.entities.StatementStatus;
 import com.everrich.spendmanager.entities.Transaction;
@@ -20,10 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.lang.reflect.Type;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
