@@ -29,6 +29,7 @@ public class AsyncConfig {
         executor.setMaxPoolSize(20);
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("Transaction-Task-");
+        executor.setRejectedExecutionHandler((r, executor1) -> log.error("Task rejected, thread pool is full and queue is also full"));
         executor.initialize();
         log.info("AsyncConfig successfully wired.");
         return executor;
