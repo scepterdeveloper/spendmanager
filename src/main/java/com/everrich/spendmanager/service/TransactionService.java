@@ -39,19 +39,13 @@ import java.util.stream.Collectors;
 public class TransactionService {
 
     private final ChatClient chatClient;
-    private final Gson gson;
+
     private final TransactionRepository transactionRepository;
     private final CategoryService categoryService;
     private final StatementService statementService; // Inject StatementService
 
     private final RagService ragService;
     private final VectorStoreService vectorStoreService;
-
-    private static final String JSON_CODE_FENCE = "```";
-    private static final String JSON_MARKER = "json";
-
-    @Value("classpath:/prompts/parse-transactions-prompt.st")
-    private Resource parseTransactionsPromptResource;
 
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
@@ -73,71 +67,33 @@ public class TransactionService {
         log.info("Transaction Service Wired Successfully");
 
         // Setup Gson with custom date handling (DD.MM.YYYY) for robustness
-        this.gson = new GsonBuilder()
-                .registerTypeAdapter(LocalDate.class,
-                        (JsonDeserializer<LocalDate>) (json, typeOfT, context) -> LocalDate.parse(json.getAsString(),
-                                DateTimeFormatter.ofPattern("dd.MM.yyyy")))
-                .create();
 
         Arrays.asList(
                 "Groceries", "Dining", "Shopping", "Transport", "Utilities",
                 "Healthcare", "Entertainment", "Income", "Other");
     }
 
-    public List<Transaction> processTransactions(String transactionText) {
-
-        log.info("==============================================================================");
-        LocalDateTime processingStartTime = LocalDateTime.now();
-        Duration processingDuration = null;
-        log.info(LocalDateTime.now() + ": Statement Processing START");
-        log.info("Fetched categories");
-        // 1. Get the list of all available categories
-        List<Category> categories = categoryService.findAll();
-        log.info("Parsing and cleaning START");
-        // 2. Use the LLM to structure the raw text into a list of transactions (date,
-        // description, amount).
-        String parsedJson = parseTransactionsWithGemini(transactionText);
-        log.info("Parsing Done");
-        String cleanJson = cleanLLMResponse(parsedJson);
-        log.info("Cleaning Done");
-        List<Transaction> transactions = deserializeTransactions(cleanJson);
-        log.info("Transactions Deserialized");
+    public List<Transaction> processTransactions(List<Transaction> transactions) {
 
         if (transactions != null)
             log.info(LocalDateTime.now() + ": No. of trasactions parsed - " + transactions.size());
 
-        // 3. Iterate through each parsed transaction and use RAG for precise
-        // categorization
-        for (Transaction t : transactions) {
+        log.info("==============================================================================");
+        List<Category> categories = categoryService.findAll();
+
+        for (Transaction transaction : transactions) {
 
             log.info("------------------------------------------------------------------------------");
-            log.info(LocalDateTime.now() + ": Resolve Category (with RAG-LLM) START");
-            LocalDateTime resolveCategorytartTime = LocalDateTime.now();
-            String categoryName = ragService.findBestCategory(t.getDescription(), t.getOperation());
-            t.setCategory(categoryName);
-            processingDuration = Duration.between(resolveCategorytartTime, LocalDateTime.now());
-            long durationInSeconds = processingDuration.toSeconds();
-            long durationInMilliseconds = processingDuration.toMillis();
-            log.info(
-                    "Time taken for transaction with description " + t.getDescription() + " - " + durationInSeconds
-                            + " Seconds ("
-                            + durationInMilliseconds
-                            + " Milliseconds)");
-
+            log.info("Resolve Category (with RAG-LLM) START");
+            String categoryName = ragService.findBestCategory(transaction.getDescription(), transaction.getOperation());
+            log.info("Transaction: " + transaction.getDescription());
+            log.info("Resolved Category: " + categoryName);
+            transaction.setCategory(categoryName);
+            log.info("Resolve Category (with RAG-LLM) END");
             log.info("------------------------------------------------------------------------------");
-            log.info(LocalDateTime.now() + ": Resolve Category (with RAG-LLM) END");
-
         }
 
-        log.info(LocalDateTime.now() + ":  Resolve Category (with RAG-LLM) finished for " + transactions.size()
-                + " transactions");
-
-        processingDuration = Duration.between(processingStartTime, LocalDateTime.now());
-        long durationInSeconds = processingDuration.toSeconds();
-        long durationInMilliseconds = processingDuration.toMillis();
-
-        log.info("Total Time Elapsed from processing START to RAG-LLM Finished - " + durationInSeconds + " Seconds ("
-                + durationInMilliseconds + " Milliseconds)");
+        log.info("Resolve Category (with RAG-LLM): Done - " + transactions.size() + " transaction(s)");
         List<Transaction> processedTransactions = resolveCategories(transactions, categories);
         log.info("==============================================================================");
 
@@ -173,17 +129,6 @@ public class TransactionService {
 
     // 🟢 REVISED: Simplified LLM call just for parsing the text into JSON
     // structure.
-    private String parseTransactionsWithGemini(String transactionText) {
-
-        PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
-        Map<String, Object> model = Map.of("transactions", transactionText);
-        log.info("Going to call LLM for parsing");
-        String LLMOutput = chatClient.prompt(promptTemplate.create(model))
-                .call()
-                .content();
-        log.info("LLM Output: " + LLMOutput);
-        return LLMOutput;
-    }
 
     private List<Transaction> resolveCategories(List<Transaction> transactions, List<Category> availableCategories) {
         Map<String, Category> categoryMap = availableCategories.stream()
@@ -246,27 +191,6 @@ public class TransactionService {
     @Transactional
     public void deleteTransaction(Long id) {
         transactionRepository.deleteById(id);
-    }
-
-    private String cleanLLMResponse(String rawLLMResponse) {
-        String cleaned = rawLLMResponse.trim();
-        String fullFenceStart = JSON_CODE_FENCE + JSON_MARKER;
-
-        if (cleaned.startsWith(fullFenceStart)) {
-            cleaned = cleaned.substring(fullFenceStart.length()).trim();
-        }
-
-        if (cleaned.endsWith(JSON_CODE_FENCE)) {
-            cleaned = cleaned.substring(0, cleaned.lastIndexOf(JSON_CODE_FENCE)).trim();
-        }
-
-        return cleaned;
-    }
-
-    private List<Transaction> deserializeTransactions(String json) {
-        Type transactionListType = new TypeToken<List<Transaction>>() {
-        }.getType();
-        return gson.fromJson(json, transactionListType);
     }
 
     /**

@@ -286,7 +286,7 @@ public class RedisAdapter {
             RedisDocument redisDocument = new RedisDocument();
             redisDocument.setDocumentId(doc.get(1).toString());
 
-            log.info("-----------------Fields-----------------");
+            //log.info("-----------------Fields-----------------");
             List<Object> fields = (List<Object>) doc.get(3);
             for (int i = 0; i < fields.size(); i += 2) {
                 String fieldName = fields.get(i).toString();

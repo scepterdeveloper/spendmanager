@@ -101,15 +101,6 @@ public class PdfController {
         return "transactions-view";
     }
 
-    // -----------------------------------------------------------------------------------
-    // 2. API Endpoint (Asynchronous File Upload) - Logic remains unchanged
-    // -----------------------------------------------------------------------------------
-
-    /**
-     * Handles the file upload asynchronously, returning a JSON response
-     * immediately.
-     * Maps to: POST /api/statement/upload
-     */
     @PostMapping("/api/statement/upload")
     @ResponseBody
     public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file,
@@ -132,11 +123,11 @@ public class PdfController {
                     .orElseThrow(() -> new IllegalArgumentException("Account not found with ID: " + accountId));
 
             Statement newStatement = statementService.createInitialStatement(file.getOriginalFilename(), account);
-
             String statementIdString = newStatement.getId().toString();
-            log.info("START: Call startProcessingAsync for statement with Id: " + statementIdString);
-            statementService.startProcessingAsync(newStatement.getId(), file.getBytes());
-
+            List<Transaction> transactions = statementService.extractTransactionsFromPdf(newStatement.getId(),
+                    file.getBytes());
+            if (transactions != null)
+                statementService.resolveCategories(newStatement.getId(), transactions);
             Map<String, String> success = Map.of(
                     "status", "success",
                     "message", "File '" + file.getOriginalFilename() + "' uploaded. Processing started.",
