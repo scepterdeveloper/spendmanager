@@ -77,7 +77,7 @@ public class StatementService {
      * Runs the long-running PDF processing and LLM categorization in a background
      * thread.
      */
-    @Async("transactionProcessingExecutor")
+    //@Async("transactionProcessingExecutor")
     // @Transactional // Ensures status updates and transaction saving are atomic
     public void startProcessingAsync(Long statementId, byte[] fileBytes) {
         // Use findById to retrieve the entity managed by the persistence context
@@ -97,11 +97,11 @@ public class StatementService {
             log.info("PDF Extracted...START Resolve Categories");
 
             // 2. Process and Categorize
-            /*List<Transaction> transactions = transactionService.processTransactions(extractedText);
+            List<Transaction> transactions = transactionService.processTransactions(extractedText);
             log.info("No. of Transactions:  " + transactions.size());
 
             // 3. Persist Transactions (TransactionService will use its new JPA Repository)
-            transactionService.saveCategorizedTransactions(statementId, transactions);*/
+            transactionService.saveCategorizedTransactions(statementId, transactions);
 
             // 4. Update Status
             statement.setStatus(StatementStatus.COMPLETED);

@@ -84,6 +84,7 @@ public class TransactionService {
                 "Healthcare", "Entertainment", "Income", "Other");
     }
 
+    @Async("transactionProcessingExecutor")
     public List<Transaction> processTransactions(String transactionText) {
 
         log.info("==============================================================================");
