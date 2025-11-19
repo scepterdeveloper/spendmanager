@@ -33,6 +33,7 @@ public class AsyncConfig {
         executor.setRejectedExecutionHandler((r, executor1) -> log.error("Task rejected, thread pool is full and queue is also full"));
         executor.setWaitForTasksToCompleteOnShutdown(true); // Allow tasks to complete on shutdown
         executor.setAwaitTerminationSeconds(60); // Wait up to 60 seconds for tasks to complete
+        executor.setThreadPriority(Thread.MAX_PRIORITY);
 
         executor.initialize();
         log.info("AsyncConfig successfully wired with CorePoolSize: {}, MaxPoolSize: {}, QueueCapacity: {}",
