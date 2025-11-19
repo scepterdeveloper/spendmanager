@@ -94,14 +94,14 @@ public class StatementService {
         try {
             // 1. Extract Text
             String extractedText = pdfProcessor.extractTextFromPdf(fileBytes);
-            log.info("START: Resolve Categories");
+            log.info("PDF Extracted...START Resolve Categories");
 
             // 2. Process and Categorize
-            List<Transaction> transactions = transactionService.processTransactions(extractedText);
+            /*List<Transaction> transactions = transactionService.processTransactions(extractedText);
             log.info("No. of Transactions:  " + transactions.size());
 
             // 3. Persist Transactions (TransactionService will use its new JPA Repository)
-            transactionService.saveCategorizedTransactions(statementId, transactions);
+            transactionService.saveCategorizedTransactions(statementId, transactions);*/
 
             // 4. Update Status
             statement.setStatus(StatementStatus.COMPLETED);
@@ -109,6 +109,7 @@ public class StatementService {
             // JpaRepository.save is not strictly needed here if @Transactional is used
             // and the entity is managed, but explicitly calling save is safer and clearer.
             statementRepository.save(statement);
+            log.info("Statement Saved");
 
         } catch (Exception e) {
             e.printStackTrace();
