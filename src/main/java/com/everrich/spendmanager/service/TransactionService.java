@@ -84,7 +84,6 @@ public class TransactionService {
                 "Healthcare", "Entertainment", "Income", "Other");
     }
 
-    @Async("transactionProcessingExecutor")
     public List<Transaction> processTransactions(String transactionText) {
 
         log.info("==============================================================================");
@@ -204,7 +203,6 @@ public class TransactionService {
 
     // ... (rest of the service methods remain the same) ...
 
-    @Transactional
     public void saveCategorizedTransactions(Long statementId, List<Transaction> transactions) {
         if (statementId != null && !transactions.isEmpty()) {
             Statement statement = statementService.getStatementById(statementId);
@@ -222,10 +220,16 @@ public class TransactionService {
                 t.setStatementId(statementId);
                 t.setAccount(account); // Set the account for each transaction
             }
-            transactionRepository.saveAll(transactions);
-            log.info("Saved " + transactions.size() + " transactions for statement: " + statementId + " and account: "
-                    + account.getName());
+            // Delegate to a transactional method for actual saving
+            performSaveAllTransactions(transactions, statementId, account);
         }
+    }
+
+    @Transactional
+    private void performSaveAllTransactions(List<Transaction> transactions, Long statementId, Account account) {
+        transactionRepository.saveAll(transactions);
+        log.info("Saved " + transactions.size() + " transactions for statement: " + statementId + " and account: "
+                + account.getName());
     }
 
     // ... (utility and filter methods) ...

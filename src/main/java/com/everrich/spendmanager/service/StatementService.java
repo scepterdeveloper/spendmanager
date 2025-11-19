@@ -77,7 +77,7 @@ public class StatementService {
      * Runs the long-running PDF processing and LLM categorization in a background
      * thread.
      */
-    //@Async("transactionProcessingExecutor")
+    @Async("transactionProcessingExecutor")
     // @Transactional // Ensures status updates and transaction saving are atomic
     public void startProcessingAsync(Long statementId, byte[] fileBytes) {
         // Use findById to retrieve the entity managed by the persistence context

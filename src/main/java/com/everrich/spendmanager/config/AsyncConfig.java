@@ -31,8 +31,12 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("Transaction-Task-");
         executor.setTaskDecorator(new LoggingTaskDecorator());
         executor.setRejectedExecutionHandler((r, executor1) -> log.error("Task rejected, thread pool is full and queue is also full"));
+        executor.setWaitForTasksToCompleteOnShutdown(true); // Allow tasks to complete on shutdown
+        executor.setAwaitTerminationSeconds(60); // Wait up to 60 seconds for tasks to complete
+
         executor.initialize();
-        log.info("AsyncConfig successfully wired.");
+        log.info("AsyncConfig successfully wired with CorePoolSize: {}, MaxPoolSize: {}, QueueCapacity: {}",
+                executor.getCorePoolSize(), executor.getMaxPoolSize(), executor.getQueueCapacity());
         return executor;
     }
 }
