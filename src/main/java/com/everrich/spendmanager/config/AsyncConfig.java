@@ -27,7 +27,7 @@ public class AsyncConfig {
         executor.setKeepAliveSeconds(600); // 10 minutes (useful if threads exceed core size)
 
         executor.setMaxPoolSize(16);
-        executor.setQueueCapacity(100);
+        executor.setQueueCapacity(8);
         executor.setThreadNamePrefix("Transaction-Task-");
         executor.setTaskDecorator(new LoggingTaskDecorator());
         executor.setRejectedExecutionHandler((r, executor1) -> log.error("Task rejected, thread pool is full and queue is also full"));
