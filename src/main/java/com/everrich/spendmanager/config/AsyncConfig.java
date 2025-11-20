@@ -19,15 +19,15 @@ public class AsyncConfig {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
 
         // 1. Set the Core Pool Size higher than 4 vCPUs for I/O bound tasks
-        executor.setCorePoolSize(25);
+        executor.setCorePoolSize(10);
 
         // 2. IMPORTANT: Do NOT let core threads die. They hold the initialized LLM
         // connection.
         executor.setAllowCoreThreadTimeOut(false); // Prevents core threads from shutting down
         executor.setKeepAliveSeconds(600); // 10 minutes (useful if threads exceed core size)
 
-        executor.setMaxPoolSize(250);
-        executor.setQueueCapacity(0);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("Transaction-Task-");
         executor.setTaskDecorator(new LoggingTaskDecorator());
         executor.setRejectedExecutionHandler((r, executor1) -> log.error("Task rejected, thread pool is full and queue is also full"));

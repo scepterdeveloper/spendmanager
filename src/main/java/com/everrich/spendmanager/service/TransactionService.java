@@ -73,6 +73,23 @@ public class TransactionService {
                 "Healthcare", "Entertainment", "Income", "Other");
     }
 
+    @Async("transactionProcessingExecutor")
+    public void categorizeTransaction(Transaction transaction) {
+
+        log.info("------------------------------------------------------------------------------");
+        log.info("Resolve Category (with RAG-LLM): START");
+        String categoryName = ragService.findBestCategory(transaction.getDescription(), transaction.getOperation());
+        log.info("Transaction: " + transaction.getDescription());
+        log.info("Resolved Category: " + categoryName);
+        transaction.setCategory(categoryName);
+        transaction.setCategoryEntity(categoryService.findByName(categoryName));
+        log.info("Resolve Category (with RAG-LLM): DONE");
+        log.info("Saving transaction: START");
+        transactionRepository.save(transaction);
+        log.info("Saving transaction: DONE");
+        log.info("------------------------------------------------------------------------------");
+    }
+
     public List<Transaction> processTransactions(List<Transaction> transactions) {
 
         if (transactions != null)

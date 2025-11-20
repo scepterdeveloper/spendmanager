@@ -126,8 +126,9 @@ public class PdfController {
             String statementIdString = newStatement.getId().toString();
             List<Transaction> transactions = statementService.extractTransactionsFromPdf(newStatement.getId(),
                     file.getBytes());
-            if (transactions != null)
-                statementService.resolveCategories(newStatement.getId(), transactions);
+            if (transactions != null) statementService.categorizeTransactions(newStatement.getId(), transactions);
+                //statementService.resolveCategories(newStatement.getId(), transactions);
+
             Map<String, String> success = Map.of(
                     "status", "success",
                     "message", "File '" + file.getOriginalFilename() + "' uploaded. Processing started.",

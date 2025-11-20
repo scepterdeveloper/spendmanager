@@ -152,7 +152,26 @@ public class StatementService {
         }
     }
 
-    @Async("transactionProcessingExecutor")
+    public void categorizeTransactions(Long statementId, List<Transaction> transactions)    {
+
+        log.info("Resolving categories (LLM Based)");
+        Optional<Statement> statementOptional = statementRepository.findById(statementId);
+
+        if (statementOptional.isEmpty()) {
+            log.error("Statement not found for ID: " + statementId);
+            return;
+        }
+
+        Statement statement = statementOptional.get();       
+        
+        for(Transaction transaction: transactions)  {
+
+            transaction.setStatementId(statementId);
+            transaction.setAccount(statement.getAccount());
+            transactionService.categorizeTransaction(transaction);
+        }
+    }
+
     public void resolveCategories(Long statementId, List<Transaction> transactions) {
 
         log.info("Resolving categories (LLM Based)");
