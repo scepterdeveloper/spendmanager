@@ -9,7 +9,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.reflect.TypeToken;
 
-import org.springframework.scheduling.annotation.Async;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -91,6 +90,14 @@ public class StatementService {
         return statementRepository.findById(id).orElse(null);
     }
 
+    public List<Statement> getProcessingStatements() {
+        return statementRepository.findByStatus(StatementStatus.PROCESSING);
+    }
+
+    public void saveStatement(Statement statement)  {
+        statementRepository.save(statement);
+    }
+
     private String parseTransactionsWithGemini(String transactionText) {
 
         PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
@@ -152,7 +159,7 @@ public class StatementService {
         }
     }
 
-    public void categorizeTransactions(Long statementId, List<Transaction> transactions)    {
+    public void categorizeTransactions(Long statementId, List<Transaction> transactions) {
 
         log.info("Resolving categories (LLM Based)");
         Optional<Statement> statementOptional = statementRepository.findById(statementId);
@@ -162,12 +169,13 @@ public class StatementService {
             return;
         }
 
-        Statement statement = statementOptional.get();       
-        
-        for(Transaction transaction: transactions)  {
+        Statement statement = statementOptional.get();
+
+        for (Transaction transaction : transactions) {
 
             transaction.setStatementId(statementId);
             transaction.setAccount(statement.getAccount());
+            transactionService.saveTransaction(transaction);
             transactionService.categorizeTransaction(transaction);
         }
     }
@@ -186,7 +194,8 @@ public class StatementService {
 
         try {
 
-            transactionService.saveCategorizedTransactions(statementId, transactionService.processTransactions(transactions));
+            transactionService.saveCategorizedTransactions(statementId,
+                    transactionService.processTransactions(transactions));
             statement.setStatus(StatementStatus.COMPLETED);
             statementRepository.save(statement);
             log.info("Resolve Categories: DONE");

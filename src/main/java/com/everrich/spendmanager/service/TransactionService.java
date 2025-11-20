@@ -3,14 +3,7 @@ package com.everrich.spendmanager.service;
 import com.everrich.spendmanager.entities.Category;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.repository.TransactionRepository;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.reflect.TypeToken;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -22,12 +15,9 @@ import com.everrich.spendmanager.entities.Account;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Type;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Arrays;
 import java.util.List;
@@ -203,6 +193,11 @@ public class TransactionService {
     @Transactional
     public Transaction saveTransaction(Transaction transaction) {
         return transactionRepository.save(transaction);
+    }
+
+    @Transactional
+    public void saveAllTransactions(List<Transaction> transactions) {
+        transactionRepository.saveAll(transactions);
     }
 
     @Transactional
