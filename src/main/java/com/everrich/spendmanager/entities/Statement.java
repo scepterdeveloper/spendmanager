@@ -18,6 +18,14 @@ public class Statement {
     private String originalFileName;
     private LocalDateTime uploadDateTime;
     private StatementStatus status; // Enum: UPLOADING, PROCESSING, COMPLETED, FAILED
+    private byte[] content;
+
+    public byte[] getContent() {
+        return content;
+    }
+    public void setContent(byte[] content) {
+        this.content = content;
+    }
 
     @ManyToOne
     @JoinColumn(name = "account_id")

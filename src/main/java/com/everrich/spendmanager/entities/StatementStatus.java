@@ -1,5 +1,5 @@
 package com.everrich.spendmanager.entities;
 
 public enum StatementStatus {
-    UPLOADING, PROCESSING, COMPLETED, FAILED
+    UPLOADING, OPEN, PROCESSING, CATEGORIZING, COMPLETED, FAILED
 }

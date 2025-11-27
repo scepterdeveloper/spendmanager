@@ -2,6 +2,7 @@ package com.everrich.spendmanager.service;
 
 import com.everrich.spendmanager.entities.Category;
 import com.everrich.spendmanager.entities.Transaction;
+import com.everrich.spendmanager.entities.TransactionCategorizationStatus;
 import com.everrich.spendmanager.repository.TransactionRepository;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.scheduling.annotation.Async;
@@ -16,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Arrays;
@@ -63,49 +63,67 @@ public class TransactionService {
                 "Healthcare", "Entertainment", "Income", "Other");
     }
 
-    @Async("transactionProcessingExecutor")
-    public void categorizeTransaction(Transaction transaction) {
+    // @Async("transactionProcessingExecutor")
+    public Transaction categorizeTransaction(Transaction transaction) {
 
         log.info("------------------------------------------------------------------------------");
         log.info("Resolve Category (with RAG-LLM): START");
-        String categoryName = ragService.findBestCategory(transaction.getDescription(), transaction.getOperation());
+        String categoryName = ragService.findBestCategory(transaction);
         log.info("Transaction: " + transaction.getDescription());
         log.info("Resolved Category: " + categoryName);
         transaction.setCategory(categoryName);
         transaction.setCategoryEntity(categoryService.findByName(categoryName));
+        transaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
         log.info("Resolve Category (with RAG-LLM): DONE");
         log.info("Saving transaction: START");
         transactionRepository.save(transaction);
         log.info("Saving transaction: DONE");
         log.info("------------------------------------------------------------------------------");
+        return transaction;
     }
 
-    public List<Transaction> processTransactions(List<Transaction> transactions) {
-
-        if (transactions != null)
-            log.info(LocalDateTime.now() + ": No. of trasactions parsed - " + transactions.size());
-
-        log.info("==============================================================================");
-        List<Category> categories = categoryService.findAll();
-
-        for (Transaction transaction : transactions) {
-
-            log.info("------------------------------------------------------------------------------");
-            log.info("Resolve Category (with RAG-LLM) START");
-            String categoryName = ragService.findBestCategory(transaction.getDescription(), transaction.getOperation());
-            log.info("Transaction: " + transaction.getDescription());
-            log.info("Resolved Category: " + categoryName);
-            transaction.setCategory(categoryName);
-            log.info("Resolve Category (with RAG-LLM) END");
-            log.info("------------------------------------------------------------------------------");
-        }
-
-        log.info("Resolve Category (with RAG-LLM): Done - " + transactions.size() + " transaction(s)");
-        List<Transaction> processedTransactions = resolveCategories(transactions, categories);
-        log.info("==============================================================================");
-
-        return processedTransactions;
-    }
+    /*
+     * public List<Transaction> processTransactions(List<Transaction> transactions)
+     * {
+     * 
+     * if (transactions != null)
+     * log.info(LocalDateTime.now() + ": No. of trasactions parsed - " +
+     * transactions.size());
+     * 
+     * log.info(
+     * "=============================================================================="
+     * );
+     * List<Category> categories = categoryService.findAll();
+     * 
+     * for (Transaction transaction : transactions) {
+     * 
+     * log.info(
+     * "------------------------------------------------------------------------------"
+     * );
+     * log.info("Resolve Category (with RAG-LLM) START");
+     * String categoryName =
+     * ragService.findBestCategory(transaction.getDescription(),
+     * transaction.getOperation());
+     * log.info("Transaction: " + transaction.getDescription());
+     * log.info("Resolved Category: " + categoryName);
+     * transaction.setCategory(categoryName);
+     * log.info("Resolve Category (with RAG-LLM) END");
+     * log.info(
+     * "------------------------------------------------------------------------------"
+     * );
+     * }
+     * 
+     * log.info("Resolve Category (with RAG-LLM): Done - " + transactions.size() +
+     * " transaction(s)");
+     * List<Transaction> processedTransactions = resolveCategories(transactions,
+     * categories);
+     * log.info(
+     * "=============================================================================="
+     * );
+     * 
+     * return processedTransactions;
+     * }
+     */
 
     /**
      * Handles the manual category correction, triggering the RAG learning loop.
@@ -127,11 +145,14 @@ public class TransactionService {
         }
         // 1. **RAG LEARNING STEP**: Index the new, corrected knowledge into the Vector
         // Store.
+        String accountName = (transaction.getAccount() != null) ? transaction.getAccount().getName() : "Unknown Account";
+        log.warn("Account is null for transaction ID {}. Using '{}' as account name for vector store.", transactionId, accountName);
         vectorStoreService.learnCorrectCategory(
                 transaction.getDescription(),
                 newCategoryName,
                 transaction.getAmount(),
-                transaction.getOperation());
+                transaction.getOperation(),
+                accountName);
     }
 
     // 🟢 REVISED: Simplified LLM call just for parsing the text into JSON

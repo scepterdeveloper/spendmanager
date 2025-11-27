@@ -122,12 +122,12 @@ public class PdfController {
             Account account = accountService.findById(accountId)
                     .orElseThrow(() -> new IllegalArgumentException("Account not found with ID: " + accountId));
 
-            Statement newStatement = statementService.createInitialStatement(file.getOriginalFilename(), account);
+            Statement newStatement = statementService.createInitialStatement(file.getOriginalFilename(), account, file.getBytes());
             String statementIdString = newStatement.getId().toString();
-            List<Transaction> transactions = statementService.extractTransactionsFromPdf(newStatement.getId(),
+            /*List<Transaction> transactions = statementService.extractTransactionsFromPdf(newStatement.getId(),
                     file.getBytes());
             if (transactions != null) statementService.categorizeTransactions(newStatement.getId(), transactions);
-                //statementService.resolveCategories(newStatement.getId(), transactions);
+                //statementService.resolveCategories(newStatement.getId(), transactions);*/
 
             Map<String, String> success = Map.of(
                     "status", "success",

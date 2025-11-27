@@ -532,6 +532,7 @@
                 <thead>
                     <tr>
                         <th>Date</th>
+                        <th>Account</th>
                         <th>Description</th>
                         <th>Amount</th>
                         <th>Category</th>
@@ -541,6 +542,7 @@
                 <tbody>
                     <tr th:each="transaction : ${transactions}">
                         <td th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</td>
+                        <td th:text="${transaction.account != null ? transaction.account.id + ' - ' + transaction.account.name : 'N/A'}">Account Info</td>
                         <td th:text="${transaction.description}">Netflix Subscription</td>
 
                         <td th:classappend="${

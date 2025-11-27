@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
+import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionOperation;
 
 import java.util.List;
@@ -22,7 +23,6 @@ public class VectorStoreService {
 
     @Value("classpath:/prompts/normalize-description-prompt.st")
     private Resource normalizeDescriptionPromptResource;
-
 
     public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder.build();
@@ -40,21 +40,21 @@ public class VectorStoreService {
         redisAdapter.createTransactionIndex();
     }
 
-
     public void learnCorrectCategory(String transactionDescription, String correctCategory, double amount,
-            TransactionOperation operation) {
+            TransactionOperation operation, String accountName) {
 
         // 1. 🟢 Apply the cleaning logic to the description before indexing
         String cleanedDescription = normalizeDescription(transactionDescription);
         String operationName = operation.name(); // Get the string "PLUS" or "MINUS"
-        redisAdapter.createDocument(correctCategory, cleanedDescription, operationName);
+        redisAdapter.createDocument(correctCategory, cleanedDescription, operationName, accountName);
 
     }
 
-    public String similaritySearch(String description, String operationName) {
+    public String similaritySearch(Transaction transaction) {
 
-        String queryText = normalizeDescription(description);
-        List<RedisDocument> searchResults = redisAdapter.searchDocuments(queryText, operationName);
+        String description = normalizeDescription(transaction.getDescription());
+        List<RedisDocument> searchResults = redisAdapter.searchDocuments(description, transaction.getOperation().name(),
+                transaction.getAccount().getName());
         String context = "";
 
         for (RedisDocument redisDocument : searchResults) {

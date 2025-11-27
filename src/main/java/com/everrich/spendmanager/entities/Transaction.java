@@ -30,7 +30,16 @@ public class Transaction {
     private String description;
     private double amount;
     private TransactionOperation operation;
+    private TransactionCategorizationStatus categorizationStatus;
     
+    public TransactionCategorizationStatus getCategorizationStatus() {
+        return categorizationStatus;
+    }
+
+    public void setCategorizationStatus(TransactionCategorizationStatus categorizationStatus) {
+        this.categorizationStatus = categorizationStatus;
+    }
+
     public TransactionOperation getOperation() {
         return operation;
     }

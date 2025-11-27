@@ -98,10 +98,10 @@ public class RedisAdapter {
             argsBuilder.add("ON").add("HASH");
             argsBuilder.add("PREFIX").add(1).add("doc:");
             argsBuilder.add("SCHEMA");
-            argsBuilder.add("description_op").add("TEXT");
             argsBuilder.add("content_payload").add("TEXT");
             argsBuilder.add("category").add("TAG");
             argsBuilder.add("operation").add("TAG");
+            argsBuilder.add("account").add("TAG");
             argsBuilder.add("vector").add("AS").add("vector");
             argsBuilder.add("VECTOR");
             argsBuilder.add("FLAT");
@@ -173,7 +173,7 @@ public class RedisAdapter {
         }
     }
 
-    public String createDocument(String categoryName, String description, String operation) {
+    public String createDocument(String categoryName, String description, String operation, String accountName) {
 
         StatefulRedisConnection<String, String> connection = null;
         //log.info("Starting creation...with description " + description);
@@ -181,7 +181,7 @@ public class RedisAdapter {
 
         try {
             String searchKey = "doc:" + UUID.randomUUID().toString();
-            String contentPayload = description + " " + operation + " " + categoryName;
+            String contentPayload = accountName + " " + operation + " " + description;
 
             connection = redisClient.connect();
             RedisCommands<String, String> syncCommands = connection.sync();
@@ -193,9 +193,9 @@ public class RedisAdapter {
             CommandArgs<String, String> hsetArgs = new CommandArgs<>(StringCodec.UTF8)
                     .add(searchKey)
                     // Add all string fields normally
-                    .add("description_op").add(description + " " + operation)
                     .add("category").add(categoryName)
                     .add("operation").add(operation)
+                    .add("account").add(accountName)
                     .add("content_payload").add(contentPayload);
 
             hsetArgs.add("vector").add(vectorByteArray);
@@ -216,7 +216,7 @@ public class RedisAdapter {
         }
     }
 
-    public List<RedisDocument> searchDocuments(String description, String operation) {
+    public List<RedisDocument> searchDocuments(String description, String operation, String accountName) {
 
         //log.info("Starting search...with description " + description);
         //log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
@@ -224,7 +224,7 @@ public class RedisAdapter {
         RedisCommands<String, String> syncCommands = null;
 
         try {
-            float[] queryVectorFloats = generateEmbeddingVector(description + " " + operation, "query");
+            float[] queryVectorFloats = generateEmbeddingVector(accountName + " " + operation + " " + description, "query");
             byte[] queryVectorByteArray = convertFloatsToRedisByteArray(queryVectorFloats);
 
             connection = redisClient.connect();
@@ -249,7 +249,7 @@ public class RedisAdapter {
             argsBuilder.add("RETURN").add(5);
             argsBuilder.add("category");
             argsBuilder.add("operation");
-            argsBuilder.add("description_op");
+            argsBuilder.add("account");
             argsBuilder.add("content_payload");
             argsBuilder.add("__vector_score"); // Use the implicit score field
 

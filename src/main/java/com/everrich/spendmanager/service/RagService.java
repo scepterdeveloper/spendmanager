@@ -3,6 +3,7 @@ package com.everrich.spendmanager.service;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
+import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionOperation;
 
 import org.springframework.ai.chat.prompt.Prompt;
@@ -35,9 +36,9 @@ public class RagService {
     }
 
 
-    public String findBestCategory(String newTransactionDescription, TransactionOperation newTransactionOperation) {
+    public String findBestCategory(Transaction transaction) {
 
-        String context = vectorStoreService.similaritySearch(newTransactionDescription, newTransactionOperation.name());
+        String context = vectorStoreService.similaritySearch(transaction);
         String availableCategories = categoryService.findAll().stream()
                 .map(c -> c.getName())
                 .collect(Collectors.joining(", "));
@@ -45,8 +46,8 @@ public class RagService {
         // ----------------------------------------
         // Step 3: Generation (Call the LLM with the context and query)
         // ----------------------------------------
-        String newTransactionDescriptionWithOperation = newTransactionDescription + " (Operation: "
-                + newTransactionOperation.name() + ")";
+        String newTransactionDescriptionWithOperation = transaction.getDescription() + " (Operation: "
+                + transaction.getOperation().name() + ")";
 
         PromptTemplate promptTemplate = new PromptTemplate(categoryPromptResource);
 

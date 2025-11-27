@@ -84,6 +84,66 @@
                 font-size: 0.8rem; /* Even smaller table font */
             }
         }
+
+        .info-section {
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: #F9FAFB;
+            border-radius: 0.5rem;
+            border: 1px solid #E5E7EB;
+            display: flex; /* Make it a flex container */
+            justify-content: flex-start; /* Align items to the start (left) */
+            gap: 2rem; /* Space between items */
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column; /* Stack label and value */
+            align-items: flex-start; /* Align labels/values to the left */
+            text-align: left;
+            flex: 0 1 auto; /* Do not grow, allow to shrink, base on content */
+            min-width: 120px; /* Minimum width to prevent squishing */
+        }
+
+        .info-label {
+            font-weight: 700; /* Bolder for prominence */
+            color: #1F2937; /* Darker color for label */
+            margin-bottom: 0.25rem; /* Space between label and value */
+            font-size: 0.9rem; /* Slightly smaller than default for labels */
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: #4B5563; /* Subtle color for value */
+            font-size: 0.8rem; /* Smaller font for value */
+        }
+
+        /* Responsive adjustments for info section */
+        @media (max-width: 768px) {
+            .info-section {
+                flex-direction: column; /* Stack items vertically on medium screens */
+                align-items: flex-start; /* Align the whole section to the left */
+            }
+            .info-item {
+                margin-bottom: 0.75rem; /* Space between stacked items */
+                align-items: flex-start; /* Align labels/values to the left */
+                text-align: left;
+            }
+            .info-item:last-child {
+                margin-bottom: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .info-section {
+                padding: 0.75rem;
+            }
+            .info-item {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 
@@ -107,10 +167,20 @@
             <p th:text="${message}"></p>
         </div>
 
-        <p style="margin-top: 1rem; color: #6B7280;">
-            Status: <span th:text="${statement.status}">COMPLETED</span> |
-            Uploaded: <span th:text="${#temporals.format(statement.uploadDateTime, 'dd MMM yyyy HH:mm')}"></span>
-        </p>
+        <div class="info-section">
+            <div class="info-item">
+                <span class="info-label">Account</span>
+                <span class="info-value" th:text="${statement.account.id + ' - ' + statement.account.name}">Account Info</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Status</span>
+                <span class="info-value" th:text="${statement.status}">COMPLETED</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Uploaded</span>
+                <span class="info-value" th:text="${#temporals.format(statement.uploadDateTime, 'dd MMM yyyy HH:mm')}"></span>
+            </div>
+        </div>
 
         <div class="data-table-wrapper">
             <table class="data-table" th:if="${!transactions.empty}">

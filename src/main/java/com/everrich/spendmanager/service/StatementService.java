@@ -1,8 +1,10 @@
 package com.everrich.spendmanager.service;
 
+import com.everrich.spendmanager.entities.Account;
 import com.everrich.spendmanager.entities.Statement;
 import com.everrich.spendmanager.entities.StatementStatus;
 import com.everrich.spendmanager.entities.Transaction;
+import com.everrich.spendmanager.entities.TransactionCategorizationStatus;
 import com.everrich.spendmanager.repository.StatementRepository;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -12,6 +14,7 @@ import com.google.gson.reflect.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -64,12 +67,13 @@ public class StatementService {
 
     }
 
-    public Statement createInitialStatement(String fileName, com.everrich.spendmanager.entities.Account account) {
+    public Statement createInitialStatement(String fileName, Account account, byte[] content) {
         Statement statement = new Statement();
         statement.setOriginalFileName(fileName);
         statement.setUploadDateTime(LocalDateTime.now());
-        statement.setStatus(StatementStatus.PROCESSING); // Start as Processing
-        statement.setAccount(account); // Set the associated account
+        statement.setStatus(StatementStatus.OPEN); 
+        statement.setAccount(account); 
+        statement.setContent(content);
         return statementRepository.save(statement);
     }
 
@@ -90,8 +94,12 @@ public class StatementService {
         return statementRepository.findById(id).orElse(null);
     }
 
-    public List<Statement> getProcessingStatements() {
-        return statementRepository.findByStatus(StatementStatus.PROCESSING);
+    public List<Statement> getOpenStatements() {
+        return statementRepository.findByStatus(StatementStatus.OPEN);
+    }
+
+    public List<Statement> getStatementsBeingCategorized() {
+        return statementRepository.findByStatus(StatementStatus.CATEGORIZING);
     }
 
     public void saveStatement(Statement statement)  {
@@ -103,7 +111,11 @@ public class StatementService {
         PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
         Map<String, Object> model = Map.of("transactions", transactionText);
         log.info("Going to call LLM for parsing");
-        String LLMOutput = chatClient.prompt(promptTemplate.create(model))
+        Prompt prompt = promptTemplate.create(model);
+        log.info("-------------------Prompt to PARSE----------------");
+        log.info(prompt.getContents());
+        log.info("--------------------------------------------------");
+        String LLMOutput = chatClient.prompt(prompt)
                 .call()
                 .content();
         return LLMOutput;
@@ -146,6 +158,9 @@ public class StatementService {
             log.info("Extract Text from PDF: DONE");
             String parsedJson = parseTransactionsWithGemini(extractedText);
             String cleanJson = cleanLLMResponse(parsedJson);
+            log.info("--------------------Parsed JSON from PDF->LLM------------------------");
+            log.info(cleanJson);
+            log.info("---------------------------------------------------------------------");
             List<Transaction> transactions = deserializeTransactions(cleanJson);
             log.info("Parse-clean (LLM Based) and deserialized transactions: DONE - " + transactions.size()
                     + " transaction(s)");
@@ -175,12 +190,16 @@ public class StatementService {
 
             transaction.setStatementId(statementId);
             transaction.setAccount(statement.getAccount());
+            transaction.setCategorizationStatus(TransactionCategorizationStatus.NOT_CATEGORIZED);
             transactionService.saveTransaction(transaction);
             transactionService.categorizeTransaction(transaction);
         }
+
+        statement.setStatus(StatementStatus.CATEGORIZING);
+        statementRepository.save(statement);
     }
 
-    public void resolveCategories(Long statementId, List<Transaction> transactions) {
+    /*public void resolveCategories(Long statementId, List<Transaction> transactions) {
 
         log.info("Resolving categories (LLM Based)");
         Optional<Statement> statementOptional = statementRepository.findById(statementId);
@@ -205,5 +224,5 @@ public class StatementService {
             statement.setStatus(StatementStatus.FAILED);
             statementRepository.save(statement);
         }
-    }
+    }*/
 }
