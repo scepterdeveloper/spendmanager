@@ -3,6 +3,9 @@
 
 <head>
     <title th:text="${appName} + ' - Dashboard'">EverRich - Dashboard</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
     <style>
         /* Define a basic grid for the tiles */
         .tile-grid {
@@ -19,8 +22,6 @@
             border-radius: 0.5rem;
             padding: 2rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            /*width: 400px;*/
-            /* Tile width maintained */
 
             /* Added Flex properties to handle layout better */
             display: flex;
@@ -237,11 +238,15 @@
                 flex-direction: column;
                 align-items: center;
                 width: 100%;
+                /* Added padding to prevent content touching the screen edges */
+                padding: 0 1rem; 
             }
 
             .dashboard-tile {
-                width: 100%; /* Make tiles take up most of the width on smaller screens */
-                /*max-width: 400px;*/ /* Prevent them from becoming too wide on slightly larger mobile devices */
+                width: 100%; 
+                /* 2. ✅ UPDATED: Removed max-width to allow tile to fill the screen */
+                max-width: unset; 
+                min-width: unset; /* Remove the desktop min-width constraint */
                 padding: 1.5rem;
             }
 
@@ -261,9 +266,13 @@
         }
 
         @media (max-width: 480px) {
+            .tile-grid {
+                 /* Added a little more space on very small screens */
+                padding: 0 0.5rem; 
+            }
             .dashboard-tile {
-                width: 95%; /* Even narrower on very small screens */
-                padding: 1.5rem;
+                width: 100%; 
+                padding: 1.2rem;
             }
 
             .dashboard-tile-title {
