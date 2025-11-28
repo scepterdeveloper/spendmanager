@@ -247,9 +247,7 @@
 
             .dashboard-tile {
                 width: 95%;
-                /* Use 95% of the screen width for a good margin */
-                /* 🛠️ ADDED: Use margins for automatic centering */
-                margin: 0 auto;
+                margin: 0 auto 20px auto;
                 max-width: unset;
                 min-width: unset;
                 padding: 1.5rem;
@@ -274,11 +272,12 @@
         @media (max-width: 480px) {
             .tile-grid {
                 /* Added a little more space on very small screens */
-                padding: 0 0.5rem;
+                padding: 0 1rem;
             }
 
             .dashboard-tile {
-                width: 100%;
+                /*width: 100%;
+                margin: 0;*/
                 padding: 1.2rem;
             }
 
