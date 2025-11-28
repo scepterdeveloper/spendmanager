@@ -7,6 +7,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
+        /* 1. CRITICAL FIX: Clear default browser margin/padding on the body globally */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Default Styles for Content Container (DESKTOP VIEW) */
+        .content-container {
+            /* ✅ FIX: Added 1.5rem (approx 24px) horizontal padding for desktop view */
+            padding: 0 1.5rem; 
+            margin: 0;
+            margin-top: 1.5rem; /* Vertical space below the header */
+            box-sizing: border-box;
+            width: 100%;
+        }
+
         /* Define a basic grid for the tiles */
         .tile-grid {
             display: flex;
@@ -14,13 +31,15 @@
             /* Space between tiles */
             flex-wrap: wrap;
             /* Allows tiles to wrap on smaller screens */
+            /* Desktop remains left-aligned by default (flex-start) */
         }
 
         .dashboard-tile {
             background-color: white;
             border: 1px solid #E5E7EB;
             border-radius: 0.5rem;
-            padding: 2rem;
+            /* Using the tight padding from the previous step */
+            padding: 1rem 2rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 
             /* Added Flex properties to handle layout better */
@@ -51,7 +70,7 @@
             color: #6B7280;
             /* Neutral gray for description text */
             font-size: 1rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             /* Space before the new feature buttons */
         }
 
@@ -234,23 +253,35 @@
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
+
+            body * {
+                box-sizing: border-box;
+            }
+
+            /* MOBILE PADDING: Re-apply tight mobile horizontal padding using padding */
+            .content-container {
+                margin-top: 1rem !important;
+                /* Keep vertical space tight */
+                padding: 0 0.5rem !important;
+                /* Keep tight horizontal padding */
+            }
+
             .tile-grid {
-                /* Change flex-direction to column for stacking */
                 flex-direction: column;
-                /* Ensures items are centered in the column stack */
-                align-items: center;
                 width: 100%;
-                /* 🛠️ REMOVED: Padding here should be removed if we apply margin to the container/tile */
+                /* Removed all padding/margins here */
                 padding: 0;
-                /* Ensures the grid itself takes full width for centering */
+                margin: 0;
+                gap: 0;
             }
 
             .dashboard-tile {
-                width: 95%;
-                margin: 0 auto 20px auto;
+                width: 100%;
+                margin: 0 0 20px 0;
                 max-width: unset;
                 min-width: unset;
-                padding: 1.5rem;
+                padding: 1rem 1.5rem;
+                /* Reduced from 1.5rem to 1rem vertical */
             }
 
             .dashboard-actions-grid {
@@ -260,7 +291,6 @@
 
             .feature-card {
                 width: 100%;
-                /* Feature cards take full width within their tile */
                 padding: 1rem 0.8rem;
             }
 
@@ -270,15 +300,21 @@
         }
 
         @media (max-width: 480px) {
+
+            /* SMALL MOBILE PADDING: Re-apply tightest horizontal padding */
+            .content-container {
+                margin-top: 0.8rem !important;
+                padding: 0 0.5rem !important;
+            }
+
             .tile-grid {
-                /* Added a little more space on very small screens */
-                padding: 0 1rem;
+                padding: 0;
             }
 
             .dashboard-tile {
-                /*width: 100%;
-                margin: 0;*/
-                padding: 1.2rem;
+                width: 100%;
+                margin: 0 0 15px 0;
+                padding: 0.8rem 1.2rem;
             }
 
             .dashboard-tile-title {
@@ -385,11 +421,11 @@
                     <div class="dashboard-tile-title">Configuration</div>
                 </div>
                 <div class="dashboard-actions-grid">
-                    <a href="/categories" class="feature-card full-width">
+                    <a th:href="@{/categories}" class="feature-card full-width">
                         <span class="feature-card-label">Manage Categories</span>
                         <span class="feature-card-description">Define and edit expense/income categories</span>
                     </a>
-                    <a href="/accounts" class="feature-card full-width">
+                    <a th:href="@{/accounts}" class="feature-card full-width">
                         <span class="feature-card-label">Manage Accounts</span>
                         <span class="feature-card-description">Define and edit financial accounts</span>
                     </a>
@@ -404,7 +440,7 @@
         <p>To create or upload transactions, you must first define at least one category.</p>
         <div class="popup-actions">
             <button onclick="closeWarningPopup()" class="btn-cancel">Cancel</button>
-            <a href="/categories" class="btn-go">Go to Categories</a>
+            <a th:href="@{/categories}" class="btn-go">Go to Categories</a>
         </div>
     </div>
     <div id="warning-popup-overlay" class="warning-popup-overlay" onclick="closeWarningPopup()"></div>
