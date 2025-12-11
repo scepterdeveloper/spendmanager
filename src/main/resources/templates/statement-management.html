@@ -4,13 +4,63 @@
     <title th:text="${appName} + ' - Statement Management'">EverRich - Statement Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        /* General Styles */
-        .page-header {
-            margin-bottom: 1.5rem;
+        /* ================================================================= 
+           BASE STYLES & VARIABLES (Copied from transaction-management.html)
+           ================================================================= */
+        :root {
+            --accent-color: #047857; /* Primary link/button color */
+            --primary-color: #1F2937; /* Dark text color */
+            --text-mellow: #6B7280;
+            --border-color: #E5E7EB; /* Light border color */
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--primary-color);
+        }
+
+        /* ================================================================= 
+           PAGE HEADER & BACK BUTTON (Copied from transaction-management.html)
+           ================================================================= */
+        .page-header {
+            display: flex;
+            align-items: center;
+            /* Consistent spacing and border */
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            margin-right: 2rem; /* Consistent spacing */
+            font-size: 1rem;
+        }
+
+        .back-link svg {
+            margin-right: 5px;
+        }
+
+        .page-header h2 {
+            color: var(--primary-color);
+            margin: 0; /* Consistent removal of margin for alignment */
+            font-size: 2rem; /* Consistent title size */
+            font-weight: 600; /* Consistent title weight */
+        }
+
+        /* General Styles */
         .upload-section {
             background-color: #F9FAFB;
-            border: 1px solid #E5E7EB;
+            border: 1px solid var(--border-color); /* Use variable for consistency */
             border-radius: 0.5rem;
             padding: 2rem;
             margin-bottom: 2rem;
@@ -55,7 +105,7 @@
         .data-table th, .data-table td {
             padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid #E5E7EB;
+            border-bottom: 1px solid var(--border-color); /* Use variable for consistency */
         }
         .data-table th {
             background-color: #E5E7EB;
@@ -90,11 +140,37 @@
         .title-full { display: block; }
 
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
+        /* ================================================================= 
+           RESPONSIVE - MOBILE (Aligned to transaction-management.html)
+           ================================================================= */
+        @media (max-width: 767px) { /* Consistent breakpoint */
             .content-container {
-                padding: 1rem;
+                padding: 0.5rem !important; /* Consistent mobile padding */
             }
+
+            .page-header {
+                align-items: flex-start;
+                margin-bottom: 0.5rem; /* Consistent reduced margin */
+                padding-bottom: 0.25rem; /* Consistent reduced padding */
+                margin-left: 0;
+                margin-right: 0;
+            }
+
+            .back-link {
+                margin-right: 1rem; /* Consistent reduced spacing */
+                font-size: 0.9rem;
+            }
+            
+            .page-header h2 {
+                font-size: 1.25rem; /* Consistent mobile title size */
+            }
+            
+            /* Apply consistent mobile padding to upload section */
+            .upload-section {
+                padding: 0.75rem; 
+                margin-bottom: 0.75rem;
+            }
+            
             .data-table th, .data-table td {
                 padding: 0.8rem;
             }
@@ -115,7 +191,7 @@
                 width: 100%; 
             }
             
-            /* ⭐ NEW REVISION: Swap titles on small screens */
+            /* Swap titles on small screens */
             .title-full { display: none; }
             .title-short { display: block; }
         }
