@@ -2,12 +2,55 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <title th:text="${appName} + ' - Manage Accounts'">EverRich - Manage Accounts</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        /* Existing Styles (Truncated for brevity) */
+        /* Existing Styles */
         :root { 
             --accent-color: #047857; 
             --primary-color: #1F2937; 
-        } 
+            --text-mellow: #6B7280;
+            --border-color: #E5E7EB;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--primary-color);
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            margin-right: 2rem;
+            font-size: 1rem;
+        }
+
+        .back-link svg {
+            margin-right: 5px;
+        }
+
+        .page-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -43,6 +86,13 @@
             border-radius: 0.25rem;
             box-sizing: border-box;
         }
+        
+        .form-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
         .btn-primary {
             background-color: var(--accent-color);
             color: white;
@@ -52,6 +102,10 @@
             cursor: pointer;
             font-weight: 600;
             transition: background-color 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            font-size: 1rem;
         }
         .btn-primary:hover {
             background-color: #059669; 
@@ -87,14 +141,15 @@
             cursor: pointer;
             font-weight: 600;
             text-decoration: none;
-            margin-left: 10px;
             transition: background-color 0.3s;
+            display: inline-block;
+            text-align: center;
+            font-size: 1rem;
         }
         .btn-cancel:hover {
             background-color: #4B5563;
         }
         
-        /* Collapsible Header Styles */
         .collapsible-header {
             display: flex;
             align-items: center;
@@ -119,7 +174,6 @@
             font-size: 1.125rem; 
         }
         
-        /* Ensure ALL interactive elements within the header use the ACCENT color */
         .collapsible-header h3, 
         .collapsible-header .icon,
         .llm-icon, 
@@ -138,7 +192,6 @@
             margin-right: 10px;
         }
         
-        /* Unified Content Wrapper Style */
         .content-wrapper {
             border: 1px solid #E5E7EB;
             padding: 2rem;
@@ -148,7 +201,6 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
         }
         
-        /* Toast & Modal Styles (Retained) */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -220,62 +272,137 @@
             border: none;
         }
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .content-container {
-                padding: 1rem; /* Adjust overall padding */
-            }
-
-            .page-header h2 {
-                font-size: 1.5rem; /* Smaller heading */
-            }
-
-            .data-table-wrapper { /* New wrapper for scrollable table */
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-            }
-
-            .data-table {
-                min-width: 600px; /* Ensure table content doesn't shrink too much */
-            }
-
-            .data-table th, .data-table td {
-                padding: 0.75rem; /* Smaller padding in table cells */
-                font-size: 0.875rem; /* Smaller font size in table */
-            }
-
-            .btn-primary, .btn-cancel {
-                width: 100%; /* Full width buttons */
-                margin-top: 0.5rem;
-                margin-left: 0; /* Remove left margin for cancel button */
-            }
-
-            .modal-content {
-                width: 95%; /* Slightly wider modal on small screens */
-            }
+        /* Mobile View (Compact High-Density Cards) */
+        .account-list-mobile {
+            display: none;
         }
 
-        @media (max-width: 480px) {
-            .page-header h2 {
-                font-size: 1.25rem; /* Even smaller heading */
+        .account-card {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .account-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .account-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .account-description {
+            font-size: 0.85rem;
+            color: var(--text-mellow);
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .account-card-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .action-icon:hover {
+            opacity: 0.7;
+        }
+
+        .edit-icon {
+            color: #3B82F6;
+        }
+
+        .delete-icon {
+            color: #EF4444;
+        }
+
+        @media (max-width: 767px) {
+            .data-table-wrapper {
+                display: none;
             }
 
-            .collapsible-header h3 {
-                font-size: 1rem; /* Smaller collapsible header title */
+            .account-list-mobile {
+                display: block;
             }
 
-            .form-group label {
-                font-size: 0.9rem; /* Smaller form labels */
+            .page-header {
+                align-items: flex-start;
+                margin-bottom: 0.5rem;
+                padding-bottom: 0.25rem;
             }
 
-            .form-group input, .form-group textarea {
-                padding: 0.6rem; /* Smaller input padding */
+            .back-link {
+                margin-right: 1rem;
                 font-size: 0.9rem;
             }
 
-            .btn-edit, .btn-delete {
-                padding: 0.4rem 0.8rem; /* Smaller action buttons */
-                font-size: 0.8rem;
+            .page-header h2 {
+                font-size: 0;
+            }
+
+            .page-header h2::after {
+                content: "Manage Accounts";
+                font-size: 1.25rem;
+            }
+
+            .content-container {
+                padding: 0.5rem !important;
+            }
+
+            .collapsible-header {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .collapsible-header h3 {
+                font-size: 1rem;
+            }
+
+            .content-wrapper {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .form-group label {
+                font-size: 0.9rem;
+            }
+
+            .form-group input, .form-group textarea {
+                padding: 0.6rem;
+                font-size: 0.9rem;
+            }
+
+            .btn-primary, .btn-cancel {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .account-card {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .modal-content {
+                width: 95%;
             }
         }
     </style>
@@ -331,17 +458,20 @@
                     <textarea id="description" th:field="*{description}" rows="2" required></textarea>
                 </div>
                 
-                <button type="submit" class="btn-primary">
-                    <span th:text="${newAccount.id != null ? 'Update Account' : 'Save Account'}">Save Account</span>
-                </button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">
+                        <span th:text="${newAccount.id != null ? 'Update Account' : 'Save Account'}">Save Account</span>
+                    </button>
 
-                <a th:if="${newAccount.id != null}" th:href="@{/accounts}" class="btn-cancel">
-                    Cancel Edit
-                </a>
+                    <a th:if="${newAccount.id != null}" th:href="@{/accounts}" class="btn-cancel">
+                        Cancel Edit
+                    </a>
+                </div>
             </form>
         </div>
 
         <h3>Existing Accounts</h3>
+        
         <div class="data-table-wrapper">
             <table class="data-table">
                 <thead>
@@ -363,7 +493,7 @@
                             </a>
                             
                             <form th:action="@{/accounts/{id}/delete(id=${account.id})}" method="post" style="display: inline;" class="delete-account-form">
-                                <button type="button" class="btn-delete" data-account-id="${account.id}">Delete</button>
+                                <button type="button" class="btn-delete" th:attr="data-account-id=${account.id}">Delete</button>
                             </form>
                         </td>
                     </tr>
@@ -373,6 +503,41 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="account-list-mobile">
+            <div th:each="account : ${accounts}" class="account-card">
+                <div class="account-card-header">
+                    <div class="account-name">
+                        <span th:text="${account.id} + ' - ' + ${account.name}">1 - Checking Account</span>
+                    </div>
+                </div>
+                
+                <div class="account-description" th:text="${account.description}">Main checking account for daily expenses.</div>
+
+                <div class="account-card-actions">
+                    <a th:href="@{/accounts/edit/{id}(id=${account.id})}" class="action-icon edit-icon" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                        </svg>
+                    </a>
+                    
+                    <form th:action="@{/accounts/{id}/delete(id=${account.id})}" method="post" style="display: inline;" class="delete-account-form">
+                        <button type="button" class="action-icon delete-icon delete-btn-mobile" th:attr="data-account-id=${account.id}" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div th:if="${accounts.empty}" style="text-align: center; padding: 2rem; background-color: white; border-radius: 0.5rem; border: 1px solid #E5E7EB;">
+                No accounts defined yet. Please add a new one above.
+            </div>
+        </div>
     </div>
     
     <script>
@@ -380,7 +545,7 @@
             // UI Elements
             const manualHeader = document.getElementById('manual-header'); 
             const manualContent = document.getElementById('manual-form-content'); 
-            const deleteButtons = document.querySelectorAll('.btn-delete');
+            const deleteButtons = document.querySelectorAll('.btn-delete, .delete-btn-mobile');
             const modal = document.getElementById('confirmation-modal');
             const modalMessage = document.getElementById('modal-message');
             const modalConfirmBtn = document.getElementById('modal-confirm-btn');
@@ -412,7 +577,6 @@
                 modal.style.display = 'flex';
             }
 
-            // Modal button handlers
             modalConfirmBtn.onclick = () => {
                 modal.style.display = 'none';
                 if (confirmAction) {
@@ -431,6 +595,9 @@
             // --- Account Deletion Logic (Using Modal) ---
             deleteButtons.forEach(button => {
                 button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
                     const form = button.closest('form');
                     
                     showModal(
@@ -448,7 +615,6 @@
 
 
             // --- Section Collapse Logic ---
-            
             const isEditMode = document.querySelector('input[name="id"]').value !== "";
             
             if (!isEditMode) {
@@ -458,7 +624,6 @@
                  manualHeader.classList.remove('collapsed');
             }
            
-            // Toggle function for any collapsible section
             function toggleSection(header, content) {
                  const isCollapsed = content.style.display === 'none';
                  content.style.display = isCollapsed ? 'block' : 'none';
