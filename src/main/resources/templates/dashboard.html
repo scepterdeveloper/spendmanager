@@ -3,497 +3,337 @@
 
 <head>
     <title th:text="${appName} + ' - Dashboard'">EverRich - Dashboard</title>
-
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
-        /* 1. CRITICAL FIX: Clear default browser margin/padding on the body globally */
+        :root {
+            --accent-color: #047857; 
+            --primary-color: #1F2937; 
+            --text-mellow: #6B7280;
+            --border-color: #E5E7EB;
+            --bg-light-teal: #F0FDFA;
+            --bg-main: #f9fafb;
+            --spending-color: #ef4444;
+            --income-color: #10b981;
+            --worth-color: #3b82f6;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
-        }
-
-        /* Default Styles for Content Container (DESKTOP VIEW) */
-        .content-container {
-            /* ✅ FIX: Added 1.5rem (approx 24px) horizontal padding for desktop view */
-            /*padding: 0 1.5rem; */
-            margin: 0;
-            padding: 0 1rem !important;
-            /*margin-top: 1.5rem;*/
-            box-sizing: border-box;
-            width: 100%;
-        }
-
-        /* Define a basic grid for the tiles */
-        .tile-grid {
-            display: flex;
-            /*gap: 10px;*/
-            gap: 1rem;
-            /* Space between tiles */
-            flex-wrap: wrap;
-            /* Allows tiles to wrap on smaller screens */
-            /* Desktop remains left-aligned by default (flex-start) */
-        }
-
-        .dashboard-tile {
-            background-color: white;
-            border: 1px solid #E5E7EB;
-            border-radius: 0.5rem;
-            /* Using the tight padding from the previous step */
-            padding: 1rem 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-
-            /* Added Flex properties to handle layout better */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-width: 300px;
-            max-width: 400px;
-            width: 100%;
-        }
-
-        /* Title block to align icon and title */
-        .dashboard-title-block {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 0.5rem;
-        }
-
-        .dashboard-tile-title {
-            font-size: 1.5rem;
-            font-weight: 600;
+            background-color: var(--bg-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: var(--primary-color);
+            min-height: 100vh;
         }
 
-        /* Style for the short description under the title */
-        .tile-short-description {
-            color: #6B7280;
-            /* Neutral gray for description text */
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            /* Space before the new feature buttons */
-        }
-
-        /* Container for the feature buttons */
-        .dashboard-actions-grid {
-            display: flex;
-            /* Use flexbox for fluid layout */
-            flex-wrap: wrap;
-            /* Allow buttons to wrap */
-            gap: 15px;
-            /* Space between the button cards */
-            margin-top: 1rem;
-            /* Ensure buttons in a partial row align to the left */
-            justify-content: flex-start;
-        }
-
-        /* 🟢 REVISED: Green Button Theme for Feature Cards */
-        .feature-card {
-            width: 185px;
-            flex: 0 0 auto;
-            /* Stop it from growing/shrinking */
-
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 0.8rem 0.5rem;
-            background-color: var(--accent-color);
-            /* 🟢 Primary green background */
-            border: 1px solid var(--accent-color);
-            /* 🟢 Green border */
-            border-radius: 0.5rem;
-            transition: all 0.2s;
-            cursor: pointer;
+        /* Standardized Dashboard Padding */
+        .content-container {
+            padding: 0.75rem !important; /* Fixed Desktop gutter */
+            margin: 0;
+            max-width: 100%;
             box-sizing: border-box;
+            width: 100%;
         }
 
-        /* 🟢 REVISED: Hover state for Green Buttons */
-        .feature-card:hover {
-            background-color: #059669;
-            /* Slightly darker green on hover */
-            border-color: #059669;
-            /* Match darker green border */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            transform: translateY(-2px);
+        /* KPI Pulse Group */
+        .pulse-group {
+            margin-bottom: 1rem;
         }
 
-        /* Configuration Tile Button stretched to fill space */
-        .dashboard-tile:nth-child(2) .dashboard-actions-grid {
-            gap: 0;
+        .pulse-header {
+            margin: 0 0 0.5rem 0.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
-        .feature-card.full-width {
-            flex-grow: 1;
-            width: auto;
-            flex: 1 1 100%;
-            align-self: center;
+        .pulse-header h2 {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-mellow);
+            margin: 0;
         }
 
-        /* 🟢 REVISED: Label Color for Green Buttons (should be white) */
-        .feature-card-label {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 4px;
-            color: white;
-            /* 🟢 White text for labels */
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--accent-color);
+            animation: pulse-glow 2s infinite;
         }
 
-        /* Description Color for Green Buttons (should be light gray for contrast) */
-        .feature-card-description {
-            font-size: 0.8rem;
-            color: #E5E7EB;
-            /* 🟢 Light gray for description text on green background */
+        @keyframes pulse-glow {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 0.4rem;
+            padding: 0.75rem 0.25rem;
+            border: 1px solid var(--border-color);
+            position: relative;
             text-align: center;
         }
 
-        /* Removed old button styling (retained) */
-        .dashboard-actions a {
-            display: none;
+        .kpi-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            border-radius: 0.4rem 0.4rem 0 0;
+        }
+        .kpi-income::before { background: var(--income-color); }
+        .kpi-spending::before { background: var(--spending-color); }
+        .kpi-worth::before { background: var(--worth-color); }
+
+        .kpi-title {
+            font-size: 0.55rem;
+            color: var(--text-mellow);
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 0.1rem;
         }
 
-        /* Styles for the success/error info popup (retained) */
-        .info-popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            padding: 1rem 1.5rem;
-            border-radius: 0.5rem;
-            color: white;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            opacity: 0;
-            transition: opacity 0.5s, transform 0.5s;
-            transform: translateY(-20px);
+        .kpi-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--primary-color);
         }
 
-        .info-popup.show {
-            opacity: 1;
-            transform: translateY(0);
+        /* Chart Section */
+        .chart-card {
+            background: white;
+            border-radius: 0.4rem;
+            padding: 0.75rem;
+            margin-bottom: 1.25rem;
+            border: 1px solid var(--border-color);
         }
 
-        .info-popup.success {
-            background-color: #047857;
-            /* Accent color green */
+        .chart-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin: 0 0 0.75rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
         }
 
-        .info-popup.error {
-            background-color: #DC2626;
-            /* Red */
-        }
-
-        /* Styles for the warning popup (retained) */
-        .warning-popup {
-            background-color: #FBBF24;
-            border: 1px solid #D97706;
-            color: #78350F;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            max-width: 400px;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            z-index: 10000;
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-            opacity: 0;
-            transition: all 0.3s ease-in-out;
-        }
-
-        .warning-popup.active {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .warning-popup h4 {
-            margin-top: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #D97706;
-            margin-bottom: 0.75rem;
-        }
-
-        .warning-popup .popup-actions {
-            margin-top: 1rem;
-            text-align: right;
-        }
-
-        .warning-popup .popup-actions a,
-        .warning-popup .popup-actions button {
-            padding: 0.5rem 1rem;
-            border-radius: 0.25rem;
-            text-decoration: none;
-            cursor: pointer;
-            font-weight: 500;
-            margin-left: 10px;
-            border: none;
-        }
-
-        .warning-popup .popup-actions .btn-go {
-            background-color: #D97706;
-            color: white;
-        }
-
-        .warning-popup .popup-actions .btn-go:hover {
-            background-color: #B45309;
-        }
-
-        .warning-popup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
+        .chart-container {
+            height: 180px;
             width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-            z-index: 9999;
-            display: none;
         }
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-
-            body * {
-                box-sizing: border-box;
-            }
-
-            /* MOBILE PADDING: Re-apply tight mobile horizontal padding using padding */
-            .content-container {
-                margin-top: 1rem !important;
-                /* Keep vertical space tight */
-                padding: 0 0.5rem !important;
-                /* Keep tight horizontal padding */
-            }
-
-            .tile-grid {
-                flex-direction: column;
-                width: 100%;
-                /* Removed all padding/margins here */
-                padding: 0;
-                margin: 0;
-                gap: 0;
-            }
-
-            .dashboard-tile {
-                width: 100%;
-                margin: 0 0 20px 0;
-                max-width: unset;
-                min-width: unset;
-                padding: 1rem 1.5rem;
-                /* Reduced from 1.5rem to 1rem vertical */
-            }
-
-            .dashboard-actions-grid {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .feature-card {
-                width: 100%;
-                padding: 1rem 0.8rem;
-            }
-
-            .feature-card.full-width {
-                width: 100%;
-            }
+        /* Action Grid */
+        .action-groups-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
         }
 
-        @media (max-width: 480px) {
+        .group-header {
+            margin-bottom: 0.2rem;
+            padding-bottom: 0.3rem;
+            border-bottom: 1px solid var(--border-color);
+        }
 
-            /* SMALL MOBILE PADDING: Re-apply tightest horizontal padding */
+        .group-name {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-mellow);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 0;
+        }
+
+        .sleek-link {
+            display: flex;
+            align-items: center;
+            padding: 0.6rem 0.4rem;
+            text-decoration: none;
+            border-radius: 0.4rem;
+            transition: background 0.2s ease, transform 0.2s ease;
+            margin-left: -0.4rem;
+        }
+
+        .sleek-link:hover {
+            background-color: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            transform: translateX(4px);
+        }
+
+        .link-icon-wrapper {
+            margin-right: 0.75rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: var(--bg-light-teal);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .link-text-content { display: flex; flex-direction: column; }
+        .link-label { font-size: 0.85rem; font-weight: 600; color: var(--primary-color); }
+        .link-subtext { font-size: 0.65rem; color: var(--text-mellow); }
+
+        /* Precise Mobile Spacing Override */
+        @media (max-width: 767px) {
             .content-container {
-                margin-top: 0.5rem !important;
-                padding: 0 0.5rem !important;
+                /* Strictly 0.5rem gutter as requested */
+                padding: 0.5rem !important; 
             }
 
-            .tile-grid {
-                padding: 0;
-                margin-top: 0.5rem !important;
+            .kpi-container {
+                gap: 0.4rem;
             }
 
-            .dashboard-tile {
-                width: 100%;
-                margin: 0 0 15px 0;
-                padding: 0.8rem 1.2rem;
+            .kpi-card {
+                padding: 0.6rem 0.15rem;
             }
 
-            .dashboard-tile-title {
-                font-size: 1.2rem;
+            .kpi-value {
+                font-size: 0.95rem;
             }
 
-            .tile-short-description {
-                font-size: 0.9rem;
-            }
-
-            .feature-card-label {
-                font-size: 1rem;
-            }
-
-            .feature-card-description {
-                font-size: 0.75rem;
+            .sleek-link:hover {
+                transform: none;
             }
         }
     </style>
 </head>
 
 <body>
-    <div th:replace="fragments/header :: appHeader"></div>
-
-    <div th:if="${message}" id="info-popup" th:classappend="${messageType == 'success' ? 'success' : 'error'}"
-        class="info-popup">
-        <span th:text="${message}"></span>
-    </div>
+    <div th:replace="~{fragments/header :: appHeader}"></div>
 
     <div id="category-data" th:attr="data-category-count=${categoryCount}"></div>
 
     <div class="content-container">
-
-        <div class="tile-grid" style="margin-top: 1rem;">
-
-            <div class="dashboard-tile">
-                <div>
-                    <div class="dashboard-title-block">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            style="color: var(--primary-color);">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <path d="M14 2v6h6"></path>
-                            <path d="M16 13H8"></path>
-                            <path d="M16 17H8"></path>
-                            <path d="M10 9H8"></path>
-                        </svg>
-                        <div class="dashboard-tile-title">Manage Transactions</div>
-                    </div>
-                    <p class="tile-short-description">Create transactions manually or by bank statement upload / Search,
-                        review and maintain them</p>
-                </div>
-
-                <div class="dashboard-actions-grid">
-
-                    <a th:href="@{/transactions/add}" id="create-btn" class="feature-card category-check-btn">
-                        <span class="feature-card-label">Create</span>
-                        <span class="feature-card-description">Create a transaction manually</span>
-                    </a>
-
-                    <a th:href="@{/statements}" id="upload-btn" class="feature-card category-check-btn">
-                        <span class="feature-card-label">Upload</span>
-                        <span class="feature-card-description">Upload transactions using statements</span>
-                    </a>
-
-                    <a th:href="@{/transactions}" id="review-btn" class="feature-card">
-                        <span class="feature-card-label">Review</span>
-                        <span class="feature-card-description">Search, review and edit transactions</span>
-                    </a>
-
-                </div>
+        
+        <div class="pulse-group">
+            <div class="pulse-header">
+                <div class="pulse-dot"></div>
+                <h2>Financial Pulse</h2>
             </div>
-            <div class="dashboard-tile">
-                <div>
-                    <div class="dashboard-title-block">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            style="color: var(--primary-color);">
-                            <path d="M3 3v18h18"></path>
-                            <path d="M18 17V9"></path>
-                            <path d="M13 17V5"></path>
-                            <path d="M8 17v-4"></path>
-                        </svg>
-                        <div class="dashboard-tile-title">Insights</div>
-                    </div>
-                    <p class="tile-short-description">Analyze transactions and draw insights</p>
+            <div class="kpi-container">
+                <div class="kpi-card kpi-income">
+                    <div class="kpi-title">Income YTD</div>
+                    <div class="kpi-value">$42,850</div>
                 </div>
-
-                <div class="dashboard-actions-grid">
-                    <a th:href="@{/insights}" class="feature-card full-width category-check-btn">
-                        <span class="feature-card-label">Run Analysis</span>
-                        <span class="feature-card-description">View spending charts and cumulative totals</span>
-                    </a>
+                <div class="kpi-card kpi-spending">
+                    <div class="kpi-title">Spending YTD</div>
+                    <div class="kpi-value">$18,320</div>
                 </div>
-            </div>
-            <div class="dashboard-tile">
-                <div class="dashboard-title-block">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        style="color: var(--primary-color);">
-                        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"></path>
-                        <path d="M12 6v6l4 2"></path>
-                    </svg>
-                    <div class="dashboard-tile-title">Configuration</div>
-                </div>
-                <div class="dashboard-actions-grid">
-                    <a th:href="@{/categories}" class="feature-card full-width">
-                        <span class="feature-card-label">Manage Categories</span>
-                        <span class="feature-card-description">Define and edit expense/income categories</span>
-                    </a>
-                    <a th:href="@{/accounts}" class="feature-card full-width">
-                        <span class="feature-card-label">Manage Accounts</span>
-                        <span class="feature-card-description">Define and edit financial accounts</span>
-                    </a>
+                <div class="kpi-card kpi-worth">
+                    <div class="kpi-title">Net Worth</div>
+                    <div class="kpi-value">$124,522</div>
                 </div>
             </div>
         </div>
 
-    </div>
+        <div class="chart-card">
+            <h3 class="chart-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent-color)"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-4"/></svg>
+                Monthly Spending
+            </h3>
+            <div class="chart-container">
+                <canvas id="spendingChart"></canvas>
+            </div>
+        </div>
 
-    <div id="category-warning-popup" class="warning-popup">
-        <h4>Category Required</h4>
-        <p>To create or upload transactions, you must first define at least one category.</p>
-        <div class="popup-actions">
-            <button onclick="closeWarningPopup()" class="btn-cancel">Cancel</button>
-            <a th:href="@{/categories}" class="btn-go">Go to Categories</a>
+        <div class="action-groups-container">
+            <div class="action-group">
+                <div class="group-header"><h3 class="group-name">Records</h3></div>
+                <div class="links-list">
+                    <a th:href="@{/transactions/add}" class="sleek-link category-check-btn">
+                        <div class="link-icon-wrapper"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+                        <div class="link-text-content">
+                            <span class="link-label">Create Transaction</span>
+                            <span class="link-subtext">Manual entry</span>
+                        </div>
+                    </a>
+                    <a th:href="@{/statements}" class="sleek-link category-check-btn">
+                        <div class="link-icon-wrapper"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+                        <div class="link-text-content">
+                            <span class="link-label">Upload Statement</span>
+                            <span class="link-subtext">Import CSV/PDF</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="action-group">
+                <div class="group-header"><h3 class="group-name">Insights</h3></div>
+                <div class="links-list">
+                    <a th:href="@{/insights}" class="sleek-link category-check-btn">
+                        <div class="link-icon-wrapper"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-4"/></svg></div>
+                        <div class="link-text-content">
+                            <span class="link-label">Run Analysis</span>
+                            <span class="link-subtext">View reports</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="action-group">
+                <div class="group-header"><h3 class="group-name">System</h3></div>
+                <div class="links-list">
+                    <a th:href="@{/categories}" class="sleek-link">
+                        <div class="link-icon-wrapper"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+                        <div class="link-text-content">
+                            <span class="link-label">Categories</span>
+                            <span class="link-subtext">Edit labels</span>
+                        </div>
+                    </a>
+                    <a th:href="@{/accounts}" class="sleek-link">
+                        <div class="link-icon-wrapper"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                        <div class="link-text-content">
+                            <span class="link-label">Accounts</span>
+                            <span class="link-subtext">Bank profiles</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    <div id="warning-popup-overlay" class="warning-popup-overlay" onclick="closeWarningPopup()"></div>
 
-    <script th:if="${message}">
-        document.addEventListener('DOMContentLoaded', function () {
-            var popup = document.getElementById('info-popup');
-            if (popup) {
-                setTimeout(function () {
-                    popup.classList.add('show');
-                }, 50);
-                setTimeout(function () {
-                    popup.classList.remove('show');
-                }, 4000);
-                setTimeout(function () {
-                    popup.remove();
-                }, 4550);
-            }
-        });
-    </script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const categoryCount = parseInt(document.getElementById('category-data').dataset.categoryCount);
-            // I've added the category-check-btn class to the Insights tile link
-            // since analysis is meaningless without categories.
-            const checkButtons = document.querySelectorAll('.category-check-btn');
-            const warningPopup = document.getElementById('category-warning-popup');
-            const overlay = document.getElementById('warning-popup-overlay');
-
-            checkButtons.forEach(button => {
-                button.addEventListener('click', function (event) {
-                    if (categoryCount === 0) {
-                        event.preventDefault(); // Stop navigation
-                        showWarningPopup();
+            const ctx = document.getElementById('spendingChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        data: [1200, 1900, 1500, 2100, 1800, 2400],
+                        backgroundColor: '#10b981', 
+                        borderRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 9 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 9 } } }
                     }
-                });
+                }
             });
-
-            window.showWarningPopup = function () {
-                warningPopup.classList.add('active');
-                overlay.style.display = 'block';
-            };
-
-            window.closeWarningPopup = function () {
-                warningPopup.classList.remove('active');
-                overlay.style.display = 'none';
-            };
         });
     </script>
 </body>
-
 </html>

@@ -217,22 +217,34 @@
         
         .visualization-toggles {
             margin-bottom: 15px;
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #E5E7EB;
         }
 
         .visualization-toggles button {
-            padding: 10px 15px;
+            padding: 12px 20px;
             cursor: pointer;
-            border: 1px solid var(--accent-color);
-            border-radius: 0.25rem;
-            background-color: white;
-            color: var(--accent-color);
+            border: none;
+            border-bottom: 3px solid transparent;
+            background-color: transparent;
+            color: #6B7280;
             font-weight: 500;
             transition: all 0.2s;
+            flex: 1;
+            position: relative;
+            bottom: -2px;
         }
+        
+        .visualization-toggles button:hover {
+            color: var(--accent-color);
+            background-color: #F9FAFB;
+        }
+        
         .visualization-toggles button.active {
-            background-color: var(--accent-color);
-            color: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+            font-weight: 600;
         }
         .chart-area {
             max-height: 400px; /* Constrain chart height */
@@ -250,76 +262,198 @@
         }
 
         /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .content-container {
-                padding: 1rem; /* Adjust overall padding */
+        @media (max-width: 767px) {
+            /* Page Header Mobile Optimization - Matching account-management.html */
+            .page-header {
+                align-items: flex-start;
+                margin-bottom: 0.5rem;
+                padding-bottom: 0.25rem;
+            }
+
+            .back-link {
+                margin-right: 1rem;
+                font-size: 0.9rem;
             }
 
             .page-header h2 {
-                font-size: 1.5rem; /* Smaller heading */
+                font-size: 0;
             }
 
-            .data-table-wrapper { /* New wrapper for scrollable table */
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            .page-header h2::after {
+                content: "Spending Insights";
+                font-size: 1.25rem;
             }
 
-            .data-table {
-                min-width: 600px; /* Ensure table content doesn't shrink too much */
+            /* Content Container Mobile Optimization */
+            .content-container {
+                padding: 0.5rem !important;
             }
 
-            .data-table th, .data-table td {
-                padding: 0.75rem; /* Smaller padding in table cells */
-                font-size: 0.875rem; /* Smaller font size in table */
+            /* Content Wrapper Mobile Optimization */
+            .content-wrapper {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
             }
 
-            .btn-filter, .btn-primary {
-                width: 100%; /* Full width buttons */
-                margin-top: 0.5rem;
-            }
-
+            /* Filter Container - Stack Vertically */
             .filter-container {
-                grid-template-columns: 1fr; /* Stack filter elements */
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
             }
 
-            .filter-row {
-                flex-direction: column; /* Stack date inputs */
-                gap: 0.5rem;
-            }
-
-            .filter-col-date input {
-                width: 100%;
-            }
-
-            .filter-actions {
-                text-align: center; /* Center filter button */
-                grid-column: auto;
+            /* Category Group - Full Width */
+            .category-group {
                 grid-row: auto;
             }
 
+            /* Date Range Fields - Stack Inputs */
+            #date-range-fields .filter-row {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            #date-range-fields input {
+                width: 100%;
+            }
+
+            /* Form Elements Mobile Optimization */
+            .form-group label {
+                font-size: 0.9rem;
+                margin-bottom: 0.4rem;
+            }
+
+            select, 
+            input[type="date"], 
+            input[type="text"] {
+                padding: 0.6rem;
+                font-size: 0.9rem;
+            }
+
+            /* Filter Actions - Full Width Button */
+            .filter-actions {
+                grid-column: auto;
+                grid-row: auto;
+                text-align: center;
+                margin-top: 0.5rem;
+            }
+
+            .btn-filter, .btn-primary {
+                width: 100%;
+                padding: 0.7rem 1rem;
+            }
+
+            /* Category Dropdown Mobile Optimization */
+            #category-list-dropdown {
+                position: fixed;
+                left: 5%;
+                right: 5%;
+                top: 50%;
+                transform: translateY(-50%);
+                min-width: unset;
+                max-width: 90%;
+                max-height: 60vh;
+            }
+
+            /* Results Section */
+            h3 {
+                font-size: 1.125rem;
+                margin-bottom: 0.75rem;
+            }
+
+            /* Visualization Toggles - Compact Tabs on Mobile */
+            .visualization-toggles {
+                margin-bottom: 1rem;
+            }
+
             .visualization-toggles button {
-                width: 100%; /* Full width toggle buttons */
-                margin-bottom: 0.5rem;
+                padding: 0.7rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            /* Data Table Mobile Optimization */
+            .data-table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -0.75rem;
+                padding: 0 0.75rem;
+            }
+
+            .data-table {
+                font-size: 0.85rem;
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.6rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            /* Make first column sticky for better readability */
+            .data-table th:first-child,
+            .data-table td:first-child {
+                position: sticky;
+                left: 0;
+                background-color: white;
+                z-index: 1;
+            }
+
+            .data-table th:first-child {
+                background-color: #F3F4F6;
+            }
+
+            /* Chart Area Mobile Optimization */
+            .chart-area {
+                max-height: 300px;
+                margin-top: 1rem;
             }
         }
 
         @media (max-width: 480px) {
-            .page-header h2 {
-                font-size: 1.25rem; /* Even smaller heading */
+            /* Extra Small Screens */
+            .page-header h2::after {
+                content: "Insights";
+                font-size: 1.125rem;
+            }
+
+            .content-wrapper {
+                padding: 0.6rem;
             }
 
             .form-group label {
-                font-size: 0.9rem; /* Smaller form labels */
+                font-size: 0.85rem;
             }
 
-            select, input[type="date"], input[type="text"] {
-                padding: 0.6rem; /* Smaller input padding */
-                font-size: 0.9rem;
+            select, 
+            input[type="date"], 
+            input[type="text"] {
+                padding: 0.55rem;
+                font-size: 0.85rem;
+            }
+
+            .data-table {
+                font-size: 0.8rem;
             }
 
             .data-table th, .data-table td {
-                padding: 0.6rem; /* Even smaller table padding */
-                font-size: 0.8rem; /* Even smaller table font */
+                padding: 0.5rem 0.4rem;
+                font-size: 0.8rem;
+            }
+
+            .btn-filter, .btn-primary {
+                padding: 0.65rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .visualization-toggles button {
+                padding: 0.65rem 0.4rem;
+                font-size: 0.75rem;
+            }
+
+            h3 {
+                font-size: 1rem;
+            }
+
+            .chart-area {
+                max-height: 250px;
             }
         }
     </style>
