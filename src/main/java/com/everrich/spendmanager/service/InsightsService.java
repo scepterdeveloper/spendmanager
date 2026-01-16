@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Arrays;
 
 @Service
 public class InsightsService {
@@ -52,7 +53,8 @@ public class InsightsService {
             LocalDate endDate,
             List<Long> categoryIds,
             String interval,
-            String intervalFunction) {
+            String intervalFunction,
+            boolean aggregateResults) { // Added aggregateResults parameter
 
         DateRange range = calculateDateRange(timeframe, startDate, endDate);
         LocalDate finalStart = range.getStart();
@@ -80,6 +82,8 @@ public class InsightsService {
             return Collections.emptyList();
         }
 
+        List<AggregatedInsight> insights;
+
         if (interval != null && !"NOT_SPECIFIED".equals(interval)) {
             // Handle interval-based aggregation
             if ("MONTHLY".equals(interval) && "SUM".equals(intervalFunction)) {
@@ -89,7 +93,7 @@ public class InsightsService {
                                 Collectors.summingDouble(Transaction::getAmount)
                         ));
 
-                return monthlyTotals.entrySet().stream()
+                insights = monthlyTotals.entrySet().stream()
                         .map(entry -> new AggregatedInsight(entry.getKey(), entry.getValue()))
                         .sorted((a, b) -> {
                             // Custom sort for monthly data (e.g., Jan 2023, Feb 2023)
@@ -117,10 +121,20 @@ public class InsightsService {
                             Double::sum
                     ));
 
-            return categoryTotals.entrySet().stream()
+            insights = categoryTotals.entrySet().stream()
                     .map(entry -> new AggregatedInsight(entry.getKey(), entry.getValue()))
                     .sorted((a, b) -> Double.compare(b.getCumulatedAmount(), a.getCumulatedAmount())) 
                     .collect(Collectors.toList());
+        }
+
+        // Apply aggregation if requested
+        if (aggregateResults && !insights.isEmpty()) {
+            double totalAggregatedAmount = insights.stream()
+                    .mapToDouble(AggregatedInsight::getCumulatedAmount)
+                    .sum();
+            return Arrays.asList(new AggregatedInsight("Total Aggregated", totalAggregatedAmount));
+        } else {
+            return insights;
         }
     }
 

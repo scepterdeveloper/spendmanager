@@ -99,6 +99,7 @@
             margin-top: 1rem;
             background-color: white;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            ;
             border-radius: 0.5rem;
             overflow: hidden;
             font-size: 0.95rem;
@@ -266,6 +267,25 @@
         /* Set table view as default visible */
         #table-view {
             display: block;
+        }
+
+        /* REFINED: Professional Aggregated View Styles */
+        .agg-summary-container {
+            padding: 1rem 0;
+            text-align: left;
+        }
+        .agg-summary-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6B7280;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+        .agg-summary-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary-color);
         }
 
         /* Responsive adjustments */
@@ -510,7 +530,6 @@
                         </div>
                     </div>
 
-                    <!-- New Interval Filter -->
                     <div class="interval-group">
                         <label for="interval">Interval</label>
                         <div class="filter-row">
@@ -523,7 +542,6 @@
                         </div>
                     </div>
 
-                    <!-- New Interval Function Filter -->
                     <div class="interval-group">
                         <label for="intervalFunction">Interval Function</label>
                         <div class="filter-row">
@@ -567,6 +585,13 @@
                         </div>
                     </div>
 
+                    <div class="form-group"
+                        style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-start;">
+                        <input type="checkbox" id="aggregateResults" name="aggregateResults" class="form-check-input"
+                            style="width: auto; margin-right: 8px;">
+                        <label for="aggregateResults" style="margin-bottom: 0;">Aggregate Results</label>
+                    </div>
+
                     <div class="filter-actions">
                         <button type="button" class="btn-filter" onclick="runAnalysis()">Go</button>
                     </div>
@@ -579,34 +604,45 @@
 
             <div class="content-wrapper">
 
-                <div class="visualization-toggles">
-                    <button id="btn-table" onclick="setView('table')" class="active">Tabular View</button>
-                    <button id="btn-pie" onclick="setView('pie')">Pie Chart</button>
-                    <button id="btn-bar" onclick="setView('bar')">Histogram</button>
-                </div>
-
-                <div id="table-view" class="view-container">
-                    <div class="data-table-wrapper">
-                        <table id="insights-table" class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Category Name</th>
-                                    <th>Cumulated Amount</th>
-                                    <th>Percentage</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="3" style="text-align: center; padding: 2rem;">Click \'Go\' to generate
-                                        the spending analysis.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <div id="insights-content-area">
+                    <div class="visualization-toggles">
+                        <button id="btn-table" onclick="setView('table')" class="active">Tabular View</button>
+                        <button id="btn-pie" onclick="setView('pie')">Pie Chart</button>
+                        <button id="btn-bar" onclick="setView('bar')">Histogram</button>
                     </div>
-                </div>
 
-                <div id="chart-view" class="view-container chart-area" style="display: none;">
-                    <canvas id="analysisChart"></canvas>
+                    <div id="table-view" class="view-container">
+                        <div class="data-table-wrapper">
+                            <table id="insights-table" class="data-table">
+                                <thead>
+                                    <tr id="insights-table-header-row">
+                                        <th>Category Name</th>
+                                        <th>Cumulated Amount</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="insights-table-body">
+                                    <tr>
+                                        <td colspan="3" style="text-align: center; padding: 2rem;">Click 'Go' to
+                                            generate
+                                            the spending analysis.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="chart-view" class="view-container chart-area" style="display: none;">
+                        <canvas id="analysisChart"></canvas>
+                    </div>
+
+                    <div id="aggregated-result-display" style="display:none;">
+                        <div class="agg-summary-container">
+                            <div class="agg-summary-title">Total Aggregated Amount</div>
+                            <div class="agg-summary-value" id="aggregated-amount-value"></div>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -620,6 +656,7 @@
         let allCategories = [];
         let currentAnalysisData = [];
         let currentChartType = 'pie'; // Default chart type
+        let myChart = null; // Chart.js instance
 
         document.addEventListener('DOMContentLoaded', function () {
             const timeframeSelect = document.getElementById('timeframe');
@@ -651,14 +688,14 @@
                 selectedCountSpan.textContent = text;
             }
 
-            // --- 1. Interval Function Logic (Enable/Disable based on Interval) --- 
+            // --- 1. Interval Function Logic (Enable/Disable based on Interval) ---
             window.toggleIntervalFunction = function () {
                 const selectedInterval = intervalSelect.value;
                 intervalFunctionSelect.disabled = (selectedInterval === 'NOT_SPECIFIED');
             }
             intervalSelect.addEventListener('change', toggleIntervalFunction);
 
-            // --- 2. Timeframe Logic (Show/Hide Date Range and enable/disable Interval) --- 
+            // --- 2. Timeframe Logic (Show/Hide Date Range and enable/disable Interval) ---
             window.toggleDateRangeAndInterval = function () {
                 const selectedTimeframe = timeframeSelect.value;
 
@@ -679,14 +716,14 @@
             timeframeSelect.addEventListener('change', toggleDateRangeAndInterval);
             toggleDateRangeAndInterval(); // Initialize on load
 
-            // --- 3. Category Dropdown Toggle --- 
+            // --- 3. Category Dropdown Toggle ---
             categoryDisplaySelect.addEventListener('mousedown', function (event) {
                 event.preventDefault();
                 // Toggle display
                 categoryListDropdown.style.display = categoryListDropdown.style.display === 'block' ? 'none' : 'block';
             });
 
-            // Close dropdown when clicking outside 
+            // Close dropdown when clicking outside
             document.addEventListener('click', function (event) {
                 if (categoryListDropdown.style.display === 'block' &&
                     !categoryListDropdown.contains(event.target) &&
@@ -695,7 +732,7 @@
                 }
             });
 
-            // --- 4. Category Selection Logic (Attached to dynamically loaded elements) --- 
+            // --- 4. Category Selection Logic (Attached to dynamically loaded elements) ---
             function attachCategoryListeners() {
                 const selectAllCheckbox = document.getElementById('select-all-categories');
                 const clearAllCheckbox = document.getElementById('clear-all-categories');
@@ -754,7 +791,7 @@
                     allCategories.forEach(cat => {
                         const div = document.createElement('div');
                         div.innerHTML = `
-                            <input type="checkbox" id="cat-${cat.id}" name="categoryIds" value="${cat.id}" class="category-checkbox" checked> 
+                            <input type="checkbox" id="cat-${cat.id}" name="categoryIds" value="${cat.id}" class="category-checkbox" checked>
                             <label for="cat-${cat.id}" style="display:inline;" >${cat.name}</label>
                         `;
                         dropdownContent.appendChild(div);
@@ -775,6 +812,7 @@
                 const endDate = document.getElementById('endDate').value;
                 const interval = intervalSelect.value;
                 const intervalFunction = intervalFunctionSelect.value;
+                const aggregateResults = document.getElementById('aggregateResults').checked;
 
                 // Select only the regular checkboxes that are checked (excluding .category-toggle)
                 const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox');
@@ -784,14 +822,19 @@
                     .filter(cb => cb.checked)
                     .map(cb => cb.value);
 
-                if (selectedCategoryIds.length === 0) {
-                    showToast("Please select at least one category.", 'error');
+                // If no categories are explicitly selected by checking, and aggregateResults is false, show an error.
+                // If selectedCategoryIds is empty but aggregateResults is true, still send the empty list for service to handle as "all".
+                if (selectedCategoryIds.length === 0 && !aggregateResults) {
+                    showToast("Please select at least one category, or check 'Aggregate Results' to view a total.", 'error');
                     return;
                 }
 
                 let params = new URLSearchParams({
                     timeframe: timeframe,
-                    categoryIds: selectedCategoryIds.join(',')
+                    categoryIds: selectedCategoryIds.join(
+                        ','
+                    ),
+                    aggregateResults: aggregateResults
                 });
 
                 if (timeframe === 'DATE_RANGE') {
@@ -812,8 +855,7 @@
                         throw new Error(`Analysis failed: ${response.status} - ${errorBody}`);
                     }
                     currentAnalysisData = await response.json();
-                    // Pass the raw interval value to renderResults, it will handle dynamic header/label determination
-                    renderResults(currentAnalysisData, interval !== 'NOT_SPECIFIED');
+                    renderResults(currentAnalysisData, interval !== 'NOT_SPECIFIED', aggregateResults);
                     showToast('Analysis complete.', 'success');
                 } catch (error) {
                     showToast('Error running analysis: ' + error.message, 'error');
@@ -821,104 +863,155 @@
             }
 
             // --- 7. Results Rendering and Visualization ---
-            let myChart = null; // Chart.js instance
 
             window.setView = function (viewType) {
-                const tableView = document.getElementById('table-view');
-                const chartView = document.getElementById('chart-view');
-                currentChartType = viewType; // Update current chart type
+                const btnTable = document.getElementById('btn-table');
+                const btnPie = document.getElementById('btn-pie');
+                const btnBar = document.getElementById('btn-bar');
+                const tableViewContainer = document.getElementById("table-view");
+                const chartViewContainer = document.getElementById("chart-view");
 
-                document.querySelectorAll('.visualization-toggles button').forEach(btn => btn.classList.remove('active'));
+                // Remove active class from all buttons
+                [btnTable, btnPie, btnBar].forEach(btn => btn.classList.remove('active'));
 
+                // Set active class and display content based on viewType
                 if (viewType === 'table') {
-                    tableView.style.display = 'block';
-                    chartView.style.display = 'none';
-                    document.getElementById('btn-table').classList.add('active');
+                    btnTable.classList.add('active');
+                    tableViewContainer.style.display = 'block';
+                    chartViewContainer.style.display = 'none';
+                    // DON'T call renderChart for table view
                 } else {
-                    tableView.style.display = 'none';
-                    chartView.style.display = 'block';
+                    tableViewContainer.style.display = 'none';
+                    chartViewContainer.style.display = 'block';
+
+                    // Determine if current data is interval analysis
+                    const isIntervalAnalysis = currentAnalysisData.length > 0 &&
+                        currentAnalysisData[0].name &&
+                        !allCategories.some(cat => cat.name === currentAnalysisData[0].name);
 
                     if (viewType === 'pie') {
-                        document.getElementById('btn-pie').classList.add('active');
-                        renderChart('pie');
+                        btnPie.classList.add('active');
+                        currentChartType = 'pie';
+                        renderChart('pie', isIntervalAnalysis);
                     } else if (viewType === 'bar') {
-                        document.getElementById('btn-bar').classList.add('active');
-                        renderChart('bar');
+                        btnBar.classList.add('active');
+                        currentChartType = 'bar';
+                        renderChart('bar', isIntervalAnalysis);
                     }
                 }
             }
+            function renderResults(data, isIntervalAnalysis = false, isAggregatedViewRequest = false) {
+                // Get references to all display elements
+                const visualizationToggles = document.querySelector(".analysis-results-wrapper .visualization-toggles");
+                const tableViewContainer = document.getElementById("table-view");
+                const chartViewContainer = document.getElementById("chart-view");
+                const aggregatedResultDisplay = document.getElementById("aggregated-result-display");
+                const insightsTableBody = document.getElementById("insights-table-body");
+                const insightsTableHeaderRow = document.getElementById("insights-table-header-row");
+                const aggregatedAmountValueSpan = document.getElementById("aggregated-amount-value");
 
-            function renderResults(data, isIntervalAnalysis = false) {
-                const tableBody = document.getElementById('insights-table').querySelector('tbody');
-                tableBody.innerHTML = '';
+                // Reset all to hidden/empty initially
+                if (visualizationToggles) visualizationToggles.style.display = 'none';
+                if (tableViewContainer) tableViewContainer.style.display = 'none';
+                if (chartViewContainer) chartViewContainer.style.display = 'none';
+                if (aggregatedResultDisplay) aggregatedResultDisplay.style.display = 'none';
+                if (insightsTableBody) insightsTableBody.innerHTML = ''; // Clear table body
+                if (aggregatedAmountValueSpan) aggregatedAmountValueSpan.textContent = ''; // Clear aggregated value
+
+                // Clear the chart if it exists
+                if (myChart) myChart.destroy();
+                currentAnalysisData = data; // Update current analysis data
 
                 if (data.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No transactions found for the selected criteria.</td></tr>';
-                    // Clear the chart if no data
-                    if (myChart) myChart.destroy();
-                    currentAnalysisData = [];
+                    // If no data, show a message in the table view
+                    if (tableViewContainer) {
+                        insightsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem;">No transactions found for the selected criteria.</td></tr>`;
+                        tableViewContainer.style.display = 'block';
+                    }
                     return;
                 }
+
+                // Check if the result is a single aggregated value (from backend)
+                const isBackendAggregated = isAggregatedViewRequest && data.length === 1 && data[0].name === "Total Aggregated";
+
+                if (isBackendAggregated) {
+                    if (aggregatedResultDisplay && aggregatedAmountValueSpan) {
+                        aggregatedAmountValueSpan.textContent = data[0].cumulatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        aggregatedResultDisplay.style.display = 'block';
+                    }
+                    return;
+                }
+
+                // Render normal view if not backend aggregated
+                if (visualizationToggles) visualizationToggles.style.display = 'flex';
+                if (tableViewContainer) tableViewContainer.style.display = 'block'; // Default to table view
 
                 const total = data.reduce((sum, item) => sum + item.cumulatedAmount, 0);
 
                 // Update table headers based on interval analysis
-                const tableHeadRow = document.querySelector('#insights-table thead tr');
-                // Dynamically determine header based on the presence of interval data
-                // If the first item has a 'name' that matches the monthly pattern, assume interval analysis
-                if (data.length > 0 && currentAnalysisData.some(item => typeof item.name === 'string' && item.name.match(/\w{3} \d{4}/))) {
-                    tableHeadRow.innerHTML = `
-                        <th>Interval</th>
-                        <th>Cumulated Amount</th>
-                        <th>Percentage</th>
-                    `;
-                } else {
-                    tableHeadRow.innerHTML = `
-                        <th>Category Name</th>
-                        <th>Cumulated Amount</th>
-                        <th>Percentage</th>
-                    `;
+                if (insightsTableHeaderRow) {
+                    if (isIntervalAnalysis) {
+                        insightsTableHeaderRow.innerHTML = `
+                            <th>Interval</th>
+                            <th>Cumulated Amount</th>
+                            <th>Percentage</th>
+                        `;
+                    } else {
+                        insightsTableHeaderRow.innerHTML = `
+                            <th>Category Name</th>
+                            <th>Cumulated Amount</th>
+                            <th>Percentage</th>
+                        `;
+                    }
                 }
 
                 data.forEach(item => {
                     const percentage = (item.cumulatedAmount / total) * 100;
-
-                    // Populate Table
-                    const row = tableBody.insertRow();
-                    row.insertCell().textContent = item.name; // Use item.name consistently
-                    // Format amounts for display consistency
-                    row.insertCell().textContent = item.cumulatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    row.insertCell().textContent = percentage.toFixed(2) + '%';
+                    if (insightsTableBody) {
+                        const row = insightsTableBody.insertRow();
+                        row.insertCell().textContent = item.name;
+                        row.insertCell().textContent = item.cumulatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        row.insertCell().textContent = percentage.toFixed(2) + '%';
+                    }
                 });
 
-                // Initial Chart Render on data load (default to currentChartType)
+                // Render chart after populating table
                 renderChart(currentChartType, isIntervalAnalysis);
             }
 
             function renderChart(type, isIntervalAnalysis = false) {
                 if (currentAnalysisData.length === 0) return;
 
-                // Use 'name' for labels consistently
+                // CRITICAL FIX: Always destroy existing chart before creating new one
+                if (myChart) {
+                    myChart.destroy();
+                    myChart = null;
+                }
+
                 const labels = currentAnalysisData.map(item => item.name);
                 const dataValues = currentAnalysisData.map(item => item.cumulatedAmount);
                 const ctx = document.getElementById('analysisChart').getContext('2d');
 
-                if (myChart) {
-                    myChart.destroy();
-                }
-
-                // Simple color palette generation
-                const backgroundColors = dataValues.map((_, index) => {
-                    const hue = (index * 137.508) % 360; // Golden angle for pleasing distribution
-                    return `hsl(${hue}, 70%, 50%)`;
-                });
+                // FIXED: Professional color palette
+                const backgroundColors = [
+                    '#047857', // Emerald 700 (Accent)
+                    '#1F2937', // Slate 800 (Primary)
+                    '#059669', // Emerald 600
+                    '#4B5563', // Slate 600
+                    '#10B981', // Emerald 500
+                    '#374151', // Slate 700
+                    '#34D399', // Emerald 400
+                    '#6B7280', // Slate 500
+                    '#064E3B', // Emerald 900
+                    '#9CA3AF'  // Slate 400
+                ];
 
                 myChart = new Chart(ctx, {
                     type: type,
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Cumulated Spending', // Generic label
+                            label: 'Cumulated Spending',
                             data: dataValues,
                             backgroundColor: backgroundColors,
                             borderColor: 'white',
@@ -933,11 +1026,10 @@
                                 position: type === 'pie' ? 'right' : 'top',
                             }
                         },
-                        // Specific options for Bar chart
                         scales: type === 'bar' ? {
-                            x: { // Add x-axis configuration for bar chart
+                            x: {
                                 title: {
-                                    display: currentAnalysisData.some(item => typeof item.name === 'string' && item.name.match(/\w{3} \d{4}/)), // Display if interval analysis
+                                    display: isIntervalAnalysis,
                                     text: 'Interval'
                                 }
                             },
@@ -948,15 +1040,13 @@
                                     text: 'Amount'
                                 }
                             }
-                        } : {} // No specific scales for pie chart
+                        } : {}
                     }
                 });
             }
 
-            // --- 8. INITIALIZATION CALLS (FIXED: Added missing calls) ---
+            // --- 8. INITIALIZATION CALLS ---
             fetchCategories();
-
-            // Run analysis immediately on load using default filters
             runAnalysis();
         });
     </script>

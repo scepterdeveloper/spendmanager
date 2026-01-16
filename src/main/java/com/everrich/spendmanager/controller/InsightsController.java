@@ -4,8 +4,6 @@ import com.everrich.spendmanager.dto.AggregatedInsight;
 import com.everrich.spendmanager.entities.Category; // Assuming your Category entity package
 import com.everrich.spendmanager.repository.CategoryRepository; 
 import com.everrich.spendmanager.service.InsightsService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -22,9 +20,6 @@ public class InsightsController {
 
     private final InsightsService insightsService;
     private final CategoryRepository categoryRepository;
-
-    private static final Logger log = LoggerFactory.getLogger(InsightsController.class);
-
     
     // Inject the services and repositories
     public InsightsController(InsightsService insightsService, CategoryRepository categoryRepository) {
@@ -62,19 +57,16 @@ public class InsightsController {
             // Spring MVC handles parsing List<Long> from a comma-separated query string
             @RequestParam List<Long> categoryIds,
             @RequestParam(required = false) String interval,
-            @RequestParam(required = false) String intervalFunction) {
+            @RequestParam(required = false) String intervalFunction,
+            @RequestParam(defaultValue = "false") boolean aggregateResults) {
 
-        // Basic validation
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            // Return an empty list with a successful 200 status
-            return ResponseEntity.ok(Collections.emptyList());
-        }
+        // The previous logic for categoryIds == null || categoryIds.isEmpty() was removed
+        // to allow the service layer to handle the "all categories" logic when the list is empty.
 
         try {
             // Delegate the heavy lifting to the Service layer
             List<AggregatedInsight> insights = insightsService.getCategoryInsights(
-                timeframe, startDate, endDate, categoryIds, interval, intervalFunction);
-
+                timeframe, startDate, endDate, categoryIds, interval, intervalFunction, aggregateResults); // Pass new parameter
                 
             return ResponseEntity.ok(insights);
         } catch (Exception e) {
