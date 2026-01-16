@@ -16,12 +16,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                 "FROM transaction t " +
                 "LEFT JOIN category c ON c.id = t.category_id " + // Keep the JOIN for filtering purposes
                 "WHERE " +
-                // Date filters
                 "(:startDate = '1900-01-01' OR t.date >= CAST(:startDate AS date)) AND " +
                 "(:endDate = '9999-12-31' OR t.date <= CAST(:endDate AS date)) AND " +
-                // Category filter - NOTE: It now filters on c.id but only selects t.*
                 "(CAST(:categoryIds AS text) IS NULL OR c.id IN (:categoryIds)) AND " +
-                // Text Search Fix
                 "(:query IS NULL OR " +
                 "  LOWER(t.description::text) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                 "  LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))" +
@@ -45,6 +42,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate,
         @Param("categoryIds") List<Long> categoryIds);
+
+    // Custom query to fetch all transactions within a date range (no category filtering)
+    @Query("SELECT t FROM Transaction t WHERE t.date BETWEEN :startDate AND :endDate")
+    List<Transaction> findByDateRange(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate);
 
     // Helper methods for the "Entire Timeframe" bounds
     @Query("SELECT MIN(t.date) FROM Transaction t")

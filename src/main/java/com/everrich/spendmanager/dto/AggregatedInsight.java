@@ -1,25 +1,25 @@
 package com.everrich.spendmanager.dto;
 
-public class CategoryInsight {
-    private String categoryName;
+public class AggregatedInsight {
+    private String name;
     private double cumulatedAmount;
     // Note: Percentage calculation will be done on the frontend for simplicity and real-time total updates.
 
     // Constructors
-    public CategoryInsight() {}
+    public AggregatedInsight() {}
     
-    public CategoryInsight(String categoryName, double cumulatedAmount) {
-        this.categoryName = categoryName;
+    public AggregatedInsight(String name, double cumulatedAmount) {
+        this.name = name;
         this.cumulatedAmount = cumulatedAmount;
     }
 
     // Getters and Setters
-    public String getCategoryName() {
-        return categoryName;
+    public String getName() {
+        return name;
     }
 
-    public void setCategoryName(String categoryName) {
-        this.categoryName = categoryName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public double getCumulatedAmount() {

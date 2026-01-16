@@ -1,9 +1,11 @@
 package com.everrich.spendmanager.controller;
 
-import com.everrich.spendmanager.dto.CategoryInsight;
+import com.everrich.spendmanager.dto.AggregatedInsight;
 import com.everrich.spendmanager.entities.Category; // Assuming your Category entity package
 import com.everrich.spendmanager.repository.CategoryRepository; 
 import com.everrich.spendmanager.service.InsightsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -20,6 +22,9 @@ public class InsightsController {
 
     private final InsightsService insightsService;
     private final CategoryRepository categoryRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(InsightsController.class);
+
     
     // Inject the services and repositories
     public InsightsController(InsightsService insightsService, CategoryRepository categoryRepository) {
@@ -49,13 +54,15 @@ public class InsightsController {
     // URL: /api/insights/analyze
     @GetMapping("/analyze")
     @ResponseBody
-    public ResponseEntity<List<CategoryInsight>> analyze(
+    public ResponseEntity<List<AggregatedInsight>> analyze(
             @RequestParam String timeframe,
             // Uses @DateTimeFormat to correctly parse dates from the query parameter
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             // Spring MVC handles parsing List<Long> from a comma-separated query string
-            @RequestParam List<Long> categoryIds) {
+            @RequestParam List<Long> categoryIds,
+            @RequestParam(required = false) String interval,
+            @RequestParam(required = false) String intervalFunction) {
 
         // Basic validation
         if (categoryIds == null || categoryIds.isEmpty()) {
@@ -65,8 +72,9 @@ public class InsightsController {
 
         try {
             // Delegate the heavy lifting to the Service layer
-            List<CategoryInsight> insights = insightsService.getCategoryInsights(
-                timeframe, startDate, endDate, categoryIds);
+            List<AggregatedInsight> insights = insightsService.getCategoryInsights(
+                timeframe, startDate, endDate, categoryIds, interval, intervalFunction);
+
                 
             return ResponseEntity.ok(insights);
         } catch (Exception e) {

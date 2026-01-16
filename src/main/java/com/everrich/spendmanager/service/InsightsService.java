@@ -1,10 +1,12 @@
 package com.everrich.spendmanager.service;
 
-import com.everrich.spendmanager.dto.CategoryInsight;
+import com.everrich.spendmanager.dto.AggregatedInsight;
 import com.everrich.spendmanager.repository.TransactionRepository;
-import com.everrich.spendmanager.entities.Transaction; // Assuming your Transaction entity package
+import com.everrich.spendmanager.entities.Transaction;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.List;
@@ -41,12 +43,16 @@ public class InsightsService {
         }
     }
 
-
     /**
      * Main method to fetch and aggregate spending insights.
      */
-    public List<CategoryInsight> getCategoryInsights(
-            String timeframe, LocalDate startDate, LocalDate endDate, List<Long> categoryIds) {
+    public List<AggregatedInsight> getCategoryInsights(
+            String timeframe,
+            LocalDate startDate,
+            LocalDate endDate,
+            List<Long> categoryIds,
+            String interval,
+            String intervalFunction) {
 
         DateRange range = calculateDateRange(timeframe, startDate, endDate);
         LocalDate finalStart = range.getStart();
@@ -56,35 +62,66 @@ public class InsightsService {
             return Collections.emptyList();
         }
 
-        List<Transaction> transactions = transactionRepository
-                .findByDateRangeAndCategories(
-                        finalStart, finalEnd, categoryIds);
+        List<Transaction> transactions;
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            transactions = transactionRepository.findByDateRange(finalStart, finalEnd);
+        } else {
+            // Call the repository method that attempts to filter by categories
+            transactions = transactionRepository.findByDateRangeAndCategories(
+                    finalStart, finalEnd, categoryIds);
+
+            // SAFEGURAD: Additional in-memory filtering to ensure category selection is respected
+            transactions = transactions.stream()
+                               .filter(t -> t.getCategoryEntity() != null && categoryIds.contains(t.getCategoryEntity().getId()))
+                               .collect(Collectors.toList());
+        }
 
         if (transactions.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 3. CORRECT FIX: Use getCategoryEntity() and access its getName() method.
-        // This resolves all prior casting and type mismatch issues.
-        Map<String, Double> categoryTotals = transactions.stream()
-                // 1. Ensure the Category entity object exists and has a name
-                .filter(t -> t.getCategoryEntity() != null && t.getCategoryEntity().getName() != null) 
-                
-                // 2. Aggregate using Collectors.toMap
-                .collect(Collectors.toMap(
-                        // Key Mapper: Use CategoryEntity to get the name (String)
-                        t -> t.getCategoryEntity().getName(),
-                        // Value Mapper: Transaction Amount (Double)
-                        Transaction::getAmount,
-                        // Merge Function: Sum the amounts for duplicate keys
-                        Double::sum
-                ));
+        if (interval != null && !"NOT_SPECIFIED".equals(interval)) {
+            // Handle interval-based aggregation
+            if ("MONTHLY".equals(interval) && "SUM".equals(intervalFunction)) {
+                Map<String, Double> monthlyTotals = transactions.stream()
+                        .collect(Collectors.groupingBy(
+                                t -> t.getDate().format(DateTimeFormatter.ofPattern("MMM yyyy")),
+                                Collectors.summingDouble(Transaction::getAmount)
+                        ));
 
-        // 4. Convert the Map into the final DTO list
-        return categoryTotals.entrySet().stream()
-                .map(entry -> new CategoryInsight(entry.getKey(), entry.getValue()))
-                .sorted((a, b) -> Double.compare(b.getCumulatedAmount(), a.getCumulatedAmount())) 
-                .collect(Collectors.toList());
+                return monthlyTotals.entrySet().stream()
+                        .map(entry -> new AggregatedInsight(entry.getKey(), entry.getValue()))
+                        .sorted((a, b) -> {
+                            // Custom sort for monthly data (e.g., Jan 2023, Feb 2023)
+                            try {
+                                LocalDate dateA = LocalDate.parse("01 " + a.getName(), DateTimeFormatter.ofPattern("dd MMM yyyy"));
+                                LocalDate dateB = LocalDate.parse("01 " + b.getName(), DateTimeFormatter.ofPattern("dd MMM yyyy"));
+                                return dateA.compareTo(dateB);
+                            } catch (Exception e) {
+                                return a.getName().compareTo(b.getName()); // Fallback to string comparison if parsing fails
+                            }
+                        })
+                        .collect(Collectors.toList());
+
+            } else {
+                // Fallback or unsupported interval/function
+                return Collections.emptyList(); 
+            }
+        } else {
+            // Existing category-based aggregation
+            Map<String, Double> categoryTotals = transactions.stream()
+                    .filter(t -> t.getCategoryEntity() != null && t.getCategoryEntity().getName() != null) 
+                    .collect(Collectors.toMap(
+                            t -> t.getCategoryEntity().getName(),
+                            Transaction::getAmount,
+                            Double::sum
+                    ));
+
+            return categoryTotals.entrySet().stream()
+                    .map(entry -> new AggregatedInsight(entry.getKey(), entry.getValue()))
+                    .sorted((a, b) -> Double.compare(b.getCumulatedAmount(), a.getCumulatedAmount())) 
+                    .collect(Collectors.toList());
+        }
     }
 
     /**

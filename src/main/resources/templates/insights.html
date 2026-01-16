@@ -4,7 +4,7 @@
 <head>
     <title th:text="${appName} + ' - Insights'">EverRich - Insights</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <style>
         /* ================================================================= 
            1. Application & Layout Consistency (Copied from Transaction Management) 
@@ -13,7 +13,7 @@
             --accent-color: #047857;
             --primary-color: #1F2937;
         }
-         
+
         /* Consistent Header Styling */
         .page-header {
             display: flex;
@@ -44,7 +44,7 @@
             font-size: 2rem;
             font-weight: 600;
         }
-         
+
         /* Unified Content Wrapper Style */
         .content-wrapper {
             border: 1px solid #E5E7EB;
@@ -63,8 +63,8 @@
             font-size: 0.95rem;
         }
 
-        select, 
-        input[type="date"], 
+        select,
+        input[type="date"],
         input[type="text"] {
             width: 100%;
             padding: 0.75rem;
@@ -116,7 +116,7 @@
             font-weight: 600;
             color: var(--primary-color);
         }
-         
+
         h3 {
             font-size: 1.5rem;
             margin-bottom: 1rem;
@@ -128,23 +128,26 @@
         .filter-container {
             display: grid;
             grid-template-columns: 1fr;
+            /* Default for mobile */
             gap: 15px;
         }
-        
+
         @media (min-width: 768px) {
             .filter-container {
-                grid-template-columns: 1fr 1fr 1fr; /* 3 columns for consistency */
+                grid-template-columns: 1fr 1fr 1fr 1fr;
+                /* Adjusted for 4 columns */
             }
         }
 
         .timeframe-group,
-        .category-group {
+        .category-group,
+        .interval-group {
             grid-column: span 1;
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
-        
+
         .filter-row {
             display: flex;
             gap: 10px;
@@ -166,15 +169,17 @@
             text-align: right;
             margin-top: 10px;
         }
-        
+
         /* REVISED: For the Go button */
         @media (min-width: 768px) {
-            .filter-actions { 
-                grid-column: 3 / 4; /* Place in the last column */
-                grid-row: 2 / 3; /* Place in the second row */
-                align-self: end; 
-                margin-top: 0; 
-            } 
+            .filter-actions {
+                grid-column: 4 / 5;
+                /* Place in the last column */
+                grid-row: 2 / 3;
+                /* Place in the second row */
+                align-self: end;
+                margin-top: 0;
+            }
         }
 
         /* Collapsible Category List (Copied from Transaction Management) */
@@ -192,29 +197,29 @@
             margin-top: 5px;
         }
 
-        #category-list-dropdown > div {
+        #category-list-dropdown>div {
             padding: 3px 0;
             line-height: 1.2;
-        } 
-        
+        }
+
         /* The container for the toggle buttons */
         .category-toggle-container {
-            display:flex; 
-            justify-content: space-between; 
-            margin-bottom: 5px; 
-            padding-bottom: 5px; 
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
             border-bottom: 1px solid #EEE;
         }
-         
+
         /* ================================================================= 
            2. Insights Specific Styles 
-           ================================================================= */ 
+           ================================================================= */
         .analysis-results-wrapper {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-        
+
         .visualization-toggles {
             margin-bottom: 15px;
             display: flex;
@@ -235,34 +240,37 @@
             position: relative;
             bottom: -2px;
         }
-        
+
         .visualization-toggles button:hover {
             color: var(--accent-color);
             background-color: #F9FAFB;
         }
-        
+
         .visualization-toggles button.active {
             color: var(--accent-color);
             border-bottom-color: var(--accent-color);
             font-weight: 600;
         }
+
         .chart-area {
-            max-height: 400px; /* Constrain chart height */
+            max-height: 400px;
+            /* Constrain chart height */
             margin-top: 20px;
         }
-        
+
         /* Hide the chart area when showing the table */
         #chart-view {
-             display: none;
+            display: none;
         }
 
         /* Set table view as default visible */
         #table-view {
-             display: block;
+            display: block;
         }
 
         /* Responsive adjustments */
         @media (max-width: 767px) {
+
             /* Page Header Mobile Optimization - Matching account-management.html */
             .page-header {
                 align-items: flex-start;
@@ -322,8 +330,8 @@
                 margin-bottom: 0.4rem;
             }
 
-            select, 
-            input[type="date"], 
+            select,
+            input[type="date"],
             input[type="text"] {
                 padding: 0.6rem;
                 font-size: 0.9rem;
@@ -337,7 +345,8 @@
                 margin-top: 0.5rem;
             }
 
-            .btn-filter, .btn-primary {
+            .btn-filter,
+            .btn-primary {
                 width: 100%;
                 padding: 0.7rem 1rem;
             }
@@ -382,7 +391,8 @@
                 font-size: 0.85rem;
             }
 
-            .data-table th, .data-table td {
+            .data-table th,
+            .data-table td {
                 padding: 0.6rem 0.5rem;
                 font-size: 0.85rem;
             }
@@ -408,6 +418,7 @@
         }
 
         @media (max-width: 480px) {
+
             /* Extra Small Screens */
             .page-header h2::after {
                 content: "Insights";
@@ -422,8 +433,8 @@
                 font-size: 0.85rem;
             }
 
-            select, 
-            input[type="date"], 
+            select,
+            input[type="date"],
             input[type="text"] {
                 padding: 0.55rem;
                 font-size: 0.85rem;
@@ -433,12 +444,14 @@
                 font-size: 0.8rem;
             }
 
-            .data-table th, .data-table td {
+            .data-table th,
+            .data-table td {
                 padding: 0.5rem 0.4rem;
                 font-size: 0.8rem;
             }
 
-            .btn-filter, .btn-primary {
+            .btn-filter,
+            .btn-primary {
                 padding: 0.65rem 1rem;
                 font-size: 0.9rem;
             }
@@ -462,91 +475,116 @@
 <body>
     <div th:replace="fragments/header :: appHeader"></div>
 
-    <div id="toast-container"></div> 
-    <div class="content-container"> 
+    <div id="toast-container"></div>
+    <div class="content-container">
 
-        <div class="page-header"> 
-            <a href="/" class="back-link"> 
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> 
-                    <path d="M19 12H5"></path> 
-                    <path d="M12 19l-7-7 7-7"></path> 
-                </svg> 
-                Back 
-            </a> 
-            <h2>Spending Insights & Analysis</h2> 
-        </div> 
+        <div class="page-header">
+            <a href="/" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+                Back
+            </a>
+            <h2>Spending Insights & Analysis</h2>
+        </div>
 
-        <div class="content-wrapper"> 
-            <form id="filter-form"> 
-                <div class="filter-container"> 
-                    
-                    <div class="timeframe-group"> 
-                        <label for="timeframe">Timeframe</label> 
-                        <div class="filter-row"> 
-                            <div class="filter-col-main"> 
-                                <select id="timeframe"> 
-                                    <option value="THIS_MONTH">This Month</option> 
-                                    <option value="LAST_MONTH">Previous Month</option> 
-                                    <option value="THIS_YEAR">This Year</option> 
-                                    <option value="LAST_YEAR">Previous Year</option> 
+        <div class="content-wrapper">
+            <form id="filter-form">
+                <div class="filter-container">
+
+                    <div class="timeframe-group">
+                        <label for="timeframe">Timeframe</label>
+                        <div class="filter-row">
+                            <div class="filter-col-main">
+                                <select id="timeframe">
+                                    <option value="THIS_MONTH">This Month</option>
+                                    <option value="LAST_MONTH">Previous Month</option>
+                                    <option value="THIS_YEAR">This Year</option>
+                                    <option value="LAST_YEAR">Previous Year</option>
                                     <option value="ENTIRE_TIMEFRAME">Entire Timeframe</option>
-                                    <option value="DATE_RANGE">Date Range</option> 
-                                </select> 
-                            </div> 
-                        </div> 
-                    </div> 
-                    
-                    <div class="category-group" style="grid-row: 1 / span 2;">
-                        <label for="category-display">Categories</label> 
-                        <div class="filter-col-main" style="position: relative;"> 
-                            <select id="category-display" readonly> 
-                                <option value="" disabled selected>Filter Categories (Currently <span 
-                                        id="selected-count">All</span>)</option> 
-                            </select> 
+                                    <option value="DATE_RANGE">Date Range</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-                            <div id="category-list-dropdown" class="category-multi-select-dropdown" 
-                                style="display:none;"> 
-                                <div class="category-toggle-container"> 
-                                    <div> 
-                                        <input type="checkbox" id="select-all-categories" class="category-toggle"> 
-                                        <label for="select-all-categories" style="font-weight:bold;">Select All</label> 
-                                    </div> 
-                                    <div> 
-                                        <input type="checkbox" id="clear-all-categories" class="category-toggle"> 
-                                        <label for="clear-all-categories" style="font-weight:bold;">Clear All</label> 
-                                    </div> 
-                                </div> 
-                                </div> 
-                        </div> 
-                    </div> 
-                    
+                    <!-- New Interval Filter -->
+                    <div class="interval-group">
+                        <label for="interval">Interval</label>
+                        <div class="filter-row">
+                            <div class="filter-col-main">
+                                <select id="interval" disabled>
+                                    <option value="NOT_SPECIFIED">Not Specified</option>
+                                    <option value="MONTHLY">Monthly</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New Interval Function Filter -->
+                    <div class="interval-group">
+                        <label for="intervalFunction">Interval Function</label>
+                        <div class="filter-row">
+                            <div class="filter-col-main">
+                                <select id="intervalFunction" disabled>
+                                    <option value="SUM">SUM</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="category-group" style="grid-row: 1 / span 2;">
+                        <label for="category-display">Categories</label>
+                        <div class="filter-col-main" style="position: relative;">
+                            <select id="category-display" readonly>
+                                <option value="" disabled selected>Filter Categories (Currently <span
+                                        id="selected-count">All</span>)</option>
+                            </select>
+
+                            <div id="category-list-dropdown" class="category-multi-select-dropdown"
+                                style="display:none;">
+                                <div class="category-toggle-container">
+                                    <div>
+                                        <input type="checkbox" id="select-all-categories" class="category-toggle">
+                                        <label for="select-all-categories" style="font-weight:bold;">Select All</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" id="clear-all-categories" class="category-toggle">
+                                        <label for="clear-all-categories" style="font-weight:bold;">Clear All</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="date-range-fields" class="timeframe-group" style="display:none;">
                         <label>Custom Date Range</label>
-                         <div class="filter-row">
+                        <div class="filter-row">
                             <input type="date" id="startDate" name="startDate" placeholder="Start Date">
                             <input type="date" id="endDate" name="endDate" placeholder="End Date">
                         </div>
                     </div>
-                    
-                    <div class="filter-actions"> 
-                        <button type="button" class="btn-filter" onclick="runAnalysis()">Go</button> 
-                    </div> 
-                </div> 
-            </form> 
-        </div> 
-        
+
+                    <div class="filter-actions">
+                        <button type="button" class="btn-filter" onclick="runAnalysis()">Go</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
         <div class="analysis-results-wrapper">
             <h3>Analysis Results</h3>
-            
+
             <div class="content-wrapper">
-                
+
                 <div class="visualization-toggles">
                     <button id="btn-table" onclick="setView('table')" class="active">Tabular View</button>
                     <button id="btn-pie" onclick="setView('pie')">Pie Chart</button>
                     <button id="btn-bar" onclick="setView('bar')">Histogram</button>
                 </div>
-                
+
                 <div id="table-view" class="view-container">
                     <div class="data-table-wrapper">
                         <table id="insights-table" class="data-table">
@@ -558,7 +596,10 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="3" style="text-align: center; padding: 2rem;">Click 'Go' to generate the spending analysis.</td></tr>
+                                <tr>
+                                    <td colspan="3" style="text-align: center; padding: 2rem;">Click \'Go\' to generate
+                                        the spending analysis.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -567,17 +608,18 @@
                 <div id="chart-view" class="view-container chart-area" style="display: none;">
                     <canvas id="analysisChart"></canvas>
                 </div>
-                
+
             </div>
         </div>
 
-    </div> 
+    </div>
 
     <div th:replace="fragments/toast-script :: toastScript"></div>
 
     <script>
-        let allCategories = []; 
-        let currentAnalysisData = []; 
+        let allCategories = [];
+        let currentAnalysisData = [];
+        let currentChartType = 'pie'; // Default chart type
 
         document.addEventListener('DOMContentLoaded', function () {
             const timeframeSelect = document.getElementById('timeframe');
@@ -585,111 +627,128 @@
             const categoryDisplaySelect = document.getElementById('category-display');
             const categoryListDropdown = document.getElementById('category-list-dropdown');
             const selectedCountSpan = document.getElementById('selected-count');
-            
+            const intervalSelect = document.getElementById('interval');
+            const intervalFunctionSelect = document.getElementById('intervalFunction');
+
             // --- Helper Functions (assuming showToast is globally available) ---
             function showToast(message, type = 'success') {
-                console.log(`Toast: ${message} (${type})`); 
+                console.log(`Toast: ${message} (${type})`);
             }
-            
-            function updateCategoryDisplayCount() { 
+
+            function updateCategoryDisplayCount() {
                 const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox');
-                const checkedCount = Array.from(categoryCheckboxes).filter(cb => cb.checked).length; 
-                const totalCount = categoryCheckboxes.length; 
+                const checkedCount = Array.from(categoryCheckboxes).filter(cb => cb.checked).length;
+                const totalCount = categoryCheckboxes.length;
 
-                let text; 
-                if (checkedCount === 0) { 
-                    text = 'None'; 
-                } else if (checkedCount === totalCount) { 
-                    text = 'All'; 
-                } else { 
-                    text = checkedCount; 
-                } 
-                selectedCountSpan.textContent = text; 
-            } 
-
-            // --- 1. Timeframe Logic (Show/Hide Date Range) --- 
-            window.toggleDateRange = function() {
-                if (timeframeSelect.value === 'DATE_RANGE') { 
-                    dateRangeFields.style.display = 'flex'; 
-                } else { 
-                    dateRangeFields.style.display = 'none'; 
-                } 
+                let text;
+                if (checkedCount === 0) {
+                    text = 'None';
+                } else if (checkedCount === totalCount) {
+                    text = 'All';
+                } else {
+                    text = checkedCount;
+                }
+                selectedCountSpan.textContent = text;
             }
-            timeframeSelect.addEventListener('change', toggleDateRange); 
-            toggleDateRange(); // Initialize on load
-            
-            // --- 2. Category Dropdown Toggle --- 
-            categoryDisplaySelect.addEventListener('mousedown', function (event) { 
-                event.preventDefault(); 
+
+            // --- 1. Interval Function Logic (Enable/Disable based on Interval) --- 
+            window.toggleIntervalFunction = function () {
+                const selectedInterval = intervalSelect.value;
+                intervalFunctionSelect.disabled = (selectedInterval === 'NOT_SPECIFIED');
+            }
+            intervalSelect.addEventListener('change', toggleIntervalFunction);
+
+            // --- 2. Timeframe Logic (Show/Hide Date Range and enable/disable Interval) --- 
+            window.toggleDateRangeAndInterval = function () {
+                const selectedTimeframe = timeframeSelect.value;
+
+                if (selectedTimeframe === 'DATE_RANGE') {
+                    dateRangeFields.style.display = 'flex';
+                } else {
+                    dateRangeFields.style.display = 'none';
+                }
+
+                // Enable/Disable Interval based on Timeframe
+                const enableInterval = ['THIS_YEAR', 'LAST_YEAR', 'DATE_RANGE', 'ENTIRE_TIMEFRAME'].includes(selectedTimeframe);
+                intervalSelect.disabled = !enableInterval;
+                if (!enableInterval) {
+                    intervalSelect.value = 'NOT_SPECIFIED';
+                }
+                toggleIntervalFunction(); // Also update interval function state
+            }
+            timeframeSelect.addEventListener('change', toggleDateRangeAndInterval);
+            toggleDateRangeAndInterval(); // Initialize on load
+
+            // --- 3. Category Dropdown Toggle --- 
+            categoryDisplaySelect.addEventListener('mousedown', function (event) {
+                event.preventDefault();
                 // Toggle display
-                categoryListDropdown.style.display = categoryListDropdown.style.display === 'block' ? 'none' : 'block'; 
-            }); 
+                categoryListDropdown.style.display = categoryListDropdown.style.display === 'block' ? 'none' : 'block';
+            });
 
             // Close dropdown when clicking outside 
-            document.addEventListener('click', function (event) { 
-                if (categoryListDropdown.style.display === 'block' && 
-                    !categoryListDropdown.contains(event.target) && 
-                    event.target !== categoryDisplaySelect) { 
-                    categoryListDropdown.style.display = 'none'; 
-                } 
-            }); 
-            
-            // --- 3. Category Selection Logic (Attached to dynamically loaded elements) --- 
+            document.addEventListener('click', function (event) {
+                if (categoryListDropdown.style.display === 'block' &&
+                    !categoryListDropdown.contains(event.target) &&
+                    event.target !== categoryDisplaySelect) {
+                    categoryListDropdown.style.display = 'none';
+                }
+            });
+
+            // --- 4. Category Selection Logic (Attached to dynamically loaded elements) --- 
             function attachCategoryListeners() {
-                const selectAllCheckbox = document.getElementById('select-all-categories'); 
-                const clearAllCheckbox = document.getElementById('clear-all-categories'); 
-                const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox'); 
+                const selectAllCheckbox = document.getElementById('select-all-categories');
+                const clearAllCheckbox = document.getElementById('clear-all-categories');
+                const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox');
 
                 // Reset toggles on new load
                 selectAllCheckbox.checked = true;
                 clearAllCheckbox.checked = false;
 
                 // Select All Listener
-                selectAllCheckbox.addEventListener('change', function () { 
-                    categoryCheckboxes.forEach(cb => cb.checked = this.checked); 
+                selectAllCheckbox.addEventListener('change', function () {
+                    categoryCheckboxes.forEach(cb => cb.checked = this.checked);
                     clearAllCheckbox.checked = false;
-                    updateCategoryDisplayCount(); 
-                }); 
+                    updateCategoryDisplayCount();
+                });
 
                 // Clear All Listener
-                clearAllCheckbox.addEventListener('change', function () { 
-                    categoryCheckboxes.forEach(cb => cb.checked = !this.checked); 
-                    selectAllCheckbox.checked = false; 
-                    updateCategoryDisplayCount(); 
-                }); 
+                clearAllCheckbox.addEventListener('change', function () {
+                    categoryCheckboxes.forEach(cb => cb.checked = !this.checked);
+                    selectAllCheckbox.checked = false;
+                    updateCategoryDisplayCount();
+                });
 
                 // Individual Checkbox Listener
-                categoryCheckboxes.forEach(cb => { 
-                    cb.addEventListener('change', function () { 
+                categoryCheckboxes.forEach(cb => {
+                    cb.addEventListener('change', function () {
                         // If any individual box is changed, uncheck both toggles
-                        selectAllCheckbox.checked = false; 
-                        clearAllCheckbox.checked = false; 
-                        
+                        selectAllCheckbox.checked = false;
+                        clearAllCheckbox.checked = false;
+
                         // Recalculate toggle state
                         const allChecked = Array.from(categoryCheckboxes).every(c => c.checked);
                         const noneChecked = Array.from(categoryCheckboxes).every(c => !c.checked);
-                        
+
                         selectAllCheckbox.checked = allChecked;
                         clearAllCheckbox.checked = noneChecked;
-                        
-                        updateCategoryDisplayCount(); 
-                    }); 
-                }); 
-                updateCategoryDisplayCount(); 
+
+                        updateCategoryDisplayCount();
+                    });
+                });
+                updateCategoryDisplayCount();
             }
-            
-            // --- 4. Fetch Categories from Backend (FIXED CONTAINER LOGIC) ---
-            window.fetchCategories = async function() {
+
+            // --- 5. Fetch Categories from Backend (FIXED CONTAINER LOGIC) ---
+            window.fetchCategories = async function () {
                 try {
                     const response = await fetch('/api/insights/categories');
                     if (!response.ok) throw new Error('Failed to fetch categories');
                     allCategories = await response.json();
-                    
+
                     // The direct container for the checkboxes is the dropdown itself,
-                    // but we need to keep the category-toggle-container.
+                    // but we need to keep the category-toggle-container. All existing category divs after first div are removed.
                     const dropdownContent = document.getElementById('category-list-dropdown');
-                    
-                    // Identify and remove all existing category divs (children *after* the first div)
                     Array.from(dropdownContent.children).slice(1).forEach(child => child.remove());
 
                     allCategories.forEach(cat => {
@@ -700,7 +759,7 @@
                         `;
                         dropdownContent.appendChild(div);
                     });
-                    
+
                     // Attach event listeners to the new checkboxes
                     attachCategoryListeners();
 
@@ -708,17 +767,22 @@
                     showToast('Error loading categories: ' + error.message, 'error');
                 }
             }
-            
-            // --- 5. Analysis Trigger ---
-            window.runAnalysis = async function() {
+
+            // --- 6. Analysis Trigger ---
+            window.runAnalysis = async function () {
                 const timeframe = timeframeSelect.value;
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
-                
+                const interval = intervalSelect.value;
+                const intervalFunction = intervalFunctionSelect.value;
+
                 // Select only the regular checkboxes that are checked (excluding .category-toggle)
-                const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox:checked');
-                
-                const selectedCategoryIds = Array.from(categoryCheckboxes).map(cb => cb.value);
+                const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox');
+
+
+                const selectedCategoryIds = Array.from(categoryCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
 
                 if (selectedCategoryIds.length === 0) {
                     showToast("Please select at least one category.", 'error');
@@ -729,33 +793,41 @@
                     timeframe: timeframe,
                     categoryIds: selectedCategoryIds.join(',')
                 });
-                
+
                 if (timeframe === 'DATE_RANGE') {
                     if (startDate) params.append('startDate', startDate);
                     if (endDate) params.append('endDate', endDate);
                 }
 
+                // Add interval and intervalFunction parameters if they are not 'NOT_SPECIFIED'
+                if (interval !== 'NOT_SPECIFIED') {
+                    params.append('interval', interval);
+                    params.append('intervalFunction', intervalFunction);
+                }
+
                 try {
                     const response = await fetch('/api/insights/analyze?' + params.toString());
                     if (!response.ok) {
-                         const errorBody = await response.text();
-                         throw new Error(`Analysis failed: ${response.status} - ${errorBody}`);
+                        const errorBody = await response.text();
+                        throw new Error(`Analysis failed: ${response.status} - ${errorBody}`);
                     }
                     currentAnalysisData = await response.json();
-                    renderResults(currentAnalysisData);
+                    // Pass the raw interval value to renderResults, it will handle dynamic header/label determination
+                    renderResults(currentAnalysisData, interval !== 'NOT_SPECIFIED');
                     showToast('Analysis complete.', 'success');
                 } catch (error) {
                     showToast('Error running analysis: ' + error.message, 'error');
                 }
             }
 
-            // --- 6. Results Rendering and Visualization ---
+            // --- 7. Results Rendering and Visualization ---
             let myChart = null; // Chart.js instance
-            
-            window.setView = function(viewType) {
+
+            window.setView = function (viewType) {
                 const tableView = document.getElementById('table-view');
                 const chartView = document.getElementById('chart-view');
-                
+                currentChartType = viewType; // Update current chart type
+
                 document.querySelectorAll('.visualization-toggles button').forEach(btn => btn.classList.remove('active'));
 
                 if (viewType === 'table') {
@@ -765,20 +837,20 @@
                 } else {
                     tableView.style.display = 'none';
                     chartView.style.display = 'block';
-                    
+
                     if (viewType === 'pie') {
                         document.getElementById('btn-pie').classList.add('active');
-                        renderChart(viewType);
+                        renderChart('pie');
                     } else if (viewType === 'bar') {
                         document.getElementById('btn-bar').classList.add('active');
-                        renderChart(viewType);
+                        renderChart('bar');
                     }
                 }
             }
-            
-            function renderResults(data) {
+
+            function renderResults(data, isIntervalAnalysis = false) {
                 const tableBody = document.getElementById('insights-table').querySelector('tbody');
-                tableBody.innerHTML = ''; 
+                tableBody.innerHTML = '';
 
                 if (data.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No transactions found for the selected criteria.</td></tr>';
@@ -790,28 +862,47 @@
 
                 const total = data.reduce((sum, item) => sum + item.cumulatedAmount, 0);
 
+                // Update table headers based on interval analysis
+                const tableHeadRow = document.querySelector('#insights-table thead tr');
+                // Dynamically determine header based on the presence of interval data
+                // If the first item has a 'name' that matches the monthly pattern, assume interval analysis
+                if (data.length > 0 && currentAnalysisData.some(item => typeof item.name === 'string' && item.name.match(/\w{3} \d{4}/))) {
+                    tableHeadRow.innerHTML = `
+                        <th>Interval</th>
+                        <th>Cumulated Amount</th>
+                        <th>Percentage</th>
+                    `;
+                } else {
+                    tableHeadRow.innerHTML = `
+                        <th>Category Name</th>
+                        <th>Cumulated Amount</th>
+                        <th>Percentage</th>
+                    `;
+                }
+
                 data.forEach(item => {
                     const percentage = (item.cumulatedAmount / total) * 100;
-                    
+
                     // Populate Table
                     const row = tableBody.insertRow();
-                    row.insertCell().textContent = item.categoryName;
+                    row.insertCell().textContent = item.name; // Use item.name consistently
                     // Format amounts for display consistency
                     row.insertCell().textContent = item.cumulatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     row.insertCell().textContent = percentage.toFixed(2) + '%';
                 });
-                
-                // Initial Chart Render on data load (default to pie)
-                renderChart('pie');
+
+                // Initial Chart Render on data load (default to currentChartType)
+                renderChart(currentChartType, isIntervalAnalysis);
             }
-            
-            function renderChart(type) {
+
+            function renderChart(type, isIntervalAnalysis = false) {
                 if (currentAnalysisData.length === 0) return;
 
-                const labels = currentAnalysisData.map(item => item.categoryName);
+                // Use 'name' for labels consistently
+                const labels = currentAnalysisData.map(item => item.name);
                 const dataValues = currentAnalysisData.map(item => item.cumulatedAmount);
                 const ctx = document.getElementById('analysisChart').getContext('2d');
-                
+
                 if (myChart) {
                     myChart.destroy();
                 }
@@ -823,11 +914,11 @@
                 });
 
                 myChart = new Chart(ctx, {
-                    type: type, 
+                    type: type,
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Cumulated Spending',
+                            label: 'Cumulated Spending', // Generic label
                             data: dataValues,
                             backgroundColor: backgroundColors,
                             borderColor: 'white',
@@ -844,6 +935,12 @@
                         },
                         // Specific options for Bar chart
                         scales: type === 'bar' ? {
+                            x: { // Add x-axis configuration for bar chart
+                                title: {
+                                    display: currentAnalysisData.some(item => typeof item.name === 'string' && item.name.match(/\w{3} \d{4}/)), // Display if interval analysis
+                                    text: 'Interval'
+                                }
+                            },
                             y: {
                                 beginAtZero: true,
                                 title: {
@@ -851,17 +948,18 @@
                                     text: 'Amount'
                                 }
                             }
-                        } : {}
+                        } : {} // No specific scales for pie chart
                     }
                 });
             }
-            
-            // --- 7. INITIALIZATION CALLS (FIXED: Added missing calls) ---
-            fetchCategories(); 
-            
+
+            // --- 8. INITIALIZATION CALLS (FIXED: Added missing calls) ---
+            fetchCategories();
+
             // Run analysis immediately on load using default filters
             runAnalysis();
         });
     </script>
 </body>
+
 </html>
