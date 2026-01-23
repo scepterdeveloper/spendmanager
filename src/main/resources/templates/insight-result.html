@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${appName} + ' - ' + ${result.insightName}">EverRich - Insight Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root { 
+            --accent-color: #047857; 
+            --primary-color: #1F2937; 
+            --text-mellow: #6B7280;
+            --border-color: #E5E7EB;
+            --bg-main: #f9fafb;
+            --income-color: #10b981;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--primary-color);
+            background-color: var(--bg-main);
+            min-height: 100vh;
+        }
+
+        .content-container {
+            padding: 0.75rem !important;
+            margin: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            margin-right: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .back-link svg { margin-right: 5px; }
+
+        .page-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .insight-description {
+            color: var(--text-mellow);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        /* KPI Card Styling (matching dashboard Financial Pulse) */
+        .kpi-result-container {
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 0.4rem;
+            padding: 0.75rem 2rem;
+            border: 1px solid var(--border-color);
+            position: relative;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .kpi-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            border-radius: 0.4rem 0.4rem 0 0;
+            background: var(--income-color);
+        }
+
+        .kpi-title {
+            font-size: 0.55rem;
+            color: var(--text-mellow);
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 0.1rem;
+        }
+
+        .kpi-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+
+        /* Chart Card Styling (matching dashboard Monthly Spending) */
+        .chart-card {
+            background: white;
+            border-radius: 0.4rem;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin: 0 0 0.75rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--primary-color);
+        }
+
+        .visualization-toggles {
+            margin-bottom: 0.75rem;
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .visualization-toggles button {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: none;
+            border-bottom: 2px solid transparent;
+            background-color: transparent;
+            color: var(--text-mellow);
+            font-weight: 500;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            flex: 1;
+            position: relative;
+            bottom: -2px;
+        }
+
+        .visualization-toggles button:hover {
+            color: var(--accent-color);
+            background-color: #F9FAFB;
+        }
+
+        .visualization-toggles button.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .chart-container {
+            height: 180px;
+            width: 100%;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            font-size: 0.85rem;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.6rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background-color: #F3F4F6;
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 0.75rem;
+        }
+
+        .view-container { display: none; }
+        .view-container.active { display: block; }
+
+        /* Mobile Responsive */
+        @media (max-width: 767px) {
+            .content-container {
+                padding: 0.5rem !important;
+            }
+
+            .page-header {
+                align-items: flex-start;
+                margin-bottom: 0.5rem;
+                padding-bottom: 0.25rem;
+            }
+
+            .back-link {
+                margin-right: 1rem;
+                font-size: 0.85rem;
+            }
+
+            .page-header h2 {
+                font-size: 1.1rem;
+            }
+
+            .kpi-card {
+                padding: 0.6rem 1.5rem;
+                min-width: 150px;
+            }
+
+            .kpi-value {
+                font-size: 0.95rem;
+            }
+
+            .chart-card {
+                padding: 0.5rem;
+            }
+
+            .visualization-toggles button {
+                padding: 0.4rem 0.5rem;
+                font-size: 0.7rem;
+            }
+
+            .chart-container {
+                height: 150px;
+            }
+
+            .data-table th, .data-table td {
+                padding: 0.5rem 0.4rem;
+                font-size: 0.8rem;
+            }
+
+            .data-table th {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/header :: appHeader}"></div>
+    
+    <div class="content-container">
+        
+        <div class="page-header">
+            <a th:href="@{/insights/manage}" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+                Back
+            </a>
+            <h2 th:text="${result.insightName}">Insight Result</h2>
+        </div>
+
+        <p class="insight-description" th:if="${result.insightDescription}" th:text="${result.insightDescription}"></p>
+
+        <!-- KPI Result (Aggregated / 1D) - Dashboard Style -->
+        <div th:if="${result.resultType.name() == 'KPI'}" class="kpi-result-container">
+            <div class="kpi-card">
+                <div class="kpi-title" th:text="${result.insightName}">Total Amount</div>
+                <div class="kpi-value" th:text="${#numbers.formatDecimal(result.aggregatedValue, 1, 2)}">0.00</div>
+            </div>
+        </div>
+
+        <!-- Chart Result (2D) - Dashboard Style -->
+        <div th:if="${result.resultType.name() == 'CHART'}" class="chart-card">
+            <h3 class="chart-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent-color)"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-4"/></svg>
+                <span th:text="${result.insightName}">Analysis Results</span>
+            </h3>
+            
+            <div class="visualization-toggles">
+                <button id="btn-table" onclick="setView('table')" class="active">Table</button>
+                <button id="btn-pie" onclick="setView('pie')">Pie</button>
+                <button id="btn-bar" onclick="setView('bar')">Bar</button>
+            </div>
+
+            <div id="table-view" class="view-container active">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th th:text="${result.xAxisType.name() == 'INTERVAL' ? 'Interval' : 'Category'}">Label</th>
+                            <th>Amount</th>
+                            <th>%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="dp : ${result.dataPoints}">
+                            <td th:text="${dp.label}">Label</td>
+                            <td th:text="${#numbers.formatDecimal(dp.value, 1, 2)}">0.00</td>
+                            <td class="percentage-cell">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="chart-view" class="view-container chart-container">
+                <canvas id="resultChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const resultData = /*[[${result}]]*/ {};
+        let myChart = null;
+        let currentChartType = 'pie';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (resultData.resultType === 'CHART' && resultData.dataPoints) {
+                // Calculate total for percentages
+                const total = resultData.dataPoints.reduce((sum, dp) => sum + dp.value, 0);
+                
+                // Update percentage column in table
+                const cells = document.querySelectorAll('.percentage-cell');
+                cells.forEach((cell, index) => {
+                    if (resultData.dataPoints[index]) {
+                        const percentage = total > 0 ? (resultData.dataPoints[index].value / total * 100) : 0;
+                        cell.textContent = percentage.toFixed(1) + '%';
+                    }
+                });
+            }
+        });
+
+        function setView(viewType) {
+            const btnTable = document.getElementById('btn-table');
+            const btnPie = document.getElementById('btn-pie');
+            const btnBar = document.getElementById('btn-bar');
+            const tableView = document.getElementById('table-view');
+            const chartView = document.getElementById('chart-view');
+
+            [btnTable, btnPie, btnBar].forEach(btn => btn.classList.remove('active'));
+            [tableView, chartView].forEach(view => view.classList.remove('active'));
+
+            if (viewType === 'table') {
+                btnTable.classList.add('active');
+                tableView.classList.add('active');
+            } else {
+                chartView.classList.add('active');
+                if (viewType === 'pie') {
+                    btnPie.classList.add('active');
+                    currentChartType = 'pie';
+                } else {
+                    btnBar.classList.add('active');
+                    currentChartType = 'bar';
+                }
+                renderChart(currentChartType);
+            }
+        }
+
+        function renderChart(type) {
+            if (!resultData.dataPoints || resultData.dataPoints.length === 0) return;
+
+            if (myChart) {
+                myChart.destroy();
+                myChart = null;
+            }
+
+            const labels = resultData.dataPoints.map(dp => dp.label);
+            const dataValues = resultData.dataPoints.map(dp => dp.value);
+            const ctx = document.getElementById('resultChart').getContext('2d');
+
+            // Use income-color (#10b981) for both bar and pie charts (matching histogram style)
+            const backgroundColors = '#10b981';
+
+            myChart = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataValues,
+                        backgroundColor: backgroundColors,
+                        borderRadius: type === 'bar' ? 2 : 0,
+                        borderColor: type === 'pie' ? 'white' : undefined,
+                        borderWidth: type === 'pie' ? 1 : 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            display: type === 'pie',
+                            position: 'right',
+                            labels: { font: { size: 9 } }
+                        } 
+                    },
+                    scales: type === 'bar' ? {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: '#f3f4f6' }, 
+                            ticks: { font: { size: 9 } } 
+                        },
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { font: { size: 9 } } 
+                        }
+                    } : {}
+                }
+            });
+        }
+        /*]]>*/
+    </script>
+</body>
+</html>

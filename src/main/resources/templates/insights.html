@@ -137,6 +137,7 @@
             .filter-container {
                 grid-template-columns: 1fr 1fr 1fr 1fr;
                 /* Adjusted for 4 columns */
+                gap: 12px 15px; /* row gap, column gap */
             }
         }
 
@@ -146,7 +147,7 @@
             grid-column: span 1;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 5px;
         }
 
         .filter-row {
@@ -165,22 +166,35 @@
             gap: 10px;
         }
 
-        .filter-actions {
+        /* Aggregate Results and Go button row styling */
+        .aggregate-go-row {
             grid-column: 1 / -1;
-            text-align: right;
-            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 0;
         }
 
-        /* REVISED: For the Go button */
+        .aggregate-go-row .form-group {
+            margin-bottom: 0;
+        }
+
         @media (min-width: 768px) {
-            .filter-actions {
-                grid-column: 4 / 5;
-                /* Place in the last column */
-                grid-row: 2 / 3;
-                /* Place in the second row */
-                align-self: end;
-                margin-top: 0;
+            .aggregate-go-row {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
             }
+
+            .aggregate-go-row .filter-actions {
+                margin-top: 0;
+                text-align: right;
+            }
+        }
+
+        .aggregate-go-row .filter-actions {
+            text-align: right;
+            margin-top: 0;
         }
 
         /* Collapsible Category List (Copied from Transaction Management) */
@@ -553,7 +567,7 @@
                         </div>
                     </div>
 
-                    <div class="category-group" style="grid-row: 1 / span 2;">
+                    <div class="category-group">
                         <label for="category-display">Categories</label>
                         <div class="filter-col-main" style="position: relative;">
                             <select id="category-display" readonly>
@@ -584,16 +598,17 @@
                             <input type="date" id="endDate" name="endDate" placeholder="End Date">
                         </div>
                     </div>
+                    <div class="aggregate-go-row">
+                        <div class="form-group"
+                            style="display: flex; align-items: center; justify-content: flex-start;">
+                            <input type="checkbox" id="aggregateResults" name="aggregateResults" class="form-check-input"
+                                style="width: auto; margin-right: 8px;">
+                            <label for="aggregateResults" style="margin-bottom: 0;">Aggregate Results</label>
+                        </div>
 
-                    <div class="form-group"
-                        style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-start;">
-                        <input type="checkbox" id="aggregateResults" name="aggregateResults" class="form-check-input"
-                            style="width: auto; margin-right: 8px;">
-                        <label for="aggregateResults" style="margin-bottom: 0;">Aggregate Results</label>
-                    </div>
-
-                    <div class="filter-actions">
-                        <button type="button" class="btn-filter" onclick="runAnalysis()">Go</button>
+                        <div class="filter-actions">
+                            <button type="button" class="btn-filter" onclick="runAnalysis()">Go</button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -717,11 +732,15 @@
             toggleDateRangeAndInterval(); // Initialize on load
 
             // --- 3. Category Dropdown Toggle ---
-            categoryDisplaySelect.addEventListener('mousedown', function (event) {
+            function toggleCategoryDropdown(event) {
                 event.preventDefault();
+                event.stopPropagation();
                 // Toggle display
                 categoryListDropdown.style.display = categoryListDropdown.style.display === 'block' ? 'none' : 'block';
-            });
+            }
+            
+            categoryDisplaySelect.addEventListener('mousedown', toggleCategoryDropdown);
+            categoryDisplaySelect.addEventListener('touchend', toggleCategoryDropdown);
 
             // Close dropdown when clicking outside
             document.addEventListener('click', function (event) {
@@ -992,19 +1011,8 @@
                 const dataValues = currentAnalysisData.map(item => item.cumulatedAmount);
                 const ctx = document.getElementById('analysisChart').getContext('2d');
 
-                // FIXED: Professional color palette
-                const backgroundColors = [
-                    '#047857', // Emerald 700 (Accent)
-                    '#1F2937', // Slate 800 (Primary)
-                    '#059669', // Emerald 600
-                    '#4B5563', // Slate 600
-                    '#10B981', // Emerald 500
-                    '#374151', // Slate 700
-                    '#34D399', // Emerald 400
-                    '#6B7280', // Slate 500
-                    '#064E3B', // Emerald 900
-                    '#9CA3AF'  // Slate 400
-                ];
+                // Professional green color palette (matching histogram style)
+                const backgroundColors = '#10b981'; // Single green color for consistency
 
                 myChart = new Chart(ctx, {
                     type: type,

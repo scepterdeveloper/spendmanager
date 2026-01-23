@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${appName} + ' - Manage Insights'">EverRich - Manage Insights</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        /* Existing Styles */
+        :root { 
+            --accent-color: #047857; 
+            --primary-color: #1F2937; 
+            --text-mellow: #6B7280;
+            --border-color: #E5E7EB;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--primary-color);
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            margin-right: 2rem;
+            font-size: 1rem;
+        }
+
+        .back-link svg {
+            margin-right: 5px;
+        }
+
+        .page-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .data-table th {
+            background-color: #F3F4F6;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.25rem;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            font-size: 1rem;
+        }
+        .btn-primary:hover {
+            background-color: #059669; 
+        }
+        .btn-delete {
+            background-color: #EF4444; 
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: opacity 0.3s;
+        }
+        .btn-delete:hover {
+            opacity: 0.8;
+        }
+        .btn-edit {
+             background-color: #3B82F6; 
+             color: white;
+             padding: 0.5rem 1rem;
+             border-radius: 0.25rem;
+             text-decoration: none;
+             font-size: 0.875rem;
+             margin-right: 10px;
+        }
+        .btn-cancel {
+            background-color: #6B7280; 
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            display: inline-block;
+            text-align: center;
+            font-size: 1rem;
+        }
+        .btn-cancel:hover {
+            background-color: #4B5563;
+        }
+        
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            padding: 10px; 
+            border: 1px solid #D1FAE5; 
+            border-radius: 0.5rem;
+            background-color: #F0FDFA; 
+            transition: background-color 0.2s;
+        }
+        .collapsible-header:hover {
+            background-color: #E0F5F2; 
+        }
+
+        .collapsible-header h3 {
+            margin: 0;
+            color: var(--accent-color); 
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            font-size: 1.125rem; 
+        }
+        
+        .collapsible-header h3, 
+        .collapsible-header .icon,
+        .llm-icon, 
+        .manual-icon {
+            color: var(--accent-color); 
+        }
+
+        .collapsible-header .icon {
+            margin-left: 10px;
+            transition: transform 0.2s;
+        }
+        .collapsible-header.collapsed .icon {
+            transform: rotate(-90deg);
+        }
+        .llm-icon, .manual-icon {
+            margin-right: 10px;
+        }
+        
+        .content-wrapper {
+            border: 1px solid #E5E7EB;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            background-color: white; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-check input[type="checkbox"] {
+            width: auto;
+        }
+
+        .form-check label {
+            margin-bottom: 0;
+        }
+
+        /* Category dropdown styling (matching insights.html exactly) */
+        .category-group {
+            position: relative;
+        }
+
+        #category-list-dropdown {
+            position: absolute;
+            z-index: 100;
+            background-color: white;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.25rem;
+            padding: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-height: 250px;
+            overflow-y: auto;
+            min-width: 250px;
+            margin-top: 5px;
+        }
+
+        #category-list-dropdown > div {
+            padding: 3px 0;
+            line-height: 1.2;
+        }
+
+        /* Override form-group styles inside dropdown */
+        #category-list-dropdown input[type="checkbox"] {
+            width: auto;
+            padding: 0;
+            margin: 0;
+            margin-right: 5px;
+            display: inline;
+            vertical-align: middle;
+        }
+
+        #category-list-dropdown label {
+            display: inline;
+            font-weight: normal;
+            margin-bottom: 0;
+            vertical-align: middle;
+        }
+
+        .category-toggle-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #EEE;
+        }
+
+        .category-toggle-container > div {
+            display: flex;
+            align-items: center;
+        }
+
+        .category-toggle-container label {
+            font-weight: bold !important;
+        }
+        
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .toast {
+            min-width: 250px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 0.5rem;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateY(-20px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success {
+            background-color: #10B981;
+        }
+        .toast.error {
+            background-color: #F87171;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .modal-buttons button {
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 0.25rem;
+            font-weight: 600;
+        }
+        #modal-confirm-btn {
+            background-color: #EF4444;
+            color: white;
+            border: none;
+        }
+        #modal-cancel-btn {
+            background-color: #D1D5DB;
+            color: #1F2937;
+            border: none;
+        }
+
+        /* Mobile View (Compact High-Density Cards) */
+        .insight-list-mobile {
+            display: none;
+        }
+
+        .insight-card {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .insight-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .insight-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .insight-description {
+            font-size: 0.85rem;
+            color: var(--text-mellow);
+            margin-bottom: 0.5rem;
+        }
+
+        .insight-params {
+            font-size: 0.75rem;
+            color: var(--text-mellow);
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .insight-card-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .action-icon:hover {
+            opacity: 0.7;
+        }
+
+        .edit-icon {
+            color: #3B82F6;
+        }
+
+        .delete-icon {
+            color: #EF4444;
+        }
+
+        #date-range-fields {
+            display: none;
+        }
+
+        @media (max-width: 767px) {
+            .data-table-wrapper {
+                display: none;
+            }
+
+            .insight-list-mobile {
+                display: block;
+            }
+
+            .page-header {
+                align-items: flex-start;
+                margin-bottom: 0.5rem;
+                padding-bottom: 0.25rem;
+            }
+
+            .back-link {
+                margin-right: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .page-header h2 {
+                font-size: 0;
+            }
+
+            .page-header h2::after {
+                content: "Manage Insights";
+                font-size: 1.25rem;
+            }
+
+            .content-container {
+                padding: 0.5rem !important;
+            }
+
+            .collapsible-header {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .collapsible-header h3 {
+                font-size: 1rem;
+            }
+
+            .content-wrapper {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .form-group label {
+                font-size: 0.9rem;
+            }
+
+            .form-group input, .form-group textarea, .form-group select {
+                padding: 0.6rem;
+                font-size: 0.9rem;
+            }
+
+            .form-row, .form-row-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-primary, .btn-cancel {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .insight-card {
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .modal-content {
+                width: 95%;
+            }
+
+            /* Category Dropdown Mobile Optimization (matching insights.html) */
+            #category-list-dropdown {
+                position: fixed;
+                left: 5%;
+                right: 5%;
+                top: 50%;
+                transform: translateY(-50%);
+                min-width: unset;
+                max-width: 90%;
+                max-height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/header :: appHeader}"></div>
+    
+    <div id="toast-container"></div>
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message"></p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn">Yes, I'm Sure</button>
+                <button id="modal-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="content-container">
+        
+        <div class="page-header">
+            <a href="/" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                Back
+            </a>
+            <h2>Manage Saved Insights</h2>
+        </div>
+
+        <div class="collapsible-header" id="manual-header">
+            <h3>
+                <span class="manual-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-4"/></svg>
+                </span>
+                <span th:text="${newInsight.id != null ? 'Edit Insight #' + newInsight.id : 'Define a New Insight'}">Define a New Insight</span>
+            </h3>
+            <span class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+        </div>        
+
+        <div class="content-wrapper" id="manual-form-content">
+            <form th:action="@{/insights/manage}" th:object="${newInsight}" method="post">
+                
+                <input type="hidden" th:field="*{id}" />
+                
+                <!-- Basic Info -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Insight Name *</label>
+                        <input type="text" id="name" th:field="*{name}" placeholder="e.g., Monthly Groceries" required />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <input type="text" id="description" th:field="*{description}" placeholder="Brief description of this insight" />
+                    </div>
+                </div>
+
+                <!-- Filter Parameters -->
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label for="timeframe">Timeframe *</label>
+                        <select id="timeframe" th:field="*{timeframe}" required>
+                            <option value="THIS_MONTH">This Month</option>
+                            <option value="LAST_MONTH">Previous Month</option>
+                            <option value="THIS_YEAR">This Year</option>
+                            <option value="LAST_YEAR">Previous Year</option>
+                            <option value="ENTIRE_TIMEFRAME">Entire Timeframe</option>
+                            <option value="DATE_RANGE">Date Range</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="intervalType">Interval</label>
+                        <select id="intervalType" th:field="*{intervalType}">
+                            <option value="NOT_SPECIFIED">Not Specified</option>
+                            <option value="MONTHLY">Monthly</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="intervalFunction">Interval Function</label>
+                        <select id="intervalFunction" th:field="*{intervalFunction}">
+                            <option value="SUM">SUM</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Date Range (shown only when timeframe = DATE_RANGE) -->
+                <div class="form-row" id="date-range-fields">
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate" th:field="*{startDate}" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="endDate">End Date</label>
+                        <input type="date" id="endDate" th:field="*{endDate}" />
+                    </div>
+                </div>
+
+                <!-- Categories (dropdown like insights.html) -->
+                <div class="form-group category-group">
+                    <label for="category-display">Categories (leave empty for all)</label>
+                    <div style="position: relative;">
+                        <select id="category-display" readonly>
+                            <option value="" disabled selected>Filter Categories (Currently <span id="selected-count">All</span>)</option>
+                        </select>
+
+                        <div id="category-list-dropdown" style="display:none;">
+                            <div class="category-toggle-container">
+                                <div>
+                                    <input type="checkbox" id="select-all-categories" class="category-toggle">
+                                    <label for="select-all-categories" style="font-weight:bold;">Select All</label>
+                                </div>
+                                <div>
+                                    <input type="checkbox" id="clear-all-categories" class="category-toggle">
+                                    <label for="clear-all-categories" style="font-weight:bold;">Clear All</label>
+                                </div>
+                            </div>
+                            <div th:each="category : ${categories}">
+                                <input type="checkbox" 
+                                       th:id="'cat-' + ${category.id}" 
+                                       th:value="${category.id}"
+                                       class="category-checkbox" />
+                                <label th:for="'cat-' + ${category.id}" style="display:inline;" th:text="${category.name}">Category Name</label>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="categoryIds" th:field="*{categoryIds}" />
+                </div>
+
+                <!-- Aggregate Results -->
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" id="aggregateResults" th:field="*{aggregateResults}" />
+                        <label for="aggregateResults">Aggregate Results</label>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">
+                        <span th:text="${newInsight.id != null ? 'Update Insight' : 'Save Insight'}">Save Insight</span>
+                    </button>
+
+                    <a th:if="${newInsight.id != null}" th:href="@{/insights/manage}" class="btn-cancel">
+                        Cancel Edit
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <h3>Existing Saved Insights</h3>
+        
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Timeframe</th>
+                        <th>Aggregate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="insight : ${savedInsights}">
+                        <td th:text="${insight.id}">1</td>
+                        <td>
+                            <a th:href="@{/insights/manage/{id}/execute(id=${insight.id})}" 
+                               style="color: var(--accent-color); text-decoration: none; font-weight: 500;"
+                               th:text="${insight.name}">Monthly Groceries</a>
+                        </td>
+                        <td th:text="${insight.description}">Track monthly grocery spending</td>
+                        <td th:text="${insight.timeframe}">THIS_MONTH</td>
+                        <td th:text="${insight.aggregateResults ? 'Yes' : 'No'}">No</td>
+                        <td>
+                            <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="btn-edit">
+                                Edit
+                            </a>
+                            
+                            <form th:action="@{/insights/manage/{id}/delete(id=${insight.id})}" method="post" style="display: inline;" class="delete-insight-form">
+                                <button type="button" class="btn-delete" th:attr="data-insight-id=${insight.id}">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${savedInsights.empty}">
+                        <td colspan="6">No saved insights defined yet. Please add a new one above.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="insight-list-mobile">
+            <div th:each="insight : ${savedInsights}" class="insight-card">
+                <div class="insight-card-header">
+                    <div class="insight-name">
+                        <a th:href="@{/insights/manage/{id}/execute(id=${insight.id})}" 
+                           style="color: var(--accent-color); text-decoration: none;"
+                           th:text="${insight.id} + ' - ' + ${insight.name}">1 - Monthly Groceries</a>
+                    </div>
+                </div>
+                
+                <div class="insight-description" th:text="${insight.description}">Track monthly grocery spending</div>
+                
+                <div class="insight-params">
+                    <strong>Timeframe:</strong> <span th:text="${insight.timeframe}">THIS_MONTH</span> | 
+                    <strong>Aggregate:</strong> <span th:text="${insight.aggregateResults ? 'Yes' : 'No'}">No</span>
+                </div>
+
+                <div class="insight-card-actions">
+                    <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="action-icon edit-icon" title="Edit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                        </svg>
+                    </a>
+                    
+                    <form th:action="@{/insights/manage/{id}/delete(id=${insight.id})}" method="post" style="display: inline;" class="delete-insight-form">
+                        <button type="button" class="action-icon delete-icon delete-btn-mobile" th:attr="data-insight-id=${insight.id}" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div th:if="${savedInsights.empty}" style="text-align: center; padding: 2rem; background-color: white; border-radius: 0.5rem; border: 1px solid #E5E7EB;">
+                No saved insights defined yet. Please add a new one above.
+            </div>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // UI Elements
+            const manualHeader = document.getElementById('manual-header'); 
+            const manualContent = document.getElementById('manual-form-content'); 
+            const deleteButtons = document.querySelectorAll('.btn-delete, .delete-btn-mobile');
+            const modal = document.getElementById('confirmation-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+            const modalCancelBtn = document.getElementById('modal-cancel-btn');
+            const toastContainer = document.getElementById('toast-container');
+            const timeframeSelect = document.getElementById('timeframe');
+            const dateRangeFields = document.getElementById('date-range-fields');
+            const intervalSelect = document.getElementById('intervalType');
+            const intervalFunctionSelect = document.getElementById('intervalFunction');
+            const categoryDisplaySelect = document.getElementById('category-display');
+            const categoryListDropdown = document.getElementById('category-list-dropdown');
+            const selectedCountSpan = document.getElementById('selected-count');
+
+            let confirmAction = null; 
+
+            // Initialize category checkboxes from hidden field
+            const categoryIdsField = document.getElementById('categoryIds');
+            const existingCategoryIds = categoryIdsField.value ? categoryIdsField.value.split(',') : [];
+            document.querySelectorAll('.category-checkbox').forEach(cb => {
+                if (existingCategoryIds.includes(cb.value)) {
+                    cb.checked = true;
+                }
+            });
+
+            // --- Category Dropdown Toggle (matching insights.html) ---
+            function toggleCategoryDropdown(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                categoryListDropdown.style.display = categoryListDropdown.style.display === 'block' ? 'none' : 'block';
+            }
+            
+            categoryDisplaySelect.addEventListener('mousedown', toggleCategoryDropdown);
+            categoryDisplaySelect.addEventListener('touchend', toggleCategoryDropdown);
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (event) {
+                if (categoryListDropdown.style.display === 'block' &&
+                    !categoryListDropdown.contains(event.target) &&
+                    event.target !== categoryDisplaySelect) {
+                    categoryListDropdown.style.display = 'none';
+                }
+            });
+
+            // --- Category Selection Logic ---
+            function updateCategoryDisplayCount() {
+                const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox');
+                const checkedCount = Array.from(categoryCheckboxes).filter(cb => cb.checked).length;
+                const totalCount = categoryCheckboxes.length;
+
+                let text;
+                if (checkedCount === 0) {
+                    text = 'None';
+                } else if (checkedCount === totalCount) {
+                    text = 'All';
+                } else {
+                    text = checkedCount;
+                }
+                selectedCountSpan.textContent = text;
+                updateCategoryIds();
+            }
+
+            // Select All / Clear All listeners
+            const selectAllCheckbox = document.getElementById('select-all-categories');
+            const clearAllCheckbox = document.getElementById('clear-all-categories');
+            const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.category-checkbox');
+
+            selectAllCheckbox.addEventListener('change', function () {
+                categoryCheckboxes.forEach(cb => cb.checked = this.checked);
+                clearAllCheckbox.checked = false;
+                updateCategoryDisplayCount();
+            });
+
+            clearAllCheckbox.addEventListener('change', function () {
+                categoryCheckboxes.forEach(cb => cb.checked = !this.checked);
+                selectAllCheckbox.checked = false;
+                updateCategoryDisplayCount();
+            });
+
+            categoryCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function () {
+                    selectAllCheckbox.checked = false;
+                    clearAllCheckbox.checked = false;
+                    const allChecked = Array.from(categoryCheckboxes).every(c => c.checked);
+                    const noneChecked = Array.from(categoryCheckboxes).every(c => !c.checked);
+                    selectAllCheckbox.checked = allChecked;
+                    clearAllCheckbox.checked = noneChecked;
+                    updateCategoryDisplayCount();
+                });
+            });
+
+            // Initialize category display count
+            updateCategoryDisplayCount();
+
+            // --- Interval Function Logic (Enable/Disable based on Interval) ---
+            function toggleIntervalFunction() {
+                const selectedInterval = intervalSelect.value;
+                intervalFunctionSelect.disabled = (selectedInterval === 'NOT_SPECIFIED');
+            }
+            intervalSelect.addEventListener('change', toggleIntervalFunction);
+
+            // --- Timeframe Logic (Show/Hide Date Range and enable/disable Interval) ---
+            function toggleDateRangeAndInterval() {
+                const selectedTimeframe = timeframeSelect.value;
+
+                if (selectedTimeframe === 'DATE_RANGE') {
+                    dateRangeFields.style.display = 'grid';
+                } else {
+                    dateRangeFields.style.display = 'none';
+                }
+
+                // Enable/Disable Interval based on Timeframe (matching insights.html constraints)
+                const enableInterval = ['THIS_YEAR', 'LAST_YEAR', 'DATE_RANGE', 'ENTIRE_TIMEFRAME'].includes(selectedTimeframe);
+                intervalSelect.disabled = !enableInterval;
+                if (!enableInterval) {
+                    intervalSelect.value = 'NOT_SPECIFIED';
+                }
+                toggleIntervalFunction();
+            }
+            timeframeSelect.addEventListener('change', toggleDateRangeAndInterval);
+            
+            // Initialize on load
+            toggleDateRangeAndInterval();
+
+            // --- Notification and Modal Helpers ---
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                }, 5000);
+            }
+
+            function showModal(message, callback) {
+                modalMessage.textContent = message;
+                confirmAction = callback;
+                modal.style.display = 'flex';
+            }
+
+            modalConfirmBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (confirmAction) {
+                    confirmAction(true);
+                }
+            };
+
+            modalCancelBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (confirmAction) {
+                    confirmAction(false);
+                }
+                confirmAction = null;
+            };
+
+            // --- Insight Deletion Logic (Using Modal) ---
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    const form = button.closest('form');
+                    
+                    showModal(
+                        'Are you sure you want to delete this saved insight? This cannot be undone!', 
+                        (confirmed) => {
+                            if (confirmed) {
+                                form.submit();
+                            } else {
+                                showToast('Deletion cancelled.', 'error');
+                            }
+                        }
+                    );
+                });
+            });
+
+
+            // --- Section Collapse Logic ---
+            const isEditMode = document.querySelector('input[name="id"]').value !== "";
+            
+            if (!isEditMode) {
+                 manualContent.style.display = 'none';
+                 manualHeader.classList.add('collapsed');
+            } else {
+                 manualHeader.classList.remove('collapsed');
+            }
+           
+            function toggleSection(header, content) {
+                 const isCollapsed = content.style.display === 'none';
+                 content.style.display = isCollapsed ? 'block' : 'none';
+                 header.classList.toggle('collapsed');
+            }
+            
+            manualHeader.addEventListener('click', () => {
+                 if (!isEditMode) {
+                    toggleSection(manualHeader, manualContent);
+                 } else {
+                    showToast("Please use 'Cancel Edit' to hide the form.", 'error');
+                 }
+            });
+        });
+
+        // Category selection helpers
+        function updateCategoryIds() {
+            const checkboxes = document.querySelectorAll('.category-checkbox:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            document.getElementById('categoryIds').value = ids.join(',');
+        }
+
+        function selectAllCategories() {
+            document.querySelectorAll('.category-checkbox').forEach(cb => cb.checked = true);
+            updateCategoryIds();
+        }
+
+        function clearAllCategories() {
+            document.querySelectorAll('.category-checkbox').forEach(cb => cb.checked = false);
+            updateCategoryIds();
+        }
+    </script>
+</body>
+</html>
