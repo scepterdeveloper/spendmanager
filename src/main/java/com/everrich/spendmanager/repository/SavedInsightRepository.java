@@ -12,4 +12,6 @@ public interface SavedInsightRepository extends JpaRepository<SavedInsight, Long
     SavedInsight findByNameIgnoreCase(String name);
     
     List<SavedInsight> findAllByOrderByNameAsc();
+    List<SavedInsight> findByShowOnDashboardTrue();
+    List<SavedInsight> findByShowOnDashboardTrueAndAggregateResultsTrue();
 }

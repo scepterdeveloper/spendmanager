@@ -45,6 +45,7 @@ public class SavedInsight {
     private String categoryIds; // Comma-separated category IDs
     
     private Boolean aggregateResults;
+    private Boolean showOnDashboard;
     
     public SavedInsight(String name, String description, String timeframe) {
         this.name = name;

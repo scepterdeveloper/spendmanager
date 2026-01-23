@@ -53,7 +53,7 @@ public class PdfController {
      * Shows the main application dashboard.
      * Maps to: GET /
      */
-    @GetMapping("/")
+    /*@GetMapping("/")
     public String showDashboard(Model model) {
         model.addAttribute("appName", "EverRich");
 
@@ -61,7 +61,7 @@ public class PdfController {
         model.addAttribute("categoryCount", categoryCount);
 
         return "dashboard";
-    }
+    }*/
 
     @GetMapping("/statements")
     public String viewStatements(Model model) {

@@ -8,6 +8,8 @@ import com.everrich.spendmanager.entities.SavedInsight;
 import com.everrich.spendmanager.repository.SavedInsightRepository;
 
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +31,11 @@ public class SavedInsightService {
         return savedInsightRepository.findAllByOrderByNameAsc();
     }
 
+    public List<SavedInsight> findInsightsForDashboard() {
+        return savedInsightRepository.findByShowOnDashboardTrue();
+    }
+
+
     public Optional<SavedInsight> findById(Long id) {
         return savedInsightRepository.findById(id);
     }
@@ -43,6 +50,19 @@ public class SavedInsightService {
 
     public SavedInsight findByName(String name) {
         return savedInsightRepository.findByNameIgnoreCase(name);
+    }
+
+    public List<InsightExecutionResult> getDashBoardKPIs()    {
+
+        List<InsightExecutionResult> results = new ArrayList<>();
+        List<SavedInsight> dashBoardKPIInsights = savedInsightRepository.findByShowOnDashboardTrueAndAggregateResultsTrue();
+        for(SavedInsight dashBoardKPIInsight: dashBoardKPIInsights) {
+
+            results.add(this.execute(dashBoardKPIInsight.getId()));
+
+        }
+
+        return results;
     }
 
     /**

@@ -2,7 +2,6 @@ package com.everrich.spendmanager.controller;
 
 import com.everrich.spendmanager.dto.InsightExecutionResult;
 import com.everrich.spendmanager.entities.SavedInsight;
-import com.everrich.spendmanager.entities.Category;
 import com.everrich.spendmanager.service.SavedInsightService;
 import com.everrich.spendmanager.service.CategoryService;
 
@@ -10,8 +9,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
-
-import java.util.List;
 
 @Controller
 @RequestMapping("/insights/manage")
