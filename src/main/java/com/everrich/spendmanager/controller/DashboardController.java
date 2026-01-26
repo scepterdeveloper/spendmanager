@@ -25,7 +25,11 @@ public class DashboardController {
 
         model.addAttribute("appName", "EverRich");
         model.addAttribute("dashBoardKPIs", savedInsightService.getDashBoardKPIs());
-        log.info("Fetched Dashboard KPIs: " + savedInsightService.getDashBoardKPIs().size());
+        //log.info("Fetched Dashboard KPIs: " + savedInsightService.getDashBoardKPIs().size());
+
+        model.addAttribute("dashBoardCharts", savedInsightService.getDashBoardCharts());
+        //log.info("Fetched Dashboard Charts: " + savedInsightService.getDashBoardCharts().size());
+
 
         return "dashboard";
     }

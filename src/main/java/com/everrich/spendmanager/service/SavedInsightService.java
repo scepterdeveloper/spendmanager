@@ -65,6 +65,17 @@ public class SavedInsightService {
         return results;
     }
 
+    public List<InsightExecutionResult> getDashBoardCharts()    {
+
+        List<InsightExecutionResult> results = new ArrayList<>();
+        List<SavedInsight> dashBoardChartInsights = savedInsightRepository.findByShowOnDashboardTrueAndAggregateResultsFalse();
+        for(SavedInsight dashboardChartInsight: dashBoardChartInsights) {
+            results.add(this.execute(dashboardChartInsight.getId()));
+        }
+
+        return results;
+    }
+
     /**
      * Execute a saved insight and return a generic result that can be mapped to various UI chart types.
      */

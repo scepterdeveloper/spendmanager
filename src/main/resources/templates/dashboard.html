@@ -89,23 +89,23 @@
 
         /* Subtler Mellow Arrows */
         .nav-btn {
-            display: none; 
+            display: flex; 
             position: absolute;
             width: 26px;
             height: 26px;
-            background: rgba(255, 255, 255, 0.4); /* Very light ghost background */
-            border: none; /* Removed border for less obstruction */
+            background: rgba(255, 255, 255, 0.4);
+            border: none;
             border-radius: 50%;
             z-index: 10;
             cursor: pointer;
             align-items: center;
             justify-content: center;
-            color: #9CA3AF; /* Mellow gray arrow color */
+            color: #9CA3AF;
             top: 50%;
             transform: translateY(-50%);
             padding: 0;
             transition: opacity 0.3s ease, background 0.2s ease;
-            backdrop-filter: blur(2px); /* Slight blur to stay readable but soft */
+            backdrop-filter: blur(2px);
         }
 
         .nav-btn:active {
@@ -117,7 +117,7 @@
             pointer-events: none;
         }
 
-        .nav-prev { left: -8px; } /* Pushed slightly outward */
+        .nav-prev { left: -8px; }
         .nav-next { right: -8px; }
 
         .kpi-card {
@@ -156,12 +156,39 @@
             color: var(--primary-color);
         }
 
+        /* Charts Carousel Styles */
+        .charts-carousel-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 1.25rem;
+        }
+
+        .charts-container {
+            display: flex;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            gap: 1rem;
+            width: 100%;
+            scrollbar-width: none;
+        }
+
+        .charts-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .chart-slide {
+            flex: 0 0 100%;
+            min-width: 100%;
+            scroll-snap-align: start;
+        }
+
         /* Chart Section */
         .chart-card {
             background: white;
             border-radius: 0.4rem;
             padding: 0.75rem;
-            margin-bottom: 1.25rem;
             border: 1px solid var(--border-color);
         }
 
@@ -304,15 +331,47 @@
             </div>
         </div>
 
-        <div class="chart-card">
-            <h3 class="chart-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent-color)">
-                    <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-4" />
+        <!-- Dynamic Charts Carousel Section -->
+        <div class="charts-carousel-wrapper">
+            <button id="btnChartPrev" class="nav-btn nav-prev nav-hidden" onclick="scrollCharts(-1)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
-                Monthly Spending
-            </h3>
-            <div class="chart-container">
-                <canvas id="spendingChart"></canvas>
+            </button>
+
+            <div class="charts-container" id="chartsContainer">
+                <div th:each="chart, iterStat : ${dashBoardCharts}" 
+                     th:if="${chart.resultType.name() == 'CHART'}"
+                     class="chart-card chart-slide">
+                    <h3 class="chart-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent-color)">
+                            <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-4" />
+                        </svg>
+                        <span th:text="${chart.insightName}">Chart Title</span>
+                    </h3>
+                    <div class="chart-container">
+                        <canvas th:id="'chart-' + ${iterStat.index}"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnChartNext" class="nav-btn nav-next" onclick="scrollCharts(1)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Hidden data elements for JavaScript access -->
+        <div id="chart-data" style="display: none;">
+            <div th:each="chart, iterStat : ${dashBoardCharts}"
+                 th:if="${chart.resultType.name() == 'CHART'}"
+                 th:attr="data-chart-index=${iterStat.index},
+                          data-chart-name=${chart.insightName}"
+                 class="chart-data-item">
+                <span th:each="dp : ${chart.dataPoints}" 
+                      th:attr="data-label=${dp.label}, data-value=${dp.value}"
+                      class="data-point"></span>
             </div>
         </div>
 
@@ -367,6 +426,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
+        // KPI Carousel Logic
         const container = document.getElementById('kpiContainer');
         const btnPrev = document.getElementById('btnPrev');
         const btnNext = document.getElementById('btnNext');
@@ -393,26 +453,95 @@
         window.addEventListener('load', updateArrows);
         window.addEventListener('resize', updateArrows);
 
+        // Charts Carousel & Rendering Logic
         document.addEventListener('DOMContentLoaded', function () {
-            const canvas = document.getElementById('spendingChart');
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                        datasets: [{ data: [1200, 1900, 1500, 2100, 1800, 2400], backgroundColor: '#10b981', borderRadius: 2 }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 9 } } },
-                            x: { grid: { display: false }, ticks: { font: { size: 9 } } }
-                        }
-                    }
-                });
+            const chartsContainer = document.getElementById('chartsContainer');
+            const btnChartPrev = document.getElementById('btnChartPrev');
+            const btnChartNext = document.getElementById('btnChartNext');
+            
+            // Update chart carousel arrows
+            function updateChartArrows() {
+                if (!chartsContainer || !btnChartPrev || !btnChartNext) return;
+                
+                if (chartsContainer.scrollLeft <= 5) {
+                    btnChartPrev.classList.add('nav-hidden');
+                } else {
+                    btnChartPrev.classList.remove('nav-hidden');
+                }
+
+                if (chartsContainer.scrollLeft + chartsContainer.offsetWidth >= chartsContainer.scrollWidth - 5) {
+                    btnChartNext.classList.add('nav-hidden');
+                } else {
+                    btnChartNext.classList.remove('nav-hidden');
+                }
             }
+            
+            // Scroll charts carousel
+            window.scrollCharts = function(direction) {
+                if (!chartsContainer) return;
+                const slideWidth = chartsContainer.offsetWidth;
+                chartsContainer.scrollBy({ left: direction * slideWidth, behavior: 'smooth' });
+            };
+            
+            if (chartsContainer) {
+                chartsContainer.addEventListener('scroll', updateChartArrows);
+                updateChartArrows();
+            }
+            
+            // Parse chart data from hidden elements and render charts
+            const chartDataContainer = document.getElementById('chart-data');
+            if (!chartDataContainer) return;
+            
+            const chartDataItems = chartDataContainer.querySelectorAll('.chart-data-item');
+            
+            chartDataItems.forEach((item) => {
+                const chartIndex = item.getAttribute('data-chart-index');
+                const chartName = item.getAttribute('data-chart-name');
+                
+                const dataPointElements = item.querySelectorAll('.data-point');
+                const labels = [];
+                const values = [];
+                
+                dataPointElements.forEach((dp) => {
+                    labels.push(dp.getAttribute('data-label'));
+                    values.push(parseFloat(dp.getAttribute('data-value')));
+                });
+                
+                // Create chart
+                const canvas = document.getElementById('chart-' + chartIndex);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: '#10b981',
+                                borderRadius: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: '#f3f4f6' },
+                                    ticks: { font: { size: 9 } }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 9 } }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
         });
     </script>
 </body>
