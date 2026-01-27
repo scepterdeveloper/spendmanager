@@ -4,173 +4,27 @@
 <head>
     <title th:text="${appName} + ' - Manage Categories'">EverRich - Manage Categories</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
-        :root {
-            --accent-color: #047857;
-            --primary-color: #1F2937;
-            --text-mellow: #6B7280;
-            --border-color: #E5E7EB;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            color: var(--primary-color);
-            background-color: #f9fafb;
-        }
-
-        .content-container {
-            padding: 1.5rem;
-            max-width: 1200px;
-            margin-left: 0;
-            margin-right: auto;
-            text-align: left;
-        }
-
-        /* --- Header Styles --- */
-        .page-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            color: var(--accent-color);
-            text-decoration: none;
-            font-weight: 500;
-            margin-right: 1.5rem;
-            font-size: 0.95rem;
-        }
-
-        .page-header h2 {
-            color: var(--primary-color);
-            margin: 0;
-            font-size: 1.75rem;
-            font-weight: 600;
-        }
-
-        /* --- Compact Table Styling --- */
-        .data-table-wrapper {
-            overflow-x: auto;
-            background-color: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        .data-table th, .data-table td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #E5E7EB;
-        }
-
-        .data-table th { background-color: #F3F4F6; font-weight: 600; }
-
-        /* --- Form Styling --- */
-        .form-group {
-            margin-bottom: 0.75rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 0.25rem;
-            font-size: 0.9rem;
-        }
-
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 0.6rem;
-            border: 1px solid #D1D5DB;
-            border-radius: 0.25rem;
-            font-family: inherit;
-            font-size: 0.95rem;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        /* --- Button Styling --- */
-        .btn-primary, .btn-cancel, .btn-delete, .btn-edit {
-            padding: 0.5rem 1rem;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-            border: none;
-            transition: opacity 0.2s;
-        }
-
-        .btn-primary { background-color: var(--accent-color); color: white; }
-        .btn-cancel { background-color: #6B7280; color: white; }
-        .btn-delete { background-color: #EF4444; color: white; }
-        .btn-edit { background-color: #3B82F6; color: white; }
+        /* Page-specific styles for Category Management */
         
-        .btn-primary:hover, .btn-cancel:hover, .btn-delete:hover, .btn-edit:hover {
-            opacity: 0.9;
-        }
-
-        /* --- Collapsible Headers --- */
-        .collapsible-header {
+        /* Selection toggle for AI suggestions */
+        .selection-toggle-compact {
             display: flex;
             align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-mellow);
             cursor: pointer;
-            margin-bottom: 0.5rem;
-            padding: 8px 12px;
-            border: 1px solid #D1FAE5;
-            border-radius: 0.4rem;
-            background-color: #F0FDFA;
         }
 
-        .collapsible-header h3 {
-            margin: 0;
-            color: var(--accent-color);
-            flex-grow: 1;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
+        .selection-toggle-compact input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
         }
 
-        .collapsible-header .icon {
-            transition: transform 0.2s;
-            color: var(--accent-color);
-        }
-
-        .collapsible-header.collapsed .icon {
-            transform: rotate(-90deg);
-        }
-
-        .content-wrapper {
-            border: 1px solid #E5E7EB;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-            background-color: white;
-        }
-
-        /* --- Mobile Card Styling --- */
-        .category-list-mobile, .suggestion-list-mobile {
-            display: none;
-        }
-
-        /* Updated header styling to right-align selection */
+        /* Review header for AI suggestions */
         .review-header-container {
             display: flex;
             justify-content: space-between;
@@ -182,79 +36,6 @@
             margin: 0;
             font-size: 0.95rem;
         }
-
-        .selection-toggle-compact {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-mellow);
-            cursor: pointer;
-        }
-
-        .category-card, .suggestion-card {
-            background-color: white;
-            border: 1px solid var(--border-color);
-            border-radius: 0.4rem;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-header-mobile { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
-        .card-desc-mobile { font-size: 0.85rem; color: var(--text-mellow); margin-bottom: 0.5rem; }
-
-        /* --- Toast & Modal --- */
-        #toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-
-        .toast {
-            min-width: 250px;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 0.5rem;
-            color: white;
-            opacity: 0;
-            transition: 0.5s;
-        }
-
-        .toast.show { opacity: 1; }
-        .toast.success { background-color: #10B981; }
-        .toast.error { background-color: #F87171; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0; top: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-            justify-content: center; align-items: center;
-        }
-
-        .modal-content {
-            background-color: white; padding: 20px; border-radius: 0.5rem;
-            width: 90%; max-width: 400px; text-align: center;
-        }
-
-        @media (max-width: 767px) {
-            .data-table-wrapper { display: none; }
-            .category-list-mobile, .suggestion-list-mobile { display: block; }
-            .content-container { padding: 0.75rem !important; }
-            .page-header h2 { font-size: 1.25rem; }
-            .content-wrapper { padding: 0.75rem; margin-bottom: 1rem; }
-            .form-actions { flex-direction: column; width: 100%; }
-            .btn-primary, .btn-cancel { width: 100%; margin-top: 0.5rem; }
-            
-            .modal-buttons {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
     </style>
 </head>
 
@@ -265,9 +46,9 @@
     <div id="confirmation-modal" class="modal">
         <div class="modal-content">
             <p id="modal-message"></p>
-            <div class="modal-buttons" style="margin-top:15px; display:flex; gap:10px;">
-                <button id="modal-confirm-btn" class="btn-delete" style="flex:1">Yes, I'm Sure</button>
-                <button id="modal-cancel-btn" class="btn-cancel" style="flex:1">Cancel</button>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn" class="btn-delete">Yes, I'm Sure</button>
+                <button id="modal-cancel-btn" class="btn-cancel">Cancel</button>
             </div>
         </div>
     </div>
@@ -283,7 +64,7 @@
 
         <div class="collapsible-header" id="llm-header">
             <h3>
-                <svg style="margin-right: 8px;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z" /></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z" /></svg>
                 Let AI Suggest Categories
             </h3>
             <span class="icon">
@@ -320,7 +101,7 @@
                     </table>
                 </div>
 
-                <div id="suggestion-list-mobile" class="suggestion-list-mobile">
+                <div id="suggestion-list-mobile" class="mobile-list">
                     <div id="mobile-suggestion-cards"></div>
                 </div>
 
@@ -333,7 +114,7 @@
 
         <div class="collapsible-header" id="manual-header">
             <h3>
-                <svg style="margin-right: 8px;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                 <span th:text="${newCategory.id != null ? 'Edit Category #' + newCategory.id : 'Add Category Manually'}">Add Category</span>
             </h3>
             <span class="icon">
@@ -388,18 +169,22 @@
             </table>
         </div>
 
-        <div class="category-list-mobile">
-            <div th:each="category : ${categories}" class="category-card">
-                <div class="card-header-mobile">
-                    <span th:text="${category.id}"></span><span> - </span><span th:text="${category.name}"></span>
+        <div class="mobile-list">
+            <div th:each="category : ${categories}" class="mobile-card">
+                <div class="mobile-card-header">
+                    <div class="mobile-card-title">
+                        <span th:text="${category.id}"></span><span> - </span><span th:text="${category.name}"></span>
+                    </div>
                 </div>
-                <div class="card-desc-mobile" th:text="${category.description}"></div>
-                <div style="display:flex; gap:1.5rem; align-items:center;">
-                    <a th:href="@{/categories/edit/{id}(id=${category.id})}" style="color: #3B82F6;">
+                
+                <div class="mobile-card-description" th:text="${category.description}"></div>
+                
+                <div class="mobile-card-actions">
+                    <a th:href="@{/categories/edit/{id}(id=${category.id})}" class="action-icon edit" title="Edit">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                     </a>
-                    <form th:action="@{/categories/{id}/delete(id=${category.id})}" method="post" style="margin:0;">
-                        <button type="button" class="delete-trigger" style="background:none; border:none; color: #EF4444; padding:0; cursor:pointer;">
+                    <form th:action="@{/categories/{id}/delete(id=${category.id})}" method="post" style="display: inline;">
+                        <button type="button" class="delete-trigger action-icon delete" title="Delete" style="background:none; border:none; padding:0; cursor:pointer;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
                     </form>
@@ -454,12 +239,12 @@
                     const row = `<tr><td>${s.name}</td><td>${s.description}</td><td><input type="checkbox" class="suggestion-cb" data-index="${i}" checked></td></tr>`;
                     suggestionsBody.insertAdjacentHTML('beforeend', row);
                     
-                    const card = `<div class="suggestion-card">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong>${s.name}</strong>
+                    const card = `<div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <div class="mobile-card-title">${s.name}</div>
                             <input type="checkbox" class="suggestion-cb" data-index="${i}" checked>
                         </div>
-                        <div class="card-desc-mobile">${s.description}</div>
+                        <div class="mobile-card-description" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">${s.description}</div>
                     </div>`;
                     suggestionsMobileContainer.insertAdjacentHTML('beforeend', card);
                 });
