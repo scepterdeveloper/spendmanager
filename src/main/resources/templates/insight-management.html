@@ -3,91 +3,11 @@
 <head>
     <title th:text="${appName} + ' - Manage Insights'">EverRich - Manage Insights</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
-        /* Existing Styles */
-        :root { 
-            --accent-color: #047857; 
-            --primary-color: #1F2937; 
-            --text-mellow: #6B7280;
-            --border-color: #E5E7EB;
-        }
+        /* Page-specific styles for Insight Management */
         
-        * {
-            box-sizing: border-box;
-        }
-        
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            color: var(--primary-color);
-        }
-        
-        .page-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            color: var(--accent-color);
-            text-decoration: none;
-            font-weight: 500;
-            margin-right: 2rem;
-            font-size: 1rem;
-        }
-
-        .back-link svg {
-            margin-right: 5px;
-        }
-
-        .page-header h2 {
-            color: var(--primary-color);
-            margin: 0;
-            font-size: 2rem;
-            font-weight: 600;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-            background-color: white;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-            border-radius: 0.5rem;
-            overflow: hidden;
-        }
-        .data-table th, .data-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #E5E7EB;
-        }
-        .data-table th {
-            background-color: #F3F4F6;
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .form-group label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #D1D5DB;
-            border-radius: 0.25rem;
-            box-sizing: border-box;
-            font-size: 1rem;
-        }
-        
+        /* Form grid layouts */
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -99,136 +19,8 @@
             grid-template-columns: 1fr 1fr 1fr;
             gap: 1rem;
         }
-        
-        .form-actions {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        
-        .btn-primary {
-            background-color: var(--accent-color);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.3s;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-            font-size: 1rem;
-        }
-        .btn-primary:hover {
-            background-color: #059669; 
-        }
-        .btn-delete {
-            background-color: #EF4444; 
-            color: white;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: opacity 0.3s;
-        }
-        .btn-delete:hover {
-            opacity: 0.8;
-        }
-        .btn-edit {
-             background-color: #3B82F6; 
-             color: white;
-             padding: 0.5rem 1rem;
-             border-radius: 0.25rem;
-             text-decoration: none;
-             font-size: 0.875rem;
-             margin-right: 10px;
-        }
-        .btn-cancel {
-            background-color: #6B7280; 
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            transition: background-color 0.3s;
-            display: inline-block;
-            text-align: center;
-            font-size: 1rem;
-        }
-        .btn-cancel:hover {
-            background-color: #4B5563;
-        }
-        
-        .collapsible-header {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            margin-bottom: 1rem;
-            padding: 10px; 
-            border: 1px solid #D1FAE5; 
-            border-radius: 0.5rem;
-            background-color: #F0FDFA; 
-            transition: background-color 0.2s;
-        }
-        .collapsible-header:hover {
-            background-color: #E0F5F2; 
-        }
 
-        .collapsible-header h3 {
-            margin: 0;
-            color: var(--accent-color); 
-            display: flex;
-            align-items: center;
-            flex-grow: 1;
-            font-size: 1.125rem; 
-        }
-        
-        .collapsible-header h3, 
-        .collapsible-header .icon,
-        .llm-icon, 
-        .manual-icon {
-            color: var(--accent-color); 
-        }
-
-        .collapsible-header .icon {
-            margin-left: 10px;
-            transition: transform 0.2s;
-        }
-        .collapsible-header.collapsed .icon {
-            transform: rotate(-90deg);
-        }
-        .llm-icon, .manual-icon {
-            margin-right: 10px;
-        }
-        
-        .content-wrapper {
-            border: 1px solid #E5E7EB;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            margin-bottom: 2rem;
-            background-color: white; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-        }
-
-        .form-check {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .form-check input[type="checkbox"] {
-            width: auto;
-        }
-
-        .form-check label {
-            margin-bottom: 0;
-        }
-
-        /* Category dropdown styling (matching insights.html exactly) */
+        /* Category dropdown styling */
         .category-group {
             position: relative;
         }
@@ -252,7 +44,6 @@
             line-height: 1.2;
         }
 
-        /* Override form-group styles inside dropdown */
         #category-list-dropdown input[type="checkbox"] {
             width: auto;
             padding: 0;
@@ -285,166 +76,13 @@
         .category-toggle-container label {
             font-weight: bold !important;
         }
-        
-        #toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        .toast {
-            min-width: 250px;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 0.5rem;
-            color: white;
-            opacity: 0;
-            transition: opacity 0.5s, transform 0.5s;
-            transform: translateY(-20px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .toast.success {
-            background-color: #10B981;
-        }
-        .toast.error {
-            background-color: #F87171;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .modal-buttons {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-around;
-        }
-        .modal-buttons button {
-            cursor: pointer;
-            padding: 10px 20px;
-            border-radius: 0.25rem;
-            font-weight: 600;
-        }
-        #modal-confirm-btn {
-            background-color: #EF4444;
-            color: white;
-            border: none;
-        }
-        #modal-cancel-btn {
-            background-color: #D1D5DB;
-            color: #1F2937;
-            border: none;
-        }
-
-        /* Mobile View (Compact High-Density Cards) */
-        .insight-list-mobile {
-            display: none;
-        }
-
-        .insight-card {
-            background-color: white;
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-        }
-
-        .insight-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.25rem;
-        }
-
-        .insight-name {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-
-        .insight-description {
-            font-size: 0.85rem;
-            color: var(--text-mellow);
-            margin-bottom: 0.5rem;
-        }
-
-        .insight-params {
-            font-size: 0.75rem;
-            color: var(--text-mellow);
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .insight-card-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .action-icon {
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .action-icon:hover {
-            opacity: 0.7;
-        }
-
-        .edit-icon {
-            color: #3B82F6;
-        }
-
-        .delete-icon {
-            color: #EF4444;
-        }
 
         #date-range-fields {
             display: none;
         }
 
+        /* Mobile responsive title override */
         @media (max-width: 767px) {
-            .data-table-wrapper {
-                display: none;
-            }
-
-            .insight-list-mobile {
-                display: block;
-            }
-
-            .page-header {
-                align-items: flex-start;
-                margin-bottom: 0.5rem;
-                padding-bottom: 0.25rem;
-            }
-
-            .back-link {
-                margin-right: 1rem;
-                font-size: 0.9rem;
-            }
-
             .page-header h2 {
                 font-size: 0;
             }
@@ -454,57 +92,11 @@
                 font-size: 1.25rem;
             }
 
-            .content-container {
-                padding: 0.5rem !important;
-            }
-
-            .collapsible-header {
-                padding: 0.75rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .collapsible-header h3 {
-                font-size: 1rem;
-            }
-
-            .content-wrapper {
-                padding: 0.75rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .form-group label {
-                font-size: 0.9rem;
-            }
-
-            .form-group input, .form-group textarea, .form-group select {
-                padding: 0.6rem;
-                font-size: 0.9rem;
-            }
-
-            .form-row, .form-row-3 {
+            .form-row,
+            .form-row-3 {
                 grid-template-columns: 1fr;
             }
 
-            .btn-primary, .btn-cancel {
-                width: 100%;
-                margin-top: 0.5rem;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-                width: 100%;
-            }
-
-            .insight-card {
-                padding: 0.75rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .modal-content {
-                width: 95%;
-            }
-
-            /* Category Dropdown Mobile Optimization (matching insights.html) */
             #category-list-dropdown {
                 position: fixed;
                 left: 5%;
@@ -544,9 +136,7 @@
 
         <div class="collapsible-header" id="manual-header">
             <h3>
-                <span class="manual-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-4"/></svg>
-                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-4"/></svg>
                 <span th:text="${newInsight.id != null ? 'Edit Insight #' + newInsight.id : 'Define a New Insight'}">Define a New Insight</span>
             </h3>
             <span class="icon">
@@ -598,17 +188,18 @@
                         <label for="intervalFunction">Interval Function</label>
                         <select id="intervalFunction" th:field="*{intervalFunction}">
                             <option value="SUM">SUM</option>
+                            <option value="AVG">AVG</option>
+                            <option value="COUNT">COUNT</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Date Range (shown only when timeframe = DATE_RANGE) -->
+                <!-- Date Range (conditionally shown) -->
                 <div class="form-row" id="date-range-fields">
                     <div class="form-group">
                         <label for="startDate">Start Date</label>
                         <input type="date" id="startDate" th:field="*{startDate}" />
                     </div>
-                    
                     <div class="form-group">
                         <label for="endDate">End Date</label>
                         <input type="date" id="endDate" th:field="*{endDate}" />
@@ -617,36 +208,42 @@
 
                 <!-- Categories (dropdown like insights.html) -->
                 <div class="form-group category-group">
-                    <label for="category-display">Categories (leave empty for all)</label>
-                    <div style="position: relative;">
-                        <select id="category-display" readonly>
-                            <option value="" disabled selected>Filter Categories (Currently <span id="selected-count">All</span>)</option>
-                        </select>
-
-                        <div id="category-list-dropdown" style="display:none;">
-                            <div class="category-toggle-container">
-                                <div>
-                                    <input type="checkbox" id="select-all-categories" class="category-toggle">
-                                    <label for="select-all-categories" style="font-weight:bold;">Select All</label>
-                                </div>
-                                <div>
-                                    <input type="checkbox" id="clear-all-categories" class="category-toggle">
-                                    <label for="clear-all-categories" style="font-weight:bold;">Clear All</label>
-                                </div>
+                    <label for="category-display">Categories</label>
+                    <input 
+                        type="text" 
+                        id="category-display" 
+                        placeholder="Click to select categories" 
+                        readonly 
+                        style="cursor: pointer;"
+                        value="Selected: "
+                    />
+                    <span id="selected-count" style="display: inline;">0</span>
+                    <input type="hidden" id="categoryIds" th:field="*{categoryIds}" />
+                    
+                    <div id="category-list-dropdown" style="display: none;">
+                        <div class="category-toggle-container">
+                            <div>
+                                <input type="checkbox" id="select-all-categories" />
+                                <label for="select-all-categories">Select All</label>
                             </div>
-                            <div th:each="category : ${categories}">
-                                <input type="checkbox" 
-                                       th:id="'cat-' + ${category.id}" 
-                                       th:value="${category.id}"
-                                       class="category-checkbox" />
-                                <label th:for="'cat-' + ${category.id}" style="display:inline;" th:text="${category.name}">Category Name</label>
+                            <div>
+                                <input type="checkbox" id="clear-all-categories" />
+                                <label for="clear-all-categories">Clear All</label>
                             </div>
                         </div>
+                        <div th:each="cat : ${categories}">
+                            <input 
+                                type="checkbox" 
+                                class="category-checkbox" 
+                                th:id="'cat-' + ${cat.id}" 
+                                th:value="${cat.id}" 
+                            />
+                            <label th:for="'cat-' + ${cat.id}" th:text="${cat.name}">Category Name</label>
+                        </div>
                     </div>
-                    <input type="hidden" id="categoryIds" th:field="*{categoryIds}" />
                 </div>
 
-                <!-- Aggregate Results -->
+                <!-- Aggregate Results and Dashboard Display -->
                 <div class="form-group">
                     <div class="form-check">
                         <input type="checkbox" id="aggregateResults" th:field="*{aggregateResults}" />
@@ -656,7 +253,6 @@
                         <input type="checkbox" id="showOnDashboard" th:field="*{showOnDashboard}" />
                         <label for="showOnDashboard">Show on Dashboard</label>
                     </div>
-
                 </div>
                 
                 <div class="form-actions">
@@ -713,32 +309,32 @@
             </table>
         </div>
 
-        <div class="insight-list-mobile">
-            <div th:each="insight : ${savedInsights}" class="insight-card">
-                <div class="insight-card-header">
-                    <div class="insight-name">
+        <div class="mobile-list">
+            <div th:each="insight : ${savedInsights}" class="mobile-card">
+                <div class="mobile-card-header">
+                    <div class="mobile-card-title">
                         <a th:href="@{/insights/manage/{id}/execute(id=${insight.id})}" 
                            style="color: var(--accent-color); text-decoration: none;"
                            th:text="${insight.id} + ' - ' + ${insight.name}">1 - Monthly Groceries</a>
                     </div>
                 </div>
                 
-                <div class="insight-description" th:text="${insight.description}">Track monthly grocery spending</div>
-                
-                <div class="insight-params">
+                <div class="mobile-card-description" th:text="${insight.description}">Track monthly grocery spending</div>
+
+                <div style="font-size: 0.75rem; color: var(--text-mellow); margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                     <strong>Timeframe:</strong> <span th:text="${insight.timeframe}">THIS_MONTH</span> | 
                     <strong>Aggregate:</strong> <span th:text="${insight.aggregateResults ? 'Yes' : 'No'}">No</span>
                 </div>
 
-                <div class="insight-card-actions">
-                    <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="action-icon edit-icon" title="Edit">
+                <div class="mobile-card-actions">
+                    <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="action-icon edit" title="Edit">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                         </svg>
                     </a>
                     
                     <form th:action="@{/insights/manage/{id}/delete(id=${insight.id})}" method="post" style="display: inline;" class="delete-insight-form">
-                        <button type="button" class="action-icon delete-icon delete-btn-mobile" th:attr="data-insight-id=${insight.id}" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
+                        <button type="button" class="action-icon delete delete-btn-mobile" th:attr="data-insight-id=${insight.id}" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -756,7 +352,7 @@
         </div>
     </div>
     
-    <script th:inline="javascript">
+    <script>
         document.addEventListener('DOMContentLoaded', function () {
             // UI Elements
             const manualHeader = document.getElementById('manual-header'); 
@@ -786,7 +382,7 @@
                 }
             });
 
-            // --- Category Dropdown Toggle (matching insights.html) ---
+            // --- Category Dropdown Toggle ---
             function toggleCategoryDropdown(event) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -855,14 +451,14 @@
             // Initialize category display count
             updateCategoryDisplayCount();
 
-            // --- Interval Function Logic (Enable/Disable based on Interval) ---
+            // --- Interval Function Logic ---
             function toggleIntervalFunction() {
                 const selectedInterval = intervalSelect.value;
                 intervalFunctionSelect.disabled = (selectedInterval === 'NOT_SPECIFIED');
             }
             intervalSelect.addEventListener('change', toggleIntervalFunction);
 
-            // --- Timeframe Logic (Show/Hide Date Range and enable/disable Interval) ---
+            // --- Timeframe Logic ---
             function toggleDateRangeAndInterval() {
                 const selectedTimeframe = timeframeSelect.value;
 
@@ -872,7 +468,6 @@
                     dateRangeFields.style.display = 'none';
                 }
 
-                // Enable/Disable Interval based on Timeframe (matching insights.html constraints)
                 const enableInterval = ['THIS_YEAR', 'LAST_YEAR', 'DATE_RANGE', 'ENTIRE_TIMEFRAME'].includes(selectedTimeframe);
                 intervalSelect.disabled = !enableInterval;
                 if (!enableInterval) {
@@ -923,7 +518,7 @@
                 confirmAction = null;
             };
 
-            // --- Insight Deletion Logic (Using Modal) ---
+            // --- Insight Deletion Logic ---
             deleteButtons.forEach(button => {
                 button.addEventListener('click', (event) => {
                     event.preventDefault();
@@ -943,7 +538,6 @@
                     );
                 });
             });
-
 
             // --- Section Collapse Logic ---
             const isEditMode = document.querySelector('input[name="id"]').value !== "";
@@ -975,16 +569,6 @@
             const checkboxes = document.querySelectorAll('.category-checkbox:checked');
             const ids = Array.from(checkboxes).map(cb => cb.value);
             document.getElementById('categoryIds').value = ids.join(',');
-        }
-
-        function selectAllCategories() {
-            document.querySelectorAll('.category-checkbox').forEach(cb => cb.checked = true);
-            updateCategoryIds();
-        }
-
-        function clearAllCategories() {
-            document.querySelectorAll('.category-checkbox').forEach(cb => cb.checked = false);
-            updateCategoryIds();
         }
     </script>
 </body>

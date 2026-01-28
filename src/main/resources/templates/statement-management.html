@@ -3,202 +3,43 @@
 <head>
     <title th:text="${appName} + ' - Statement Management'">EverRich - Statement Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
-        /* ================================================================= 
-           BASE STYLES & VARIABLES (Copied from transaction-management.html)
-           ================================================================= */
-        :root {
-            --accent-color: #047857; /* Primary link/button color */
-            --primary-color: #1F2937; /* Dark text color */
-            --text-mellow: #6B7280;
-            --border-color: #E5E7EB; /* Light border color */
+        /* Specific tweaks for Statement Page */
+        #loading-spinner { 
+            display: none; 
+            margin-top: 1rem; 
+            color: var(--accent-color); 
+            font-weight: 600; 
+            font-size: 0.9rem;
         }
+        
+        /* Status Color Coding */
+        .status-COMPLETED { color: var(--success-color); font-weight: 600; } 
+        .status-FAILED { color: var(--error-color); font-weight: 600; } 
+        .status-PROCESSING { color: #F59E0B; font-weight: 600; } 
 
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            color: var(--primary-color);
-        }
-
-        /* ================================================================= 
-           PAGE HEADER & BACK BUTTON (Copied from transaction-management.html)
-           ================================================================= */
-        .page-header {
+        .upload-controls {
             display: flex;
+            gap: 1rem;
             align-items: center;
-            /* Consistent spacing and border */
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
         }
 
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            color: var(--accent-color);
-            text-decoration: none;
-            font-weight: 500;
-            margin-right: 2rem; /* Consistent spacing */
-            font-size: 1rem;
-        }
-
-        .back-link svg {
-            margin-right: 5px;
-        }
-
-        .page-header h2 {
-            color: var(--primary-color);
-            margin: 0; /* Consistent removal of margin for alignment */
-            font-size: 2rem; /* Consistent title size */
-            font-weight: 600; /* Consistent title weight */
-        }
-
-        /* General Styles */
-        .upload-section {
-            background-color: #F9FAFB;
-            border: 1px solid var(--border-color); /* Use variable for consistency */
-            border-radius: 0.5rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        /* Message/Alert Styling */
-        .alert-success { background-color: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; padding: 1rem; border-radius: 0.25rem; margin-bottom: 1rem; }
-        .alert-error { background-color: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 1rem; border-radius: 0.25rem; margin-bottom: 1rem; }
-        #loading-spinner { display: none; margin-top: 1rem; color: var(--accent-color); font-weight: 600; }
-
-        /* Style for the Upload Button */
-        #uploadButton { 
-            padding: 0.75rem 1.5rem; 
-            background-color: var(--accent-color); 
-            color: white; 
-            border: none; 
-            border-radius: 0.25rem; 
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.3s;
-        }
-        #uploadButton:hover {
-            background-color: #059669; 
-        }
-        #uploadButton:disabled {
-            background-color: #9CA3AF; /* Gray out when disabled */
-            cursor: not-allowed;
-        }
-
-        /* Table Styling */
-        .data-table {
-            width: 100%;
-            table-layout: auto; 
-            border-collapse: separate; 
-            border-spacing: 0;
-            margin-top: 1rem;
-            background-color: white;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            border-radius: 0.5rem;
-            overflow: hidden; 
-        }
-        .data-table th, .data-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color); /* Use variable for consistency */
-        }
-        .data-table th {
-            background-color: #E5E7EB;
-            font-weight: 600;
-            color: var(--primary-color);
-            text-transform: uppercase;
-            font-size: 0.875rem;
-        }
-        .data-table tbody tr:hover {
-            background-color: #F9FAFB;
-        }
-        .data-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        
-        /* Status Color Coding (Using status name directly as part of the class) */
-        .status-COMPLETED { color: #059669; font-weight: 600; } 
-        .status-FAILED { color: #DC2626; font-weight: 600; } 
-        .status-PROCESSING { color: #F59E0B; } 
-        
-        .action-link {
-             color: var(--accent-color);
-             text-decoration: none;
-             font-weight: 500;
-        }
-        .action-link:hover {
-            text-decoration: underline;
-        }
-        
-        /* Default state: Show full title, Hide short title */
-        .title-short { display: none; }
-        .title-full { display: block; }
-
-
-        /* ================================================================= 
-           RESPONSIVE - MOBILE (Aligned to transaction-management.html)
-           ================================================================= */
-        @media (max-width: 767px) { /* Consistent breakpoint */
-            .content-container {
-                padding: 0.5rem !important; /* Consistent mobile padding */
-            }
-
-            .page-header {
-                align-items: flex-start;
-                margin-bottom: 0.5rem; /* Consistent reduced margin */
-                padding-bottom: 0.25rem; /* Consistent reduced padding */
-                margin-left: 0;
-                margin-right: 0;
-            }
-
-            .back-link {
-                margin-right: 1rem; /* Consistent reduced spacing */
-                font-size: 0.9rem;
-            }
-            
-            .page-header h2 {
-                font-size: 1.25rem; /* Consistent mobile title size */
-            }
-            
-            /* Apply consistent mobile padding to upload section */
-            .upload-section {
-                padding: 0.75rem; 
-                margin-bottom: 0.75rem;
-            }
-            
-            .data-table th, .data-table td {
-                padding: 0.8rem;
-            }
-            
-            .data-table {
-                width: 100%;
-            }
-            
-            #uploadForm > div {
-                flex-direction: column; 
-                gap: 1rem;
-            }
-            #accountSelect, #fileInput {
-                margin-right: 0 !important; 
-                width: 100%;
-            }
-            #uploadButton {
-                width: 100%; 
-            }
-            
-            /* Swap titles on small screens */
+        @media (max-width: 767px) {
+            .upload-controls { flex-direction: column; align-items: stretch; }
             .title-full { display: none; }
-            .title-short { display: block; }
+            .title-short { display: inline; }
+        }
+        
+        @media (min-width: 768px) {
+            .title-short { display: none; }
         }
     </style>
 </head>
 <body>
-    <div th:replace="fragments/header :: appHeader"></div>
+    <div th:replace="~{fragments/header :: appHeader}"></div>
+    
     <div class="content-container">
         
         <div class="page-header">
@@ -212,28 +53,30 @@
             </h2>
         </div>
 
-        <div class="upload-section">
-            <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--primary-color);">Upload New Statement (PDF)</h3>
+        <div class="content-wrapper">
+            <h3 style="margin-top: 0; margin-bottom: 1rem;">Upload New Statement (PDF)</h3>
             
             <div id="message-container"></div>
             
-            <form id="uploadForm" style="margin-top: 1rem;">
-                <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-                    <select id="accountSelect" name="accountId" required style="padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 0.25rem; flex-grow: 1;">
+            <form id="uploadForm">
+                <div class="upload-controls">
+                    <select id="accountSelect" name="accountId" required style="flex: 1;">
                         <option value="">-- Select an Account --</option>
                         <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"></option>
                     </select>
-                </div>
-                
-                <div style="display: flex; align-items: center;"> 
-                    <input type="file" id="fileInput" name="file" accept="application/pdf" required style="padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 0.25rem; margin-right: 1rem; flex-grow: 1;">
-                    <button type="submit" id="uploadButton" disabled title="Please select an account and a file to enable this button.">
+                    
+                    <input type="file" id="fileInput" name="file" accept="application/pdf" required style="flex: 2;">
+
+                    <button type="submit" id="uploadButton" class="btn-primary" disabled title="Please select an account and a file.">
                         Upload and Start Processing
                     </button>
                 </div>
             </form>
             
-            <div id="loading-spinner">Processing your file... Please wait or navigate to **<a href="#statement-list-section" style="color: var(--accent-color);">the list below</a>** to check progress.</div>
+            <div id="loading-spinner">
+                <svg class="animate-spin" style="display:inline; margin-right: 5px; vertical-align: middle;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                Processing your file... Please wait or navigate to the list below.
+            </div>
         </div>
 
         <div id="statement-list-section">
@@ -248,123 +91,120 @@
                         <tr th:each="stmt : ${statements}"
                             th:data-status-name="${stmt.status.name()}"
                             th:data-href="${stmt.status.name() == 'COMPLETED' ? '/statements/' + stmt.id : ''}">
-                            
                             <td>
                                 <strong>
-                                    <span th:text="${stmt.id}">12345...</span> - <span th:text="${stmt.originalFileName}">BankStatement.pdf</span>
+                                    <span th:text="${stmt.id}">ID</span> - <span th:text="${stmt.originalFileName}">File.pdf</span>
                                 </strong><br/>
-                                <span style="font-size: 0.8em; color: #6B7280;">Account - <span th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">My Checking Account</span></span><br/>
-                                <span style="font-size: 0.8em; color: #6B7280;">Uploaded - <span th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">01 Jan 2025 10:00</span></span><br/>
+                                <span style="font-size: 0.8em; color: var(--text-mellow);">Account - <span th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">Account</span></span><br/>
+                                <span style="font-size: 0.8em; color: var(--text-mellow);">Uploaded - <span th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">Date</span></span><br/>
                                 
                                 <span style="font-size: 0.9em; display: inline-block; margin-top: 0.25rem;"
                                       th:text="${stmt.status}"
-                                      th:classappend="'status-' + ${stmt.status.name()}">PROCESSING</span>
+                                      th:classappend="'status-' + ${stmt.status.name()}">STATUS</span>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+
+            <div class="mobile-list">
+                <div th:each="stmt : ${statements}" 
+                     class="mobile-card"
+                     th:data-status-name="${stmt.status.name()}"
+                     th:data-href="${stmt.status.name() == 'COMPLETED' ? '/statements/' + stmt.id : ''}"
+                     th:classappend="${stmt.status.name() == 'COMPLETED' ? 'clickable' : ''}">
+                    
+                    <div class="mobile-card-header">
+                        <span class="mobile-card-title" th:text="${stmt.originalFileName}">File.pdf</span>
+                        <span style="font-size: 0.85rem;" 
+                              th:text="${stmt.status}" 
+                              th:classappend="'status-' + ${stmt.status.name()}">STATUS</span>
+                    </div>
+                    
+                    <div class="mobile-card-description">
+                        <div style="margin-bottom: 4px;">
+                            <strong>ID:</strong> <span th:text="${stmt.id}">ID</span>
+                        </div>
+                        <div style="margin-bottom: 4px;">
+                            <strong>Account:</strong> <span th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">Account</span>
+                        </div>
+                        <div>
+                            <strong>Uploaded:</strong> <span th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">Date</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
     </div>
 
     <script>
-        document.addEventListener(
-            'DOMContentLoaded',
-            function () {
-                const uploadForm = document.getElementById('uploadForm');
-                const fileInput = document.getElementById('fileInput');
-                const accountSelect = document.getElementById('accountSelect');
-                const uploadButton = document.getElementById('uploadButton');
-                const spinner = document.getElementById('loading-spinner');
-                const messageContainer = document.getElementById('message-container');
+        document.addEventListener('DOMContentLoaded', function () {
+            const uploadForm = document.getElementById('uploadForm');
+            const fileInput = document.getElementById('fileInput');
+            const accountSelect = document.getElementById('accountSelect');
+            const uploadButton = document.getElementById('uploadButton');
+            const spinner = document.getElementById('loading-spinner');
+            const messageContainer = document.getElementById('message-container');
 
-                function updateUploadButtonState() {
-                    const isAccountSelected = accountSelect.value !== '';
-                    const isFileSelected = fileInput.files.length > 0;
-                    uploadButton.disabled = !(isAccountSelected && isFileSelected);
-                    if (uploadButton.disabled) {
-                        uploadButton.title = "Please select an account and a file to enable this button.";
-                    } else {
-                        uploadButton.title = "";
-                    }
-                }
-
-                // Initial state
-                updateUploadButtonState();
-
-                // Event listeners for changes
-                accountSelect.addEventListener('change', updateUploadButtonState);
-                fileInput.addEventListener('change', updateUploadButtonState);
-
-                uploadForm.addEventListener('submit', function (event) {
-                    event.preventDefault();
-
-                    messageContainer.innerHTML = '';
-                    spinner.style.display = 'block';
-                    uploadButton.disabled = true; // Disable button during submission
-
-                    const formData = new FormData();
-                    formData.append('file', fileInput.files[0]);
-                    formData.append('accountId', accountSelect.value);
-
-                    fetch('/api/statement/upload', {
-                        method: 'POST',
-                        body: formData,
-                    })
-                        .then((response) =>
-                            response.json().then((data) => ({
-                                status: response.status,
-                                body: data,
-                            }))
-                        )
-                        .then((result) => {
-                            spinner.style.display = 'none';
-                            // Re-enable button based on current selections after processing
-                            updateUploadButtonState();
-
-                            if (result.status >= 200 && result.status < 300) {
-                                // Success: Add message and prompt refresh
-                                messageContainer.innerHTML =
-                                    '<div class="alert-success">' +
-                                    result.body.message +
-                                    ' Refresh the page or click <a href="/statements" class="action-link">here</a> to see the new statement in the list below.</div>';
-                                fileInput.value = ''; // Clear file input after successful upload
-                                updateUploadButtonState(); // Update button state after clearing file input
-                            } else {
-                                // Error
-                                messageContainer.innerHTML =
-                                    '<div class="alert-error">Upload Error: ' +
-                                    (result.body.message || 'An unknown error occurred.') +
-                                    '</div>';
-                            }
-                        })
-                        .catch((error) => {
-                            spinner.style.display = 'none';
-                            updateUploadButtonState(); // Re-enable button on network error
-                            console.error('Network Error:', error);
-                            messageContainer.innerHTML =
-                                '<div class="alert-error">A network error prevented the upload.</div>';
-                        });
-                });
-
-                // Logic to assign 'clickable' class and event listener based on data attribute
-                document.querySelectorAll('.data-table tbody tr').forEach((row) => {
-                    const status = row.dataset.statusName;
-
-                    if (status === 'COMPLETED') {
-                        // The row is clickable only if the status is COMPLETED
-                        row.classList.add('clickable');
-                        row.addEventListener('click', function () {
-                            const href = this.dataset.href;
-                            if (href) {
-                                window.location.href = href;
-                            }
-                        });
-                    }
-                });
+            function updateUploadButtonState() {
+                const isAccountSelected = accountSelect.value !== '';
+                const isFileSelected = fileInput.files.length > 0;
+                uploadButton.disabled = !(isAccountSelected && isFileSelected);
             }
-        );
+
+            accountSelect.addEventListener('change', updateUploadButtonState);
+            fileInput.addEventListener('change', updateUploadButtonState);
+
+            uploadForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                messageContainer.innerHTML = '';
+                spinner.style.display = 'block';
+                uploadButton.disabled = true;
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('accountId', accountSelect.value);
+
+                fetch('/api/statement/upload', {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                .then(result => {
+                    spinner.style.display = 'none';
+                    updateUploadButtonState();
+
+                    if (result.status >= 200 && result.status < 300) {
+                        messageContainer.innerHTML = `<div class="alert alert-success">${result.body.message} Refreshing list...</div>`;
+                        // Reload to update the list and ensure it's visible
+                        setTimeout(() => window.location.reload(), 2000);
+                    } else {
+                        messageContainer.innerHTML = `<div class="alert alert-error">Upload Error: ${result.body.message || 'An unknown error occurred.'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    spinner.style.display = 'none';
+                    updateUploadButtonState();
+                    messageContainer.innerHTML = `<div class="alert alert-error">A network error prevented the upload.</div>`;
+                });
+            });
+
+            // Handle click events for both Table Rows and Mobile Cards
+            const attachClickEvents = () => {
+                const targets = document.querySelectorAll('.data-table tbody tr, .mobile-card');
+                targets.forEach((el) => {
+                    if (el.dataset.statusName === 'COMPLETED') {
+                        el.classList.add('clickable');
+                        el.addEventListener('click', function () {
+                            const href = this.dataset.href;
+                            if (href) window.location.href = href;
+                        });
+                    }
+                });
+            };
+
+            attachClickEvents();
+        });
     </script>
 </body>
 </html>
