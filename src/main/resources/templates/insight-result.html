@@ -74,43 +74,21 @@
             color: var(--primary-color);
         }
 
-        /* Visualization Toggle Tabs */
+        /* Page-specific: Smaller visualization toggle buttons for compact result page */
         .visualization-toggles {
             margin-bottom: 0.75rem;
-            display: flex;
-            gap: 0;
-            border-bottom: 2px solid var(--border-color);
         }
 
         .visualization-toggles button {
             padding: 0.5rem 1rem;
-            cursor: pointer;
-            border: none;
-            border-bottom: 2px solid transparent;
-            background-color: transparent;
-            color: var(--text-mellow);
-            font-weight: 500;
             font-size: 0.75rem;
-            transition: all 0.2s;
-            flex: 1;
             position: relative;
             bottom: -2px;
         }
 
-        .visualization-toggles button:hover {
-            color: var(--accent-color);
-            background-color: #F9FAFB;
-        }
-
-        .visualization-toggles button.active {
-            color: var(--accent-color);
-            border-bottom-color: var(--accent-color);
-            font-weight: 600;
-        }
-
+        /* Page-specific: Chart height for result page */
         .chart-container {
             height: 180px;
-            width: 100%;
         }
 
         /* View Container Toggle */

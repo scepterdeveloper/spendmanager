@@ -4,179 +4,48 @@
 <head>
     <title th:text="${appName} + ' - Transaction Form'">EverRich - Transaction Form</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
-        /* ================================================================= 
-           BASE STYLES & VARIABLES (Copied from transaction-management.html)
-           ================================================================= */
-        :root {
-            --accent-color: #047857; /* The green color */
-            --primary-color: #1F2937; /* Dark text color */
-            --text-mellow: #6B7280; /* Muted text color */
-            --border-color: #E5E7EB; /* Light border color */
-            --light-bg: #F9FAFB; /* Background not used in management but good to keep */
-        }
+        /* Page-specific styles for Transaction Form */
         
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            color: var(--primary-color);
-        }
-
-        /* ================================================================= 
-           PAGE HEADER (Copied from transaction-management.html)
-           ================================================================= */
-        .page-header {
-            display: flex;
-            align-items: center;
-            /* Consistent margins/padding */
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color); /* Use variable for consistency */
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            color: var(--accent-color);
-            text-decoration: none;
-            font-weight: 500;
-            margin-right: 2rem; /* Consistent right margin */
-            font-size: 1rem;
-        }
-
-        .back-link svg {
-            margin-right: 5px; /* Consistent spacing for icon */
-        }
-
-        .page-header h2 {
-            color: var(--primary-color);
-            margin: 0; /* Consistent removal of margin */
-            font-size: 2rem; /* Consistent title size */
-            font-weight: 600; /* Consistent title weight */
-        }
-
-        /* ================================================================= 
-           CONTENT WRAPPER (Aligned to transaction-management.html's content-wrapper)
-           ================================================================= */
-        .content-container {
-            /* Keep existing padding for desktop/general use */
-            padding: 2rem;
-        }
-
+        /* Form wrapper styling */
         .form-wrapper {
             margin: 0;
-            border: 1px solid var(--border-color); /* Use variable for consistency */
-            /* Adjusted from 2.5rem to 2rem to match transaction-management.html's .content-wrapper */
-            padding: 2rem; 
+            border: 1px solid var(--border-color);
+            padding: 2rem;
             border-radius: 0.5rem;
             background-color: white;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-md);
         }
 
-        /* ================================================================= 
-           FORM & BUTTON ELEMENTS (Adjusted for consistency)
-           ================================================================= */
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            /* Changed from 600 to 500 to match label font-weight in management page */
-            font-weight: 500; 
-            margin-bottom: 0.5rem;
-            color: var(--primary-color);
-            /* Added font size from management page's label */
-            font-size: 0.95rem; 
-        }
-
+        /* Input max-width for better desktop layout */
         input[type="text"],
         input[type="number"],
         input[type="date"],
         select {
-            width: 100%;
-            /* Consistent padding from management page */
-            padding: 0.75rem; 
-            border: 1px solid #D1D5DB;
-            border-radius: 0.25rem;
-            box-sizing: border-box;
-            font-size: 1rem;
-            /* Retained max-width for neatness on desktop */
             max-width: 400px;
         }
 
-        /* Use .btn-primary styling from transaction-management.html */
         .btn-primary {
-            background-color: var(--accent-color);
-            color: white;
-            /* Consistent padding from management page */
-            padding: 0.75rem 1.5rem; 
-            border: none;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.3s;
             max-width: 400px;
             width: 100%;
-            /* Adjusted font-size from 1.1rem to 1rem to match management page button text size */
-            font-size: 1rem; 
             margin-top: 1rem;
         }
 
-        .btn-primary:hover {
-            background-color: #059669;
-        }
-        
-        /* ================================================================= 
-           RESPONSIVE - MOBILE (Aligned to transaction-management.html)
-           ================================================================= */
-        @media (max-width: 767px) { /* Changed from 768px to 767px for consistency */
-            /* Consistent Mobile Content Padding */
-            .content-container {
-                padding: 0.5rem !important; /* Matches management page mobile padding */
-            }
-
-            /* Consistent Mobile Header Adjustments */
-            .page-header {
-                align-items: flex-start;
-                margin-bottom: 0.5rem; /* Reduced margin */
-                padding-bottom: 0.25rem; /* Reduced padding */
-                margin-left: 0;
-                margin-right: 0;
-            }
-
-            .back-link {
-                margin-right: 1rem;
-                font-size: 0.9rem;
-            }
-            
-            .page-header h2 {
-                font-size: 1.25rem; /* Matches the size of the '::after' content in the management page */
-            }
-            
-            /* Consistent Mobile Wrapper Adjustments */
+        /* Mobile responsive */
+        @media (max-width: 767px) {
             .form-wrapper {
-                /* Matches management page mobile content-wrapper padding and margin */
-                padding: 0.75rem; 
+                padding: 0.75rem;
                 margin-bottom: 0.75rem;
-                margin-left: 0;
-                margin-right: 0;
             }
 
-            /* Consistent Mobile Form Elements */
             .form-group {
-                /* Reduced margin gap */
-                margin-bottom: 0.75rem; 
+                margin-bottom: 0.75rem;
             }
 
             .form-group label {
-                /* Reduced label margin-bottom */
-                margin-bottom: 0.375rem; 
-                font-size: 0.875rem; /* Slightly reduced font size for mobile label */
+                margin-bottom: 0.375rem;
+                font-size: 0.875rem;
             }
 
             input[type="text"],
@@ -184,21 +53,16 @@
             input[type="date"],
             select {
                 max-width: 100%;
-                /* Consistent padding from management page */
-                padding: 0.5rem; 
-                font-size: 0.9rem; /* Consistent font size for inputs */
+                padding: 0.5rem;
+                font-size: 0.9rem;
             }
 
             .btn-primary {
                 max-width: 100%;
-                /* Consistent padding from management page */
-                padding: 0.5rem 1rem; 
-                font-size: 0.95rem; /* Slightly reduced font size for mobile button */
+                padding: 0.5rem 1rem;
+                font-size: 0.95rem;
             }
         }
-        
-        /* Removed @media (max-width: 480px) to keep 767px as the single mobile breakpoint, 
-           matching the approach in transaction-management.html */
     </style>
 </head>
 

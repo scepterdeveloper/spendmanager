@@ -7,7 +7,7 @@
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        /* --- Filter Grid --- */
+        /* --- Page-Specific: Filter Grid --- */
         .filter-container {
             display: grid;
             grid-template-columns: 1fr;
@@ -21,93 +21,20 @@
             }
         }
 
-        /* --- Category Dropdown Styling --- */
-        .category-group {
-            position: relative;
-        }
-
-        #category-list-dropdown {
-            position: absolute;
-            z-index: 100;
-            background-color: white;
-            border: 1px solid var(--border-color);
-            border-radius: 0.4rem;
-            padding: 10px;
-            box-shadow: var(--shadow-lg);
-            max-height: 250px;
-            overflow-y: auto;
-            min-width: 250px;
-            margin-top: 5px;
-        }
-
-        #category-list-dropdown > div {
-            padding: 3px 0;
-            line-height: 1.2;
-            display: flex;
-            align-items: center;
-        }
-
-        #category-list-dropdown input[type="checkbox"] {
-            width: auto;
-            margin-right: 8px;
-        }
-
-        #category-list-dropdown label {
-            display: inline;
-            font-weight: normal;
-            margin-bottom: 0;
-            cursor: pointer;
-        }
-
-        .category-toggle-container {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .category-toggle-container label {
-            font-weight: bold !important;
-        }
-
-        /* --- Visualization Tabs --- */
-        .visualization-toggles {
-            margin-bottom: 1.5rem;
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .visualization-toggles button {
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            border: none;
-            border-bottom: 3px solid transparent;
-            background-color: transparent;
-            color: var(--text-mellow);
-            font-weight: 500;
-            flex: 1;
-            transition: all 0.2s;
-        }
-
-        .visualization-toggles button.active {
-            color: var(--accent-color);
-            border-bottom-color: var(--accent-color);
-            font-weight: 600;
-        }
-
+        /* --- Page-Specific: Chart Height --- */
         .chart-area {
             height: 380px;
-            width: 100%;
         }
 
-        /* --- Mobile Responsive Fixes --- */
+        /* --- Mobile Responsive: Page-Specific --- */
         @media (max-width: 767px) {
             #table-view .data-table-wrapper {
                 display: block !important;
                 overflow-x: auto;
-                margin: 0 -0.75rem;
-                padding: 0 0.75rem;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
             }
 
             .data-table th, .data-table td {
@@ -115,18 +42,9 @@
                 padding: 0.6rem 0.5rem;
             }
 
-            #category-list-dropdown {
-                position: fixed;
-                left: 5%;
-                right: 5%;
-                top: 50%;
-                transform: translateY(-50%);
-                min-width: unset;
-                max-width: 90%;
-                max-height: 60vh;
+            .chart-area { 
+                height: 280px; 
             }
-
-            .chart-area { height: 280px; }
         }
     </style>
 </head>

@@ -118,11 +118,7 @@ body {
     background-color: #fafafa;
 }
 
-.data-table tr.clickable {
-    cursor: pointer;
-}
-
-/* --- Forms & Inputs --- */
+/* --- Forms --- */
 .form-group {
     margin-bottom: 1rem;
 }
@@ -134,10 +130,6 @@ body {
     font-size: 0.95rem;
 }
 
-/* Delta: Global selector to ensure inputs without form-groups (like your upload row) are styled */
-input,
-textarea,
-select,
 .form-group input,
 .form-group textarea,
 .form-group select {
@@ -147,17 +139,11 @@ select,
     border-radius: 0.25rem;
     font-family: inherit;
     font-size: 0.95rem;
-    background-color: var(--bg-white);
 }
 
-input[type="file"] {
-    padding: 0.5rem;
-    cursor: pointer;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
@@ -214,7 +200,6 @@ select:focus {
 }
 
 .btn-primary:disabled {
-    background-color: #9CA3AF;
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -249,28 +234,6 @@ select:focus {
 
 .btn-edit:hover {
     opacity: 0.9;
-}
-
-/* --- Delta: Alerts & Notifications --- */
-.alert {
-    padding: 1rem;
-    border-radius: 0.4rem;
-    margin-bottom: 1.5rem;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    border: 1px solid transparent;
-}
-
-.alert-success {
-    background-color: var(--bg-accent-light);
-    color: var(--accent-color);
-    border-color: var(--border-accent-light);
-}
-
-.alert-error {
-    background-color: #FEF2F2;
-    color: var(--error-color);
-    border-color: #FEE2E2;
 }
 
 /* --- Collapsible Headers --- */
@@ -354,15 +317,6 @@ select:focus {
 
 .toast.error {
     background-color: #F87171;
-}
-
-/* --- Delta: Animations --- */
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-.animate-spin {
-    animation: spin 1s linear infinite;
 }
 
 /* --- Modal --- */
@@ -482,8 +436,108 @@ select:focus {
     color: var(--error-color);
 }
 
+/* --- Category Multi-Select Dropdown --- */
+.category-group {
+    position: relative;
+}
+
+#category-list-dropdown {
+    position: absolute;
+    z-index: 100;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0.4rem;
+    padding: 10px;
+    box-shadow: var(--shadow-lg);
+    max-height: 250px;
+    overflow-y: auto;
+    min-width: 250px;
+    margin-top: 5px;
+}
+
+#category-list-dropdown > div {
+    padding: 3px 0;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+}
+
+#category-list-dropdown input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+#category-list-dropdown label {
+    display: inline;
+    font-weight: normal;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.category-toggle-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-toggle-container label {
+    font-weight: bold !important;
+}
+
+/* --- Visualization Toggle Tabs --- */
+.visualization-toggles {
+    margin-bottom: 1.5rem;
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.visualization-toggles button {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border: none;
+    border-bottom: 3px solid transparent;
+    background-color: transparent;
+    color: var(--text-mellow);
+    font-weight: 500;
+    flex: 1;
+    transition: all 0.2s;
+}
+
+.visualization-toggles button:hover {
+    color: var(--accent-color);
+    background-color: var(--bg-light);
+}
+
+.visualization-toggles button.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* --- Chart & View Containers --- */
+.chart-area {
+    width: 100%;
+}
+
+.view-container {
+    /* Base container for toggling between different views */
+}
+
 /* --- Responsive Design --- */
 @media (max-width: 767px) {
+    /* Prevent horizontal scrolling issues on mobile */
+    body {
+        overflow-x: hidden;
+    }
+
+    .content-container,
+    .content-wrapper {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
     .content-container {
         padding: 0.75rem !important;
     }
@@ -556,6 +610,18 @@ select:focus {
 
     .modal-buttons {
         flex-direction: column;
+    }
+
+    /* Category dropdown mobile positioning */
+    #category-list-dropdown {
+        position: fixed;
+        left: 5%;
+        right: 5%;
+        top: 50%;
+        transform: translateY(-50%);
+        min-width: unset;
+        max-width: 90%;
+        max-height: 60vh;
     }
 }
 
