@@ -1,9 +1,6 @@
 package com.everrich.spendmanager.service;
 
-import com.everrich.spendmanager.dto.AggregatedInsight;
 import com.everrich.spendmanager.dto.InsightExecutionResult;
-import com.everrich.spendmanager.dto.InsightExecutionResult.DataPoint;
-import com.everrich.spendmanager.dto.InsightExecutionResult.XAxisType;
 import com.everrich.spendmanager.entities.SavedInsight;
 import com.everrich.spendmanager.repository.SavedInsightRepository;
 
@@ -35,7 +32,6 @@ public class SavedInsightService {
         return savedInsightRepository.findByShowOnDashboardTrue();
     }
 
-
     public Optional<SavedInsight> findById(Long id) {
         return savedInsightRepository.findById(id);
     }
@@ -52,32 +48,28 @@ public class SavedInsightService {
         return savedInsightRepository.findByNameIgnoreCase(name);
     }
 
-    public List<InsightExecutionResult> getDashBoardKPIs()    {
-
+    public List<InsightExecutionResult> getDashBoardKPIs() {
         List<InsightExecutionResult> results = new ArrayList<>();
         List<SavedInsight> dashBoardKPIInsights = savedInsightRepository.findByShowOnDashboardTrueAndAggregateResultsTrue();
         for(SavedInsight dashBoardKPIInsight: dashBoardKPIInsights) {
-
             results.add(this.execute(dashBoardKPIInsight.getId()));
-
         }
-
         return results;
     }
 
-    public List<InsightExecutionResult> getDashBoardCharts()    {
-
+    public List<InsightExecutionResult> getDashBoardCharts() {
         List<InsightExecutionResult> results = new ArrayList<>();
         List<SavedInsight> dashBoardChartInsights = savedInsightRepository.findByShowOnDashboardTrueAndAggregateResultsFalse();
         for(SavedInsight dashboardChartInsight: dashBoardChartInsights) {
             results.add(this.execute(dashboardChartInsight.getId()));
         }
-
         return results;
     }
 
     /**
-     * Execute a saved insight and return a generic result that can be mapped to various UI chart types.
+     * REFACTORED: Execute a saved insight using the harmonized execution method.
+     * This now delegates to InsightsService.executeAdHocInsight() after extracting
+     * the saved parameters, ensuring consistent behavior between saved and ad-hoc insights.
      */
     public InsightExecutionResult execute(Long insightId) {
         SavedInsight insight = savedInsightRepository.findById(insightId)
@@ -97,8 +89,8 @@ public class SavedInsightService {
         String interval = "NOT_SPECIFIED".equals(insight.getIntervalType()) ? null : insight.getIntervalType();
         String intervalFunction = insight.getIntervalFunction();
 
-        // Execute the analysis using the existing InsightsService
-        List<AggregatedInsight> analysisResults = insightsService.getCategoryInsights(
+        // Use the harmonized execution method from InsightsService
+        InsightExecutionResult result = insightsService.executeAdHocInsight(
                 insight.getTimeframe(),
                 insight.getStartDate(),
                 insight.getEndDate(),
@@ -108,37 +100,11 @@ public class SavedInsightService {
                 Boolean.TRUE.equals(insight.getAggregateResults())
         );
 
-        // Transform the results into InsightExecutionResult
-        if (Boolean.TRUE.equals(insight.getAggregateResults())) {
-            // KPI result (1D - single aggregated value)
-            Double aggregatedValue = 0.0;
-            if (!analysisResults.isEmpty() && analysisResults.get(0).getName().equals("Total Aggregated")) {
-                aggregatedValue = analysisResults.get(0).getCumulatedAmount();
-            }
-            return InsightExecutionResult.createKpiResult(
-                    insight.getId(),
-                    insight.getName(),
-                    insight.getDescription(),
-                    aggregatedValue
-            );
-        } else {
-            // Chart result (2D - multiple data points)
-            List<DataPoint> dataPoints = analysisResults.stream()
-                    .map(ai -> new DataPoint(ai.getName(), ai.getCumulatedAmount()))
-                    .collect(Collectors.toList());
+        // Override the auto-generated name and description with the saved insight's metadata
+        result.setInsightId(insight.getId());
+        result.setInsightName(insight.getName());
+        result.setInsightDescription(insight.getDescription());
 
-            // Determine X-axis type based on whether interval is specified
-            XAxisType xAxisType = (interval != null && !interval.isEmpty()) 
-                    ? XAxisType.INTERVAL 
-                    : XAxisType.CATEGORY;
-
-            return InsightExecutionResult.createChartResult(
-                    insight.getId(),
-                    insight.getName(),
-                    insight.getDescription(),
-                    dataPoints,
-                    xAxisType
-            );
-        }
+        return result;
     }
 }

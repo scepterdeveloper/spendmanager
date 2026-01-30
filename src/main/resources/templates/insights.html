@@ -5,7 +5,6 @@
     <title th:text="${appName} + ' - Insights'">EverRich - Insights</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         /* --- Page-Specific: Filter Grid --- */
         .filter-container {
@@ -21,29 +20,10 @@
             }
         }
 
-        /* --- Page-Specific: Chart Height --- */
-        .chart-area {
-            height: 380px;
-        }
-
         /* --- Mobile Responsive: Page-Specific --- */
         @media (max-width: 767px) {
-            #table-view .data-table-wrapper {
-                display: block !important;
-                overflow-x: auto;
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                max-width: 100%;
-            }
-
-            .data-table th, .data-table td {
-                white-space: nowrap;
-                padding: 0.6rem 0.5rem;
-            }
-
-            .chart-area { 
-                height: 280px; 
+            .filter-container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -64,11 +44,11 @@
         </div>
 
         <div class="content-wrapper">
-            <form id="filter-form">
+            <form id="filter-form" th:action="@{/insights/execute}" method="post">
                 <div class="filter-container">
                     <div class="form-group">
                         <label for="timeframe">Timeframe</label>
-                        <select id="timeframe">
+                        <select id="timeframe" name="timeframe">
                             <option value="THIS_MONTH">This Month</option>
                             <option value="LAST_MONTH">Previous Month</option>
                             <option value="THIS_YEAR">This Year</option>
@@ -80,7 +60,7 @@
 
                     <div class="form-group">
                         <label for="interval">Interval</label>
-                        <select id="interval" disabled onchange="toggleIntervalFunction()">
+                        <select id="interval" name="interval" disabled onchange="toggleIntervalFunction()">
                             <option value="NOT_SPECIFIED">Not Specified</option>
                             <option value="MONTHLY">Monthly</option>
                         </select>
@@ -88,7 +68,7 @@
 
                     <div class="form-group">
                         <label for="intervalFunction">Function</label>
-                        <select id="intervalFunction" disabled>
+                        <select id="intervalFunction" name="intervalFunction" disabled>
                             <option value="SUM">SUM</option>
                         </select>
                     </div>
@@ -99,6 +79,7 @@
                             <input type="text" id="category-display" placeholder="Select categories" readonly style="cursor: pointer; flex: 1;" value="Selected: " />
                             <span id="selected-count" style="margin-left: -35px; font-size: 0.85rem; color: var(--accent-color); font-weight: bold; z-index: 5;">All</span>
                         </div>
+                        <input type="hidden" id="categoryIds" name="categoryIds" />
                         
                         <div id="category-list-dropdown" style="display:none;">
                             <div class="category-toggle-container">
@@ -117,71 +98,26 @@
                     <div id="date-range-fields" class="form-group" style="display:none; grid-column: 1 / -1;">
                         <label>Custom Date Range</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="date" id="startDate" class="form-control">
-                            <input type="date" id="endDate" class="form-control">
+                            <input type="date" id="startDate" name="startDate" class="form-control">
+                            <input type="date" id="endDate" name="endDate" class="form-control">
                         </div>
                     </div>
 
                     <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
                         <div class="form-check">
-                            <input type="checkbox" id="aggregateResults" class="form-check-input">
+                            <input type="checkbox" id="aggregateResults" name="aggregateResults" class="form-check-input">
                             <label for="aggregateResults">Aggregate Total Only</label>
                         </div>
-                        <button type="button" class="btn-primary" onclick="runAnalysis()">Go</button>
+                        <button type="submit" class="btn-primary">Analyze</button>
                     </div>
                 </div>
             </form>
         </div>
-
-        <div class="analysis-results-wrapper">
-            <h3 style="margin-bottom: 1rem;">Analysis Results</h3>
-            <div class="content-wrapper">
-                <div id="insights-content-area">
-                    <div class="visualization-toggles" id="viz-toggles" style="display: none;">
-                        <button id="btn-table" onclick="setView('table')" class="active">Tabular View</button>
-                        <button id="btn-pie" onclick="setView('pie')">Pie Chart</button>
-                        <button id="btn-bar" onclick="setView('bar')">Histogram</button>
-                    </div>
-
-                    <div id="table-view" class="view-container">
-                        <div class="data-table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr id="insights-table-header-row">
-                                        <th>Category Name</th>
-                                        <th>Amount</th>
-                                        <th>%</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="insights-table-body">
-                                    <tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-mellow);">Configure filters and click 'Go' to start analysis.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div id="chart-view" class="view-container chart-area" style="display: none;">
-                        <canvas id="analysisChart"></canvas>
-                    </div>
-
-                    <div id="aggregated-result-display" style="display:none; text-align: center; padding: 2.5rem;">
-                        <div style="color: var(--text-mellow); font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em;">Total Aggregated Amount</div>
-                        <div id="aggregated-amount-value" style="font-size: 2.75rem; font-weight: 800; color: var(--accent-color); margin-top: 0.5rem;">0.00</div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
-
-    <div th:replace="~{fragments/toast-script :: toastScript}"></div>
 
     <script th:inline="javascript">
         /*<![CDATA[*/
-        document.addEventListener('DOMContentLoaded', function () {
-            let currentData = [];
-            let myChart = null;
-            let currentView = 'table'; 
-
+        document.addEventListener('DOMContentLoaded', function() {
             const timeframeSelect = document.getElementById('timeframe');
             const intervalSelect = document.getElementById('interval');
             const intervalFn = document.getElementById('intervalFunction');
@@ -189,6 +125,7 @@
             const categoryDropdown = document.getElementById('category-list-dropdown');
             const selectedCountSpan = document.getElementById('selected-count');
 
+            // Timeframe change handler
             timeframeSelect.addEventListener('change', function() {
                 document.getElementById('date-range-fields').style.display = this.value === 'DATE_RANGE' ? 'flex' : 'none';
                 const supportsInterval = ['THIS_YEAR', 'LAST_YEAR', 'DATE_RANGE', 'ENTIRE_TIMEFRAME'].includes(this.value);
@@ -203,6 +140,7 @@
                 intervalFn.disabled = (intervalSelect.value === 'NOT_SPECIFIED');
             };
 
+            // Category dropdown handlers
             categoryDisplay.onclick = (e) => {
                 categoryDropdown.style.display = categoryDropdown.style.display === 'none' ? 'block' : 'none';
                 e.stopPropagation();
@@ -216,6 +154,10 @@
                 if (checked.length === 0) selectedCountSpan.textContent = "None";
                 else if (checked.length === checkboxes.length) selectedCountSpan.textContent = "All";
                 else selectedCountSpan.textContent = checked.length;
+                
+                // Update hidden field with comma-separated IDs
+                const ids = Array.from(checked).map(cb => cb.value);
+                document.getElementById('categoryIds').value = ids.join(',');
             }
 
             document.getElementById('select-all-categories').onclick = function() {
@@ -230,110 +172,7 @@
                 updateCategoryUI();
             };
 
-            window.runAnalysis = async function () {
-                const selected = Array.from(document.querySelectorAll('.cat-cb:checked')).map(cb => cb.value);
-                const isAgg = document.getElementById('aggregateResults').checked;
-                const interval = intervalSelect.value;
-
-                let params = new URLSearchParams({
-                    timeframe: timeframeSelect.value,
-                    categoryIds: selected.join(','),
-                    aggregateResults: isAgg
-                });
-
-                if (timeframeSelect.value === 'DATE_RANGE') {
-                    params.append('startDate', document.getElementById('startDate').value);
-                    params.append('endDate', document.getElementById('endDate').value);
-                }
-                if (interval !== 'NOT_SPECIFIED') {
-                    params.append('interval', interval);
-                    params.append('intervalFunction', intervalFn.value);
-                }
-
-                try {
-                    const res = await fetch('/api/insights/analyze?' + params.toString());
-                    currentData = await res.json();
-                    renderResults(isAgg, interval !== 'NOT_SPECIFIED');
-                } catch (e) { console.error("Error fetching analysis", e); }
-            };
-
-            window.setView = function (type) {
-                currentView = type;
-                document.querySelectorAll('.visualization-toggles button').forEach(b => b.classList.remove('active'));
-                document.getElementById('btn-' + type).classList.add('active');
-                
-                const isInterval = intervalSelect.value !== 'NOT_SPECIFIED';
-                document.getElementById('table-view').style.display = type === 'table' ? 'block' : 'none';
-                document.getElementById('chart-view').style.display = type === 'table' ? 'none' : 'block';
-                
-                if(type !== 'table') renderChart(type, isInterval);
-            };
-
-            function renderResults(isAggRequest, isInterval) {
-                const body = document.getElementById('insights-table-body');
-                const header = document.getElementById('insights-table-header-row');
-                const viz = document.getElementById('viz-toggles');
-                const aggDisp = document.getElementById('aggregated-result-display');
-                const tableView = document.getElementById('table-view');
-                const chartView = document.getElementById('chart-view');
-
-                body.innerHTML = '';
-                viz.style.display = 'none';
-                aggDisp.style.display = 'none';
-                tableView.style.display = 'none';
-                chartView.style.display = 'none';
-
-                if (currentData.length === 0) {
-                    body.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 2rem;">No data found.</td></tr>';
-                    tableView.style.display = 'block';
-                    return;
-                }
-
-                // FIX: If Aggregate Total is enabled, ensure chart area is hidden even if pie/bar was active
-                if (isAggRequest && currentData.length === 1 && currentData[0].name === "Total Aggregated") {
-                    aggDisp.style.display = 'block';
-                    document.getElementById('aggregated-amount-value').textContent = currentData[0].cumulatedAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
-                    return;
-                }
-
-                // Normal view: Restore toggles and current selected view
-                viz.style.display = 'flex';
-                header.innerHTML = isInterval ? '<th>Interval (Month)</th><th>Amount</th><th>%</th>' 
-                                              : '<th>Category Name</th><th>Amount</th><th>%</th>';
-
-                const total = currentData.reduce((s, i) => s + i.cumulatedAmount, 0);
-                currentData.forEach(item => {
-                    const row = body.insertRow();
-                    row.insertCell().textContent = item.name;
-                    row.insertCell().textContent = item.cumulatedAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
-                    row.insertCell().textContent = ((item.cumulatedAmount / total) * 100).toFixed(1) + '%';
-                });
-
-                setView(currentView); 
-            }
-
-            function renderChart(type, isInterval) {
-                if (myChart) myChart.destroy();
-                const ctx = document.getElementById('analysisChart').getContext('2d');
-                myChart = new Chart(ctx, {
-                    type: type,
-                    data: {
-                        labels: currentData.map(d => d.name),
-                        datasets: [{
-                            label: isInterval ? 'Spending Trend' : 'Spending Distribution',
-                            data: currentData.map(d => d.cumulatedAmount),
-                            backgroundColor: type === 'pie' ? ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'] : '#10b981'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: type === 'pie', position: 'bottom' } },
-                        scales: type === 'bar' ? { y: { beginAtZero: true } } : {}
-                    }
-                });
-            }
-
+            // Load categories
             async function loadCategories() {
                 const res = await fetch('/api/insights/categories');
                 const cats = await res.json();

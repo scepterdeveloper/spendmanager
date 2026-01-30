@@ -71,6 +71,8 @@ public class SavedInsightController {
         try {
             InsightExecutionResult result = savedInsightService.execute(id);
             model.addAttribute("result", result);
+            // Set back URL to return to insight management page
+            model.addAttribute("backUrl", "/insights/manage");
             return "insight-result";
         } catch (Exception e) {
             model.addAttribute("error", "Failed to execute insight: " + e.getMessage());

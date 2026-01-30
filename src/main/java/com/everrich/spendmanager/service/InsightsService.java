@@ -1,6 +1,9 @@
 package com.everrich.spendmanager.service;
 
 import com.everrich.spendmanager.dto.AggregatedInsight;
+import com.everrich.spendmanager.dto.InsightExecutionResult;
+import com.everrich.spendmanager.dto.InsightExecutionResult.DataPoint;
+import com.everrich.spendmanager.dto.InsightExecutionResult.XAxisType;
 import com.everrich.spendmanager.repository.TransactionRepository;
 import com.everrich.spendmanager.entities.Transaction;
 import org.springframework.stereotype.Service;
@@ -45,7 +48,124 @@ public class InsightsService {
     }
 
     /**
+     * NEW: Execute an ad-hoc insight and return a result suitable for display.
+     * This harmonizes the execution logic for both saved insights and ad-hoc analysis.
+     */
+    public InsightExecutionResult executeAdHocInsight(
+            String timeframe,
+            LocalDate startDate,
+            LocalDate endDate,
+            List<Long> categoryIds,
+            String interval,
+            String intervalFunction,
+            boolean aggregateResults) {
+
+        // Execute the underlying analysis
+        List<AggregatedInsight> analysisResults = getCategoryInsights(
+                timeframe,
+                startDate,
+                endDate,
+                categoryIds,
+                interval,
+                intervalFunction,
+                aggregateResults
+        );
+
+        // Build a generic insight name based on parameters
+        String insightName = buildInsightName(timeframe, interval, aggregateResults);
+        String insightDescription = buildInsightDescription(timeframe, startDate, endDate, categoryIds);
+
+        // Transform the results into InsightExecutionResult
+        if (aggregateResults) {
+            // KPI result (1D - single aggregated value)
+            Double aggregatedValue = 0.0;
+            if (!analysisResults.isEmpty() && analysisResults.get(0).getName().equals("Total Aggregated")) {
+                aggregatedValue = analysisResults.get(0).getCumulatedAmount();
+            }
+            return InsightExecutionResult.createKpiResult(
+                    null, // No ID for ad-hoc insights
+                    insightName,
+                    insightDescription,
+                    aggregatedValue
+            );
+        } else {
+            // Chart result (2D - multiple data points)
+            List<DataPoint> dataPoints = analysisResults.stream()
+                    .map(ai -> new DataPoint(ai.getName(), ai.getCumulatedAmount()))
+                    .collect(Collectors.toList());
+
+            // Determine X-axis type based on whether interval is specified
+            XAxisType xAxisType = (interval != null && !interval.isEmpty()) 
+                    ? XAxisType.INTERVAL 
+                    : XAxisType.CATEGORY;
+
+            return InsightExecutionResult.createChartResult(
+                    null, // No ID for ad-hoc insights
+                    insightName,
+                    insightDescription,
+                    dataPoints,
+                    xAxisType
+            );
+        }
+    }
+
+    /**
+     * Helper method to build a descriptive insight name based on parameters.
+     */
+    private String buildInsightName(String timeframe, String interval, boolean aggregateResults) {
+        StringBuilder name = new StringBuilder();
+        
+        if (aggregateResults) {
+            name.append("Total Spending");
+        } else if (interval != null && !interval.isEmpty()) {
+            name.append(interval).append(" Analysis");
+        } else {
+            name.append("Category Analysis");
+        }
+        
+        name.append(" - ").append(formatTimeframeName(timeframe));
+        
+        return name.toString();
+    }
+
+    /**
+     * Helper method to build insight description.
+     */
+    private String buildInsightDescription(String timeframe, LocalDate startDate, LocalDate endDate, List<Long> categoryIds) {
+        StringBuilder desc = new StringBuilder("Analysis for ");
+        desc.append(formatTimeframeName(timeframe));
+        
+        if ("DATE_RANGE".equals(timeframe) && startDate != null && endDate != null) {
+            desc.append(" (").append(startDate).append(" to ").append(endDate).append(")");
+        }
+        
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            desc.append(" | ").append(categoryIds.size()).append(" categories selected");
+        } else {
+            desc.append(" | All categories");
+        }
+        
+        return desc.toString();
+    }
+
+    /**
+     * Helper method to format timeframe for display.
+     */
+    private String formatTimeframeName(String timeframe) {
+        switch (timeframe) {
+            case "THIS_MONTH": return "This Month";
+            case "LAST_MONTH": return "Last Month";
+            case "THIS_YEAR": return "This Year";
+            case "LAST_YEAR": return "Last Year";
+            case "ENTIRE_TIMEFRAME": return "Entire Timeframe";
+            case "DATE_RANGE": return "Custom Date Range";
+            default: return timeframe;
+        }
+    }
+
+    /**
      * Main method to fetch and aggregate spending insights.
+     * This is the core analysis engine used by both saved and ad-hoc insights.
      */
     public List<AggregatedInsight> getCategoryInsights(
             String timeframe,
@@ -54,7 +174,7 @@ public class InsightsService {
             List<Long> categoryIds,
             String interval,
             String intervalFunction,
-            boolean aggregateResults) { // Added aggregateResults parameter
+            boolean aggregateResults) {
 
         DateRange range = calculateDateRange(timeframe, startDate, endDate);
         LocalDate finalStart = range.getStart();
@@ -72,7 +192,7 @@ public class InsightsService {
             transactions = transactionRepository.findByDateRangeAndCategories(
                     finalStart, finalEnd, categoryIds);
 
-            // SAFEGURAD: Additional in-memory filtering to ensure category selection is respected
+            // SAFEGUARD: Additional in-memory filtering to ensure category selection is respected
             transactions = transactions.stream()
                                .filter(t -> t.getCategoryEntity() != null && categoryIds.contains(t.getCategoryEntity().getId()))
                                .collect(Collectors.toList());

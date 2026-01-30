@@ -1,7 +1,8 @@
 package com.everrich.spendmanager.controller;
 
 import com.everrich.spendmanager.dto.AggregatedInsight;
-import com.everrich.spendmanager.entities.Category; // Assuming your Category entity package
+import com.everrich.spendmanager.dto.InsightExecutionResult;
+import com.everrich.spendmanager.entities.Category;
 import com.everrich.spendmanager.repository.CategoryRepository; 
 import com.everrich.spendmanager.service.InsightsService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -11,66 +12,109 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping({"/insights", "/api/insights"}) // Maps the root path to the page and /api to the data
+@RequestMapping({"/insights", "/api/insights"})
 public class InsightsController {
 
     private final InsightsService insightsService;
     private final CategoryRepository categoryRepository;
     
-    // Inject the services and repositories
     public InsightsController(InsightsService insightsService, CategoryRepository categoryRepository) {
         this.insightsService = insightsService;
         this.categoryRepository = categoryRepository;
     }
 
-    // 1. Controller for the Thymeleaf Page View
+    // 1. Controller for the Thymeleaf Page View (Parameter Collection)
     // URL: /insights
     @GetMapping
     public String showInsightsPage(Model model) {
         model.addAttribute("appName", "EverRich");
-        // Returns the HTML template
         return "insights"; 
     }
 
-    // 2. REST Endpoint to get all categories for the filter dropdown
+    // 2. Execute ad-hoc insight and redirect to result page
+    // URL: POST /insights/execute
+    @PostMapping("/execute")
+    public String executeAdHocInsight(
+            @RequestParam String timeframe,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String categoryIds,
+            @RequestParam(required = false) String interval,
+            @RequestParam(required = false) String intervalFunction,
+            @RequestParam(defaultValue = "false") boolean aggregateResults,
+            Model model) {
+
+        model.addAttribute("appName", "EverRich");
+        
+        try {
+            // Parse category IDs from comma-separated string
+            List<Long> categoryIdList = Collections.emptyList();
+            if (categoryIds != null && !categoryIds.trim().isEmpty()) {
+                categoryIdList = Arrays.stream(categoryIds.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(Long::parseLong)
+                        .collect(Collectors.toList());
+            }
+
+            // Normalize interval parameter
+            String normalizedInterval = "NOT_SPECIFIED".equals(interval) ? null : interval;
+
+            // Execute the analysis
+            InsightExecutionResult result = insightsService.executeAdHocInsight(
+                    timeframe,
+                    startDate,
+                    endDate,
+                    categoryIdList,
+                    normalizedInterval,
+                    intervalFunction,
+                    aggregateResults
+            );
+
+            model.addAttribute("result", result);
+            // Set back URL to return to insights page
+            model.addAttribute("backUrl", "/insights");
+            return "insight-result";
+            
+        } catch (Exception e) {
+            model.addAttribute("error", "Failed to execute insight: " + e.getMessage());
+            return "redirect:/insights";
+        }
+    }
+
+    // 3. REST Endpoint to get all categories for the filter dropdown
     // URL: /api/insights/categories
     @GetMapping("/categories")
-    @ResponseBody // Tells Spring to return the data directly as JSON
+    @ResponseBody
     public List<Category> getAllCategories() {
-        // Fetch all categories. Assuming the repository method handles sorting (e.g., findAllByOrderByNameAsc())
         return categoryRepository.findAll(); 
     }
 
-    // 3. REST Endpoint to get the analysis data
+    // 4. Legacy REST Endpoint to get the analysis data (kept for backward compatibility)
     // URL: /api/insights/analyze
     @GetMapping("/analyze")
     @ResponseBody
     public ResponseEntity<List<AggregatedInsight>> analyze(
             @RequestParam String timeframe,
-            // Uses @DateTimeFormat to correctly parse dates from the query parameter
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            // Spring MVC handles parsing List<Long> from a comma-separated query string
             @RequestParam List<Long> categoryIds,
             @RequestParam(required = false) String interval,
             @RequestParam(required = false) String intervalFunction,
             @RequestParam(defaultValue = "false") boolean aggregateResults) {
 
-        // The previous logic for categoryIds == null || categoryIds.isEmpty() was removed
-        // to allow the service layer to handle the "all categories" logic when the list is empty.
-
         try {
-            // Delegate the heavy lifting to the Service layer
             List<AggregatedInsight> insights = insightsService.getCategoryInsights(
-                timeframe, startDate, endDate, categoryIds, interval, intervalFunction, aggregateResults); // Pass new parameter
+                timeframe, startDate, endDate, categoryIds, interval, intervalFunction, aggregateResults);
                 
             return ResponseEntity.ok(insights);
         } catch (Exception e) {
-            // Log the error and return a 500 status for the AJAX call
             System.err.println("Error generating insights: " + e.getMessage());
             return ResponseEntity.status(500).build();
         }
