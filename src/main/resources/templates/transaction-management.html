@@ -287,6 +287,7 @@
             border-radius: 0.5rem;
             overflow: hidden;
             font-size: 0.95rem;
+            table-layout: fixed;
         }
 
         .data-table th,
@@ -300,6 +301,37 @@
             background-color: #F3F4F6;
             font-weight: 600;
             color: var(--primary-color);
+        }
+
+        /* Column width settings for desktop */
+        .data-table th:nth-child(1),
+        .data-table td:nth-child(1) {
+            width: 10%;
+        }
+
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2) {
+            width: 15%;
+        }
+
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) {
+            width: 40%;
+        }
+
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) {
+            width: 10%;
+        }
+
+        .data-table th:nth-child(5),
+        .data-table td:nth-child(5) {
+            width: 10%;
+        }
+
+        .data-table th:nth-child(6),
+        .data-table td:nth-child(6) {
+            width: 15%;
         }
 
         .action-buttons-container {

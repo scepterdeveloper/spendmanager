@@ -42,10 +42,11 @@ body {
 /* --- Layout & Container --- */
 .content-container {
     padding: 1.5rem;
-    max-width: 1200px;
+    max-width: 100%;
     margin-left: 0;
-    margin-right: auto;
+    margin-right: 0;
     text-align: left;
+    width: 100%;
 }
 
 /* Full-width content container (for dashboard and result pages) */
