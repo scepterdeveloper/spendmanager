@@ -25,11 +25,61 @@
             align-items: center;
             flex-wrap: wrap;
         }
+        
+        /* Consistent styling for form inputs */
+        .upload-controls select,
+        .upload-controls input[type="file"] {
+            padding: 0.75rem;
+            font-size: 0.95rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.25rem;
+            font-family: inherit;
+        }
+        
+        .upload-controls select:focus,
+        .upload-controls input[type="file"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
+        }
 
         @media (max-width: 767px) {
             .upload-controls { flex-direction: column; align-items: stretch; }
             .title-full { display: none; }
             .title-short { display: inline; }
+            
+            /* Restrict filename length to 30 characters in mobile list */
+            .mobile-card-title {
+                display: inline-block;
+                max-width: 30ch; /* 30 characters */
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            
+            /* Consistent styling for form inputs in mobile mode */
+            .upload-controls select,
+            .upload-controls input[type="file"] {
+                padding: 0.5rem;
+                font-size: 0.9rem;
+                border: 1px solid #D1D5DB;
+                border-radius: 0.25rem;
+                width: 100%;
+                max-width: 100%;
+            }
+            
+            .upload-controls select:focus,
+            .upload-controls input[type="file"]:focus {
+                outline: none;
+                border-color: var(--accent-color);
+                box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
+            }
+            
+            .upload-controls button {
+                padding: 0.5rem 1rem;
+                font-size: 0.95rem;
+                width: 100%;
+            }
         }
         
         @media (min-width: 768px) {
