@@ -87,6 +87,7 @@ public class TransactionController {
         @RequestParam(required = false, defaultValue = "current_month") String timeframe,
         @RequestParam(value = "startDate", required = false) String startDateStr, 
         @RequestParam(value = "endDate", required = false) String endDateStr,    
+        @RequestParam(required = false) List<Long> accountIds,
         @RequestParam(required = false) List<Long> categoryIds,
         @RequestParam(value = "query", required = false) String query,
         Model model,
@@ -113,16 +114,19 @@ public class TransactionController {
             timeframe, 
             selectedStartDate,
             selectedEndDate,
+            accountIds,
             categoryIds,
             query 
         );
     
         model.addAttribute("transactions", filteredTransactions);
         model.addAttribute("categories", categoryService.findAll());
+        model.addAttribute("accounts", accountService.findAll());
     
         model.addAttribute("selectedTimeframe", timeframe);
         model.addAttribute("selectedStartDate", startDateStr); 
-        model.addAttribute("selectedEndDate", endDateStr);     
+        model.addAttribute("selectedEndDate", endDateStr);
+        model.addAttribute("selectedAccountIds", accountIds);
         model.addAttribute("selectedCategoryIds", categoryIds); 
         model.addAttribute("selectedQuery", query); 
     

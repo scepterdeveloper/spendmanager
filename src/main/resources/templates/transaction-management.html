@@ -231,48 +231,60 @@
             flex: 1;
         }
 
-        /* Category Dropdown */
-        .category-select-wrapper {
+        /* Category Dropdown - matches app-theme.css */
+        .category-group {
             position: relative;
         }
 
-        .category-multi-select-dropdown {
-            display: none;
+        #category-list-dropdown,
+        #account-list-dropdown {
             position: absolute;
-            z-index: 100;
+            top: calc(100% + 5px); /* Position below the input field with 5px gap */
+            left: 0;
+            z-index: 1000;
             background-color: white;
-            border: 1px solid #D1D5DB;
-            border-radius: 0.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.4rem;
             padding: 10px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
             max-height: 250px;
             overflow-y: auto;
             min-width: 250px;
-            margin-top: 5px;
-            top: 100%;
-            left: 0;
+            width: 100%; /* Make dropdown same width as parent */
         }
 
-        .category-multi-select-dropdown.show {
-            display: block;
-        }
-
-        .category-multi-select-dropdown > div {
+        #category-list-dropdown > div,
+        #account-list-dropdown > div {
             padding: 3px 0;
             line-height: 1.2;
+            display: flex;
+            align-items: center;
         }
 
-        .category-header {
+        #category-list-dropdown input[type="checkbox"],
+        #account-list-dropdown input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        #category-list-dropdown label,
+        #account-list-dropdown label {
+            display: inline;
+            font-weight: normal;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .category-toggle-container {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #EEE;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .category-header label {
-            font-weight: bold;
-            margin: 0;
+        .category-toggle-container label {
+            font-weight: bold !important;
         }
 
         /* ================================================================= 
@@ -692,30 +704,56 @@
                             </div>
                         </div>
 
+                        <!-- Account -->
+                        <div class="filter-field category-group">
+                            <label for="account-display">Account</label>
+                            <div style="display: flex; align-items: center;">
+                                <input type="text" id="account-display" placeholder="Select accounts" readonly style="cursor: pointer; flex: 1;" value="Selected: " />
+                                <span id="account-selected-count" style="margin-left: -50px; font-size: 0.85rem; color: var(--accent-color); font-weight: bold; z-index: 5; min-width: 40px; text-align: left;">All</span>
+                            </div>
+                            <div id="account-list-dropdown" style="display:none;">
+                                <div class="category-toggle-container">
+                                    <div>
+                                        <input type="checkbox" id="select-all-accounts">
+                                        <label for="select-all-accounts">Select All</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" id="clear-all-accounts">
+                                        <label for="clear-all-accounts">Clear All</label>
+                                    </div>
+                                </div>
+                                <div th:each="account : ${accounts}">
+                                    <input type="checkbox" th:id="${'acc-' + account.id}" name="accountIds"
+                                        th:value="${account.id}" class="account-checkbox"
+                                        th:checked="${selectedAccountIds != null and #lists.contains(selectedAccountIds, account.id)}">
+                                    <label th:for="${'acc-' + account.id}" th:text="${account.id + ' - ' + account.name}">Account Name</label>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Categories -->
-                        <div class="filter-field">
+                        <div class="filter-field category-group">
                             <label for="category-display">Categories</label>
-                            <div class="category-select-wrapper">
-                                <select id="category-display" name="category-display-toggle">
-                                    <option value="" disabled selected>Filter Categories (Currently <span id="selected-count">All</span>)</option>
-                                </select>
-                                <div id="category-list-dropdown" class="category-multi-select-dropdown">
-                                    <div class="category-header">
-                                        <div>
-                                            <input type="checkbox" id="select-all-categories" class="category-toggle">
-                                            <label for="select-all-categories">Select All</label>
-                                        </div>
-                                        <div>
-                                            <input type="checkbox" id="clear-all-categories" class="category-toggle">
-                                            <label for="clear-all-categories">Clear All</label>
-                                        </div>
+                            <div style="display: flex; align-items: center;">
+                                <input type="text" id="category-display" placeholder="Select categories" readonly style="cursor: pointer; flex: 1;" value="Selected: " />
+                                <span id="selected-count" style="margin-left: -50px; font-size: 0.85rem; color: var(--accent-color); font-weight: bold; z-index: 5; min-width: 40px; text-align: left;">All</span>
+                            </div>
+                            <div id="category-list-dropdown" style="display:none;">
+                                <div class="category-toggle-container">
+                                    <div>
+                                        <input type="checkbox" id="select-all-categories">
+                                        <label for="select-all-categories">Select All</label>
                                     </div>
-                                    <div th:each="category : ${categories}">
-                                        <input type="checkbox" th:id="${'cat-' + category.id}" name="categoryIds"
-                                            th:value="${category.id}" class="category-checkbox"
-                                            th:checked="${selectedCategoryIds != null and #lists.contains(selectedCategoryIds, category.id)}">
-                                        <label th:for="${'cat-' + category.id}" th:text="${category.name}">Category Name</label>
+                                    <div>
+                                        <input type="checkbox" id="clear-all-categories">
+                                        <label for="clear-all-categories">Clear All</label>
                                     </div>
+                                </div>
+                                <div th:each="category : ${categories}">
+                                    <input type="checkbox" th:id="${'cat-' + category.id}" name="categoryIds"
+                                        th:value="${category.id}" class="category-checkbox"
+                                        th:checked="${selectedCategoryIds != null and #lists.contains(selectedCategoryIds, category.id)}">
+                                    <label th:for="${'cat-' + category.id}" th:text="${category.name}">Category Name</label>
                                 </div>
                             </div>
                         </div>
@@ -758,11 +796,14 @@
                     <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
                     <td>
                         <div class="action-buttons-container">
-                            <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
+                            <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
                             <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post" style="display:inline;">
                                 <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
                                 <input type="hidden" name="startDate" th:if="${selectedStartDate != null}" th:value="${selectedStartDate}" />
                                 <input type="hidden" name="endDate" th:if="${selectedEndDate != null}" th:value="${selectedEndDate}" />
+                                <div th:if="${selectedAccountIds != null}" th:each="accId : ${selectedAccountIds}">
+                                    <input type="hidden" name="accountIds" th:value="${accId}" />
+                                </div>
                                 <input type="hidden" name="query" th:if="${selectedQuery != null}" th:value="${selectedQuery}" />
                                 <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
                                     <input type="hidden" name="categoryIds" th:value="${catId}" />
@@ -800,7 +841,7 @@
                     </div>
                     
                     <div class="card-actions-inline">
-                        <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" 
+                        <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" 
                            class="btn-icon-edit" title="Edit">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -811,6 +852,9 @@
                             <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
                             <input type="hidden" name="startDate" th:if="${selectedStartDate != null}" th:value="${selectedStartDate}" />
                             <input type="hidden" name="endDate" th:if="${selectedEndDate != null}" th:value="${selectedEndDate}" />
+                            <div th:if="${selectedAccountIds != null}" th:each="accId : ${selectedAccountIds}">
+                                <input type="hidden" name="accountIds" th:value="${accId}" />
+                            </div>
                             <input type="hidden" name="query" th:if="${selectedQuery != null}" th:value="${selectedQuery}" />
                             <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
                                 <input type="hidden" name="categoryIds" th:value="${catId}" />
@@ -828,11 +872,14 @@
                 </div>
 
                 <div class="card-actions" style="display: none;">
-                    <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
+                    <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
                     <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post">
                         <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
                         <input type="hidden" name="startDate" th:if="${selectedStartDate != null}" th:value="${selectedStartDate}" />
                         <input type="hidden" name="endDate" th:if="${selectedEndDate != null}" th:value="${selectedEndDate}" />
+                        <div th:if="${selectedAccountIds != null}" th:each="accId : ${selectedAccountIds}">
+                            <input type="hidden" name="accountIds" th:value="${accId}" />
+                        </div>
                         <input type="hidden" name="query" th:if="${selectedQuery != null}" th:value="${selectedQuery}" />
                         <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
                             <input type="hidden" name="categoryIds" th:value="${catId}" />
@@ -868,6 +915,12 @@
             const applyFiltersBtn = document.getElementById('apply-filters-btn');
             const startDateInput = document.getElementById('start-date');
             const endDateInput = document.getElementById('end-date');
+            const accountDisplaySelect = document.getElementById('account-display');
+            const accountListDropdown = document.getElementById('account-list-dropdown');
+            const selectAllAccountsCheckbox = document.getElementById('select-all-accounts');
+            const clearAllAccountsCheckbox = document.getElementById('clear-all-accounts');
+            const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+            const accountSelectedCountSpan = document.getElementById('account-selected-count');
 
             let confirmAction = null;
 
@@ -909,17 +962,77 @@
             });
             toggleDateRangeFields();
 
-            // Category Dropdown
-            categoryDisplaySelect.addEventListener('mousedown', function (event) {
-                event.preventDefault();
-                categoryListDropdown.classList.toggle('show');
+            // Account Dropdown
+            accountDisplaySelect.onclick = (e) => {
+                accountListDropdown.style.display = accountListDropdown.style.display === 'none' ? 'block' : 'none';
+                e.stopPropagation();
+            };
+            document.onclick = () => accountListDropdown.style.display = 'none';
+            accountListDropdown.onclick = (e) => e.stopPropagation();
+
+            // Account Selection
+            function updateAccountDisplayCount() {
+                const checkedCount = Array.from(accountCheckboxes).filter(cb => cb.checked).length;
+                const totalCount = accountCheckboxes.length;
+
+                let text;
+                if (checkedCount === 0) {
+                    text = 'None';
+                } else if (checkedCount === totalCount) {
+                    text = 'All';
+                } else {
+                    text = checkedCount;
+                }
+                accountSelectedCountSpan.textContent = text;
+                updateFilterSummary();
+            }
+
+            selectAllAccountsCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    accountCheckboxes.forEach(cb => cb.checked = true);
+                    clearAllAccountsCheckbox.checked = false;
+                }
+                updateAccountDisplayCount();
             });
 
-            document.addEventListener('click', function (event) {
-                if (!categoryListDropdown.contains(event.target) && event.target !== categoryDisplaySelect) {
-                    categoryListDropdown.classList.remove('show');
+            clearAllAccountsCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    accountCheckboxes.forEach(cb => cb.checked = false);
+                    selectAllAccountsCheckbox.checked = false;
                 }
+                updateAccountDisplayCount();
             });
+
+            accountCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function () {
+                    selectAllAccountsCheckbox.checked = false;
+                    clearAllAccountsCheckbox.checked = false;
+
+                    const allChecked = Array.from(accountCheckboxes).every(c => c.checked);
+                    const noneChecked = Array.from(accountCheckboxes).every(c => !c.checked);
+
+                    if (allChecked) selectAllAccountsCheckbox.checked = true;
+                    if (noneChecked) clearAllAccountsCheckbox.checked = true;
+                    
+                    updateAccountDisplayCount();
+                });
+            });
+
+            // Initialize account select-all/clear-all state on page load
+            const allAccountsChecked = Array.from(accountCheckboxes).every(c => c.checked);
+            const noAccountsChecked = Array.from(accountCheckboxes).every(c => !c.checked);
+            if (allAccountsChecked) selectAllAccountsCheckbox.checked = true;
+            if (noAccountsChecked) clearAllAccountsCheckbox.checked = true;
+            
+            updateAccountDisplayCount();
+
+            // Category Dropdown
+            categoryDisplaySelect.onclick = (e) => {
+                categoryListDropdown.style.display = categoryListDropdown.style.display === 'none' ? 'block' : 'none';
+                e.stopPropagation();
+            };
+            document.onclick = () => categoryListDropdown.style.display = 'none';
+            categoryListDropdown.onclick = (e) => e.stopPropagation();
 
             // Category Selection
             function updateCategoryDisplayCount() {
@@ -969,6 +1082,12 @@
                 });
             });
 
+            // Initialize category select-all/clear-all state on page load
+            const allCategoriesChecked = Array.from(categoryCheckboxes).every(c => c.checked);
+            const noCategoriesChecked = Array.from(categoryCheckboxes).every(c => !c.checked);
+            if (allCategoriesChecked) selectAllCheckbox.checked = true;
+            if (noCategoriesChecked) clearAllCheckbox.checked = true;
+            
             updateCategoryDisplayCount();
 
             // Filter Summary
@@ -1009,6 +1128,23 @@
                     }
                 }
                 summaryHTML += `<div><strong>Timeframe:</strong> ${timeframeValue}</div>`;
+
+                // Account filter
+                const checkedAccounts = Array.from(accountCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => document.querySelector(`label[for="${cb.id}"]`).textContent.trim());
+
+                let accountsValue;
+                if (checkedAccounts.length === accountCheckboxes.length) {
+                    accountsValue = 'All';
+                } else if (checkedAccounts.length === 0) {
+                    accountsValue = 'None';
+                } else if (checkedAccounts.length > 2) {
+                    accountsValue = `${checkedAccounts.slice(0, 2).join(', ')}, and ${checkedAccounts.length - 2} more`;
+                } else {
+                    accountsValue = checkedAccounts.join(', ');
+                }
+                summaryHTML += `<div><strong>Accounts:</strong> ${accountsValue}</div>`;
 
                 const checkedCategories = Array.from(categoryCheckboxes)
                     .filter(cb => cb.checked)
@@ -1079,10 +1215,14 @@
                 if (clearAllCheckbox.checked || selectAllCheckbox.checked) {
                     categoryCheckboxes.forEach(cb => cb.disabled = true);
                 }
+                if (clearAllAccountsCheckbox.checked || selectAllAccountsCheckbox.checked) {
+                    accountCheckboxes.forEach(cb => cb.disabled = true);
+                }
             });
 
             window.addEventListener('load', function () {
                 categoryCheckboxes.forEach(cb => cb.disabled = false);
+                accountCheckboxes.forEach(cb => cb.disabled = false);
             });
         });
     </script>

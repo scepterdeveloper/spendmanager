@@ -293,16 +293,19 @@ public class TransactionService {
             String timeframe,
             LocalDate customStartDate,
             LocalDate customEndDate,
+            List<Long> accountIds,
             List<Long> categoryIds,
             String query) {
 
         DateRange range = calculateDateRange(timeframe, customStartDate, customEndDate);
 
+        List<Long> effectiveAccountIds = (accountIds == null || accountIds.isEmpty()) ? null : accountIds;
         List<Long> effectiveCategoryIds = (categoryIds == null || categoryIds.isEmpty()) ? null : categoryIds;
 
         List<Transaction> filteredList = transactionRepository.findFiltered(
                 range.getStart(),
                 range.getEnd(),
+                effectiveAccountIds,
                 effectiveCategoryIds,
                 query);
 

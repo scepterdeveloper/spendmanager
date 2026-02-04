@@ -18,6 +18,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                 "WHERE " +
                 "(:startDate = '1900-01-01' OR t.date >= CAST(:startDate AS date)) AND " +
                 "(:endDate = '9999-12-31' OR t.date <= CAST(:endDate AS date)) AND " +
+                "(CAST(:accountIds AS text) IS NULL OR t.account_id IN (:accountIds)) AND " +
                 "(CAST(:categoryIds AS text) IS NULL OR c.id IN (:categoryIds)) AND " +
                 "(:query IS NULL OR " +
                 "  LOWER(t.description::text) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
@@ -28,6 +29,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findFiltered(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
+            @Param("accountIds") List<Long> accountIds,
             @Param("categoryIds") List<Long> categoryIds,
             @Param("query") String query);
 
