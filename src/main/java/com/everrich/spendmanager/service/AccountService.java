@@ -17,7 +17,9 @@ public class AccountService {
     }
 
     public List<Account> findAll() {
-        return accountRepository.findAll();
+        List<Account> accounts = accountRepository.findAll();
+        accounts.sort((a1, a2) -> a1.getName().compareToIgnoreCase(a2.getName()));
+        return accounts;
     }
 
     public Optional<Account> findById(Long id) {

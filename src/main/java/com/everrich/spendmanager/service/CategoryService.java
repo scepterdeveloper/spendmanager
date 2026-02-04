@@ -25,7 +25,9 @@ public class CategoryService {
     }
 
     public List<Category> findAll() {
-        return categoryRepository.findAll();
+        List<Category> categories = categoryRepository.findAll();
+        categories.sort((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()));
+        return categories;
     }
 
     public Optional<Category> findById(Long id) {

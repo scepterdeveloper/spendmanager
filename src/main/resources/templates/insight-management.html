@@ -68,7 +68,7 @@
         </div>
     </div>
     
-    <div class="content-container">
+    <div class="content-container-full">
         
         <div class="page-header">
             <a href="/" class="back-link">
@@ -234,7 +234,13 @@
                                th:text="${insight.name}">Monthly Groceries</a>
                         </td>
                         <td th:text="${insight.description}">Track monthly grocery spending</td>
-                        <td th:text="${insight.timeframe}">THIS_MONTH</td>
+                        <td th:text="${insight.timeframe == 'THIS_MONTH' ? 'This Month' : 
+                                       insight.timeframe == 'LAST_MONTH' ? 'Previous Month' : 
+                                       insight.timeframe == 'THIS_YEAR' ? 'This Year' : 
+                                       insight.timeframe == 'LAST_YEAR' ? 'Previous Year' : 
+                                       insight.timeframe == 'ENTIRE_TIMEFRAME' ? 'Entire Timeframe' : 
+                                       insight.timeframe == 'DATE_RANGE' ? 'Date Range' : 
+                                       insight.timeframe}">This Month</td>
                         <td th:text="${insight.aggregateResults ? 'Yes' : 'No'}">No</td>
                         <td>
                             <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="btn-edit">
@@ -266,7 +272,13 @@
                 <div class="mobile-card-description" th:text="${insight.description}">Track monthly grocery spending</div>
 
                 <div style="font-size: 0.75rem; color: var(--text-mellow); margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
-                    <strong>Timeframe:</strong> <span th:text="${insight.timeframe}">THIS_MONTH</span> | 
+                    <strong>Timeframe:</strong> <span th:text="${insight.timeframe == 'THIS_MONTH' ? 'This Month' : 
+                                                                  insight.timeframe == 'LAST_MONTH' ? 'Previous Month' : 
+                                                                  insight.timeframe == 'THIS_YEAR' ? 'This Year' : 
+                                                                  insight.timeframe == 'LAST_YEAR' ? 'Previous Year' : 
+                                                                  insight.timeframe == 'ENTIRE_TIMEFRAME' ? 'Entire Timeframe' : 
+                                                                  insight.timeframe == 'DATE_RANGE' ? 'Date Range' : 
+                                                                  insight.timeframe}">This Month</span> | 
                     <strong>Aggregate:</strong> <span th:text="${insight.aggregateResults ? 'Yes' : 'No'}">No</span>
                 </div>
 
