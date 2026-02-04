@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${appName} + ' - RAG Configuration'">EverRich - RAG Configuration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/app-theme.css}">
+</head>
+<body>
+    <div th:replace="fragments/header :: appHeader"></div>
+
+    <div id="toast-container"></div>
+    
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message"></p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn" class="btn-delete">Yes, Reset Configuration</button>
+                <button id="modal-cancel-btn" class="btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <div class="page-header">
+            <a href="/" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+                Back
+            </a>
+            <h2>Autocategorization</h2>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div th:if="${successMessage}" style="background-color: #D1FAE5; color: #065F46; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem; border-left: 4px solid var(--success-color);">
+            <strong>Success!</strong> <span th:text="${successMessage}"></span>
+        </div>
+
+        <div th:if="${errorMessage}" style="background-color: #FEE2E2; color: #991B1B; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem; border-left: 4px solid var(--error-color);">
+            <strong>Error!</strong> <span th:text="${errorMessage}"></span>
+        </div>
+
+        <!-- RAG Configuration -->
+        <div class="content-wrapper">
+            <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--primary-color);">RAG Configuration</h3>
+
+            <div style="background-color: var(--bg-light); padding: 1rem; border-radius: 0.375rem; border-left: 4px solid var(--accent-color); margin-bottom: 1.5rem;">
+                <p style="margin: 0.5rem 0; font-size: 0.95rem; color: var(--text-mellow);"><strong style="color: var(--primary-color);">Index Name:</strong> <span th:text="${indexName}">transaction_index</span></p>
+                <p style="margin: 0.5rem 0; font-size: 0.95rem; color: var(--text-mellow);"><strong style="color: var(--primary-color);">Vector Dimension:</strong> <span th:text="${vectorDimension}">768</span></p>
+                <p style="margin: 0.5rem 0; font-size: 0.95rem; color: var(--text-mellow);"><strong style="color: var(--primary-color);">Status:</strong> Active</p>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <form id="reset-form" th:action="@{/rag-config/reset}" method="post" style="margin: 0;">
+                    <button type="button" id="reset-btn" class="btn-delete" style="padding: 0.75rem 1.5rem;">
+                        Reset Configuration
+                    </button>
+                </form>
+
+                <form id="recreate-form" th:action="@{/rag-config/recreate}" method="post" style="margin: 0;">
+                    <button type="button" id="recreate-btn" class="btn-primary" style="padding: 0.75rem 1.5rem;">
+                        Re-create Configuration
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const resetBtn = document.getElementById('reset-btn');
+            const resetForm = document.getElementById('reset-form');
+            const recreateBtn = document.getElementById('recreate-btn');
+            const recreateForm = document.getElementById('recreate-form');
+            const modal = document.getElementById('confirmation-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+            const modalCancelBtn = document.getElementById('modal-cancel-btn');
+            
+            let currentAction = null;
+
+            resetBtn.addEventListener('click', function () {
+                currentAction = 'reset';
+                modalMessage.textContent = 'Are you sure you want to reset the RAG configuration? This will delete the entire vector search index and all embeddings. This action cannot be undone!';
+                modalConfirmBtn.textContent = 'Yes, Reset Configuration';
+                modalConfirmBtn.className = 'btn-delete';
+                modal.style.display = 'flex';
+            });
+
+            recreateBtn.addEventListener('click', function () {
+                currentAction = 'recreate';
+                modalMessage.textContent = 'Are you sure you want to re-create the RAG configuration? This will load all categorized transactions from the database and create training documents. This may take several minutes.';
+                modalConfirmBtn.textContent = 'Yes, Re-create Configuration';
+                modalConfirmBtn.className = 'btn-primary';
+                modal.style.display = 'flex';
+            });
+
+            modalConfirmBtn.addEventListener('click', function () {
+                modal.style.display = 'none';
+                if (currentAction === 'reset') {
+                    resetForm.submit();
+                } else if (currentAction === 'recreate') {
+                    recreateForm.submit();
+                }
+            });
+
+            modalCancelBtn.addEventListener('click', function () {
+                modal.style.display = 'none';
+                currentAction = null;
+            });
+        });
+    </script>
+</body>
+</html>

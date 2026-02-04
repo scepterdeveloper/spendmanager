@@ -322,4 +322,45 @@ public class RedisAdapter {
     public int getVectorDimension() {
         return this.TARGET_VECTOR_DIMENSION;
     }
+
+    /**
+     * Delete the entire index AND all associated documents.
+     * Uses the DD (Delete Documents) flag to remove both the index structure 
+     * and all hash keys associated with this index (keys with prefix 'doc:').
+     */
+    public void deleteIndex() {
+        StatefulRedisConnection<String, String> connection = null;
+        
+        try {
+            log.info("Deleting index '{}' from Redis...", INDEX_NAME);
+            connection = redisClient.connect();
+            RedisCommands<String, String> syncCommands = connection.sync();
+            
+            ProtocolKeyword ftDropIndexCommand = new ProtocolKeyword() {
+                @Override
+                public byte[] getBytes() {
+                    return "FT.DROPINDEX".getBytes(StandardCharsets.UTF_8);
+                }
+            };
+            
+            CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
+            argsBuilder.add(INDEX_NAME);
+            argsBuilder.add("DD");  // DD flag = Delete Documents (deletes all hash keys with this index)
+            
+            CommandOutput<String, String, String> output = new StatusOutput<>(StringCodec.UTF8);
+            String result = syncCommands.dispatch(ftDropIndexCommand, output, argsBuilder);
+            
+            log.info("FT.DROPINDEX command with DD flag executed successfully - index and all documents deleted");
+            log.info("Result: {}", result);
+            
+        } catch (Exception e) {
+            log.error("Error deleting index '{}': {}", INDEX_NAME, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete index: " + e.getMessage(), e);
+        } finally {
+            if (connection != null) {
+                connection.close();
+                log.info("Connection closed after deleting index");
+            }
+        }
+    }
 }
