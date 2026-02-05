@@ -288,8 +288,15 @@ public class InsightsService {
                 end = transactionRepository.findMaxDate().orElse(null);
                 break;
             case "DATE_RANGE":
-                start = customStart != null ? customStart : transactionRepository.findMinDate().orElse(LocalDate.MIN);
-                end = customEnd != null ? customEnd : transactionRepository.findMaxDate().orElse(LocalDate.MAX);
+                // For DATE_RANGE, both customStart and customEnd must be provided
+                if (customStart != null && customEnd != null) {
+                    start = customStart;
+                    end = customEnd;
+                } else {
+                    // If dates are not provided, return null range to indicate invalid state
+                    start = null;
+                    end = null;
+                }
                 break;
             default:
                 start = now.with(TemporalAdjusters.firstDayOfMonth());
