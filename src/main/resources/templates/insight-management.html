@@ -20,9 +20,13 @@
             gap: 1rem;
         }
 
-        /* Page-specific: Date range fields toggle */
+        /* Page-specific: Date range fields toggle - will be shown via inline style if DATE_RANGE */
         #date-range-fields {
             display: none;
+        }
+        
+        #date-range-fields.show {
+            display: grid !important;
         }
 
         /* Mobile responsive title override */
@@ -139,14 +143,14 @@
                 </div>
 
                 <!-- Date Range (conditionally shown) -->
-                <div class="form-row" id="date-range-fields">
+                <div class="form-row" id="date-range-fields" th:classappend="${newInsight.timeframe == 'DATE_RANGE' ? 'show' : ''}">
                     <div class="form-group">
                         <label for="startDate">Start Date</label>
-                        <input type="date" id="startDate" th:field="*{startDate}" />
+                        <input type="date" id="startDate" name="startDate" th:value="${newInsight.startDate}" />
                     </div>
                     <div class="form-group">
                         <label for="endDate">End Date</label>
-                        <input type="date" id="endDate" th:field="*{endDate}" />
+                        <input type="date" id="endDate" name="endDate" th:value="${newInsight.endDate}" />
                     </div>
                 </div>
 
@@ -310,6 +314,9 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Check if in edit mode (must be defined early)
+            const isEditMode = document.querySelector('input[name="id"]').value !== "";
+            
             // UI Elements
             const manualHeader = document.getElementById('manual-header'); 
             const manualContent = document.getElementById('manual-form-content'); 
@@ -327,7 +334,7 @@
             const categoryListDropdown = document.getElementById('category-list-dropdown');
             const selectedCountSpan = document.getElementById('selected-count');
 
-            let confirmAction = null; 
+            let confirmAction = null;
 
             // Initialize category checkboxes from hidden field
             const categoryIdsField = document.getElementById('categoryIds');
@@ -433,8 +440,13 @@
             }
             timeframeSelect.addEventListener('change', toggleDateRangeAndInterval);
             
-            // Initialize on load
+            // Initialize on load - ensure date range fields are shown if DATE_RANGE is selected
             toggleDateRangeAndInterval();
+            
+            // Force display of date range fields if in edit mode with DATE_RANGE
+            if (isEditMode && timeframeSelect.value === 'DATE_RANGE') {
+                dateRangeFields.style.display = 'grid';
+            }
 
             // --- Notification and Modal Helpers ---
             function showToast(message, type = 'success') {
@@ -496,8 +508,6 @@
             });
 
             // --- Section Collapse Logic ---
-            const isEditMode = document.querySelector('input[name="id"]').value !== "";
-            
             if (!isEditMode) {
                  manualContent.style.display = 'none';
                  manualHeader.classList.add('collapsed');

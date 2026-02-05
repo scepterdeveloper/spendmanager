@@ -20,9 +20,24 @@
             }
         }
 
+        /* --- Date Range Fields --- */
+        #date-range-fields {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        #date-range-fields.show {
+            display: grid;
+        }
+
         /* --- Mobile Responsive: Page-Specific --- */
         @media (max-width: 767px) {
             .filter-container {
+                grid-template-columns: 1fr;
+            }
+
+            #date-range-fields {
                 grid-template-columns: 1fr;
             }
         }
@@ -95,19 +110,25 @@
                         </div>
                     </div>
 
-                    <div id="date-range-fields" class="form-group" style="display:none; grid-column: 1 / -1;">
-                        <label>Custom Date Range</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="date" id="startDate" name="startDate" class="form-control">
-                            <input type="date" id="endDate" name="endDate" class="form-control">
+                    <div id="date-range-fields" style="grid-column: 1 / -1;">
+                        <div class="form-group">
+                            <label for="startDate">Start Date</label>
+                            <input type="date" id="startDate" name="startDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="endDate">End Date</label>
+                            <input type="date" id="endDate" name="endDate">
                         </div>
                     </div>
 
-                    <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <div style="grid-column: 1 / -1; margin-top: 5px;">
                         <div class="form-check">
                             <input type="checkbox" id="aggregateResults" name="aggregateResults" class="form-check-input">
                             <label for="aggregateResults">Aggregate Total Only</label>
                         </div>
+                    </div>
+
+                    <div style="grid-column: 1 / -1;">
                         <button type="submit" class="btn-primary">Analyze</button>
                     </div>
                 </div>
@@ -127,7 +148,12 @@
 
             // Timeframe change handler
             timeframeSelect.addEventListener('change', function() {
-                document.getElementById('date-range-fields').style.display = this.value === 'DATE_RANGE' ? 'flex' : 'none';
+                const dateRangeFields = document.getElementById('date-range-fields');
+                if (this.value === 'DATE_RANGE') {
+                    dateRangeFields.classList.add('show');
+                } else {
+                    dateRangeFields.classList.remove('show');
+                }
                 const supportsInterval = ['THIS_YEAR', 'LAST_YEAR', 'DATE_RANGE', 'ENTIRE_TIMEFRAME'].includes(this.value);
                 intervalSelect.disabled = !supportsInterval;
                 if (!supportsInterval) {

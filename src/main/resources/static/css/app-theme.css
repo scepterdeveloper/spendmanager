@@ -1066,15 +1066,7 @@ body {
    TRANSACTION MANAGEMENT RESPONSIVE - MOBILE
    ================================================================= */
 @media (max-width: 767px) {
-    /* Hide ALL desktop tables on mobile */
-    .data-table-wrapper {
-        display: none !important;
-    }
-    
-    .data-table {
-        display: none !important;
-    }
-
+    /* Hide transaction management tables on mobile (but not insight result tables) */
     .transaction-list-mobile {
         display: block;
     }
