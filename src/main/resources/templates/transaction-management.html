@@ -162,6 +162,7 @@
         <h3 th:text="${#lists.size(transactions)} + ' transaction(s) found'">0 transaction(s) found</h3>
         
         <!-- Desktop Table -->
+        <div class="data-table-wrapper">
         <table class="data-table">
             <thead>
                 <tr>
@@ -206,6 +207,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
 
         <!-- Mobile Cards -->
         <div class="transaction-list-mobile">
