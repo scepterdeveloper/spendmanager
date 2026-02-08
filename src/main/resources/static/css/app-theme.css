@@ -1573,9 +1573,9 @@ body {
 /* Transaction table column widths - Desktop only */
 @media (min-width: 768px) {
   .data-table-wrapper table th:nth-child(1),
-  .data-table-wrapper table td:nth-child(1) { width: 12%; } /* Date */
+  .data-table-wrapper table td:nth-child(1) { width: 10%; } /* Date */
   .data-table-wrapper table th:nth-child(2),
-  .data-table-wrapper table td:nth-child(2) { width: 12%; } /* Account */
+  .data-table-wrapper table td:nth-child(2) { width: 16%; } /* Account */
   .data-table-wrapper table th:nth-child(3),
   .data-table-wrapper table td:nth-child(3) { width: 40%; } /* Description */
   .data-table-wrapper table th:nth-child(4),
@@ -1583,5 +1583,5 @@ body {
   .data-table-wrapper table th:nth-child(5),
   .data-table-wrapper table td:nth-child(5) { width: 12%; } /* Category */
   .data-table-wrapper table th:nth-child(6),
-  .data-table-wrapper table td:nth-child(6) { width: 12%; } /* Actions */
+  .data-table-wrapper table td:nth-child(6) { width: 10%; } /* Actions */
 }

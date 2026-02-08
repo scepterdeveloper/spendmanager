@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import com.everrich.spendmanager.service.SavedInsightService;
 
 @Controller
-@RequestMapping("/")
+@RequestMapping("/dashboard")
 public class DashboardController {
 
     private final SavedInsightService savedInsightService;
