@@ -46,25 +46,54 @@ public class TenantSchemaService {
      * @param registration The registration for which to create the tenant schema
      */
     @Async
+    @Transactional
     public void createTenantSchemaAsync(Registration registration) {
         String registrationId = registration.getRegistrationId();
         String schemaName = multiTenancyProperties.getSchemaName(registrationId);
         
-        logger.info("Starting async tenant schema creation for registration: {}, schema: {}", 
+        logger.info("=== TENANT SCHEMA CREATION START === Registration: {}, Schema: {}", 
                 registrationId, schemaName);
 
         try {
+            logger.info("Step 1/4: Creating schema {}", schemaName);
             createSchema(schemaName);
-            copyTableStructures(schemaName);
-            copyDefaultData(schemaName);
+            logger.info("Step 1/4: Schema {} created successfully", schemaName);
             
-            // Update status to COMPLETED
-            updateTenantCreationStatus(registration.getId(), TenantCreationStatus.COMPLETED);
-            logger.info("Successfully created tenant schema: {}", schemaName);
+            logger.info("Step 2/4: Copying table structures to {}", schemaName);
+            copyTableStructures(schemaName);
+            logger.info("Step 2/4: Table structures copied successfully to {}", schemaName);
+            
+            logger.info("Step 3/4: Copying default data to {}", schemaName);
+            copyDefaultData(schemaName);
+            logger.info("Step 3/4: Default data copied successfully to {}", schemaName);
+            
+            // Update status to COMPLETED - fetch fresh entity within transaction
+            logger.info("Step 4/4: Updating tenant creation status to COMPLETED for registration ID: {}", registration.getId());
+            Registration freshRegistration = registrationRepository.findById(registration.getId())
+                    .orElseThrow(() -> new RuntimeException("Registration not found: " + registration.getId()));
+            freshRegistration.setTenantCreationStatus(TenantCreationStatus.COMPLETED);
+            registrationRepository.save(freshRegistration);
+            registrationRepository.flush(); // Ensure immediate write to database
+            logger.info("Step 4/4: Tenant creation status updated to COMPLETED for registration: {}", registrationId);
+            
+            logger.info("=== TENANT SCHEMA CREATION COMPLETE === Registration: {}, Schema: {}", 
+                    registrationId, schemaName);
             
         } catch (Exception e) {
-            logger.error("Failed to create tenant schema: {}", schemaName, e);
-            updateTenantCreationStatus(registration.getId(), TenantCreationStatus.FAILED);
+            logger.error("=== TENANT SCHEMA CREATION FAILED === Registration: {}, Schema: {}, Error: {}", 
+                    registrationId, schemaName, e.getMessage(), e);
+            try {
+                Registration freshRegistration = registrationRepository.findById(registration.getId())
+                        .orElse(null);
+                if (freshRegistration != null) {
+                    freshRegistration.setTenantCreationStatus(TenantCreationStatus.FAILED);
+                    registrationRepository.save(freshRegistration);
+                    registrationRepository.flush();
+                    logger.info("Updated tenant creation status to FAILED for registration: {}", registrationId);
+                }
+            } catch (Exception updateEx) {
+                logger.error("Failed to update tenant creation status to FAILED: {}", updateEx.getMessage(), updateEx);
+            }
         }
     }
 
