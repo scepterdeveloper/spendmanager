@@ -21,10 +21,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Registration entity representing a tenant in the multi-tenant system.
+ * This entity is stored in the public schema and shared across all tenants.
+ * Each registration has a unique registrationId which is used as the tenant identifier.
+ */
 @Getter
 @Setter
 @Entity
-@Table(name = "REGISTRATION")
+@Table(name = "REGISTRATION", schema = "public")
 @NoArgsConstructor
 public class Registration {
 
@@ -50,6 +55,14 @@ public class Registration {
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+    
+    /**
+     * Status of the tenant schema creation process.
+     * Used to track asynchronous schema creation during registration.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tenant_creation_status")
+    private TenantCreationStatus tenantCreationStatus;
     
     @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<AppUser> users = new ArrayList<>();

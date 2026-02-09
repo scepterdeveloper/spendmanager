@@ -3,7 +3,9 @@ package com.everrich.spendmanager.service;
 import com.everrich.spendmanager.entities.AppUser;
 import com.everrich.spendmanager.entities.Registration;
 import com.everrich.spendmanager.entities.RegistrationStatus;
+import com.everrich.spendmanager.entities.TenantCreationStatus;
 import com.everrich.spendmanager.entities.UserRole;
+import com.everrich.spendmanager.multitenancy.TenantSchemaService;
 import com.everrich.spendmanager.repository.AppUserRepository;
 import com.everrich.spendmanager.repository.RegistrationRepository;
 import org.slf4j.Logger;
@@ -23,15 +25,18 @@ public class RegistrationService {
     private final AppUserRepository appUserRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final TenantSchemaService tenantSchemaService;
 
     public RegistrationService(RegistrationRepository registrationRepository,
                                AppUserRepository appUserRepository,
                                EmailService emailService,
-                               PasswordEncoder passwordEncoder) {
+                               PasswordEncoder passwordEncoder,
+                               TenantSchemaService tenantSchemaService) {
         this.registrationRepository = registrationRepository;
         this.appUserRepository = appUserRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.tenantSchemaService = tenantSchemaService;
     }
 
     @Transactional
@@ -43,6 +48,9 @@ public class RegistrationService {
 
         // Create new registration
         Registration registration = new Registration(RegistrationStatus.OPEN);
+        
+        // Set tenant creation status to INITIATED
+        registration.setTenantCreationStatus(TenantCreationStatus.INITIATED);
         
         // Create new user with OWNER role
         AppUser user = new AppUser(firstName, lastName, email, UserRole.OWNER);
@@ -58,6 +66,10 @@ public class RegistrationService {
         registration = registrationRepository.save(registration);
         
         logger.info("Registration initiated for email: {}, Registration ID: {}", email, registration.getRegistrationId());
+        
+        // Trigger async tenant schema creation
+        // This runs in the background while the user receives their email
+        tenantSchemaService.createTenantSchemaAsync(registration);
         
         // Send registration email
         emailService.sendRegistrationEmail(registration, user);

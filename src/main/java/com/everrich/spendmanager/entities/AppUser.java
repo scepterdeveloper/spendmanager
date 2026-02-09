@@ -17,10 +17,15 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * Application user entity.
+ * This entity is stored in the public schema and shared across all tenants.
+ * Users are associated with a registration which determines their tenant.
+ */
 @Getter
 @Setter
 @Entity
-@Table(name = "APP_USER")
+@Table(name = "APP_USER", schema = "public")
 @NoArgsConstructor
 public class AppUser {
 

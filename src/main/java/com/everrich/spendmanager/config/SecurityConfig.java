@@ -1,5 +1,6 @@
 package com.everrich.spendmanager.config;
 
+import com.everrich.spendmanager.multitenancy.TenantFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -7,10 +8,21 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Security configuration with multi-tenancy support.
+ * Configures authentication, authorization, and tenant context filter.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final TenantFilter tenantFilter;
+
+    public SecurityConfig(TenantFilter tenantFilter) {
+        this.tenantFilter = tenantFilter;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -27,7 +39,9 @@ public class SecurityConfig {
             )
             .logout(logout -> logout
                 .permitAll()
-            );
+            )
+            // Add TenantFilter after authentication to set tenant context
+            .addFilterAfter(tenantFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
