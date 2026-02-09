@@ -2,11 +2,15 @@ package com.everrich.spendmanager.service;
 
 import com.everrich.spendmanager.entities.AppUser;
 import com.everrich.spendmanager.entities.Registration;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,9 +28,60 @@ public class EmailService {
     
     @Value("${app.mail.enabled:true}")
     private boolean emailEnabled;
+    
+    @Value("${spring.mail.host:not-configured}")
+    private String mailHost;
+    
+    @Value("${spring.mail.port:0}")
+    private int mailPort;
+    
+    @Value("${spring.mail.username:not-configured}")
+    private String mailUsername;
 
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
+    }
+    
+    @PostConstruct
+    public void logMailConfiguration() {
+        logger.info("=== Email Service Configuration ===");
+        logger.info("Email enabled: {}", emailEnabled);
+        logger.info("From email: {}", fromEmail);
+        logger.info("Base URL: {}", baseUrl);
+        logger.info("SMTP Host: {}", mailHost);
+        logger.info("SMTP Port: {}", mailPort);
+        logger.info("SMTP Username: {}", maskEmail(mailUsername));
+        logger.info("SMTP Username length: {}", mailUsername != null ? mailUsername.length() : 0);
+        logger.info("SMTP Username is empty: {}", mailUsername == null || mailUsername.isEmpty() || "not-configured".equals(mailUsername));
+        
+        // Log additional details from JavaMailSenderImpl if available
+        if (mailSender instanceof JavaMailSenderImpl) {
+            JavaMailSenderImpl impl = (JavaMailSenderImpl) mailSender;
+            logger.info("JavaMailSender configured host: {}", impl.getHost());
+            logger.info("JavaMailSender configured port: {}", impl.getPort());
+            logger.info("JavaMailSender configured username: {}", maskEmail(impl.getUsername()));
+            logger.info("JavaMailSender password configured: {}", impl.getPassword() != null && !impl.getPassword().isEmpty());
+            logger.info("JavaMailSender password length: {}", impl.getPassword() != null ? impl.getPassword().length() : 0);
+            
+            if (impl.getJavaMailProperties() != null) {
+                logger.info("JavaMail properties:");
+                impl.getJavaMailProperties().forEach((key, value) -> 
+                    logger.info("  {} = {}", key, value)
+                );
+            }
+        }
+        logger.info("=== End Email Configuration ===");
+    }
+    
+    private String maskEmail(String email) {
+        if (email == null || email.isEmpty() || "not-configured".equals(email)) {
+            return email;
+        }
+        int atIndex = email.indexOf('@');
+        if (atIndex > 2) {
+            return email.substring(0, 2) + "***" + email.substring(atIndex);
+        }
+        return "***" + (atIndex >= 0 ? email.substring(atIndex) : "");
     }
 
     public void sendRegistrationEmail(Registration registration, AppUser user) {
@@ -55,16 +110,71 @@ public class EmailService {
         );
 
         try {
+            logger.info("Preparing to send registration email to: {}", user.getEmail());
+            logger.info("Using from address: {}", fromEmail);
+            
+            // Log current mail sender configuration before sending
+            if (mailSender instanceof JavaMailSenderImpl) {
+                JavaMailSenderImpl impl = (JavaMailSenderImpl) mailSender;
+                logger.debug("Current SMTP config - Host: {}, Port: {}, Username: {}", 
+                    impl.getHost(), impl.getPort(), maskEmail(impl.getUsername()));
+            }
+            
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(user.getEmail());
             message.setSubject(subject);
             message.setText(body);
             
+            logger.info("Attempting to send email via SMTP...");
             mailSender.send(message);
             logger.info("Registration email sent successfully to: {}", user.getEmail());
+            
+        } catch (MailAuthenticationException e) {
+            logger.error("=== SMTP Authentication Failed ===");
+            logger.error("Failed to authenticate with SMTP server");
+            logger.error("Recipient: {}", user.getEmail());
+            logger.error("SMTP Host: {}", mailHost);
+            logger.error("SMTP Port: {}", mailPort);
+            logger.error("SMTP Username: {}", maskEmail(mailUsername));
+            logger.error("Error message: {}", e.getMessage());
+            if (e.getCause() != null) {
+                logger.error("Cause: {}", e.getCause().getMessage());
+                if (e.getCause().getCause() != null) {
+                    logger.error("Root cause: {}", e.getCause().getCause().getMessage());
+                }
+            }
+            logger.error("Full stack trace:", e);
+            logger.error("=== End Authentication Error ===");
+            logger.error("");
+            logger.error("TROUBLESHOOTING TIPS:");
+            logger.error("1. For Gmail, ensure you're using an App Password (not your regular password)");
+            logger.error("2. Create an App Password at: https://myaccount.google.com/apppasswords");
+            logger.error("3. Verify MAIL_USERNAME and MAIL_PASSWORD environment variables are set correctly");
+            logger.error("4. Ensure 2-Step Verification is enabled on your Google account");
+            
+        } catch (MailSendException e) {
+            logger.error("=== SMTP Send Failed ===");
+            logger.error("Failed to send email to: {}", user.getEmail());
+            logger.error("Error message: {}", e.getMessage());
+            if (e.getFailedMessages() != null && !e.getFailedMessages().isEmpty()) {
+                e.getFailedMessages().forEach((msg, ex) -> {
+                    logger.error("Failed message error: {}", ex.getMessage());
+                });
+            }
+            logger.error("Full stack trace:", e);
+            logger.error("=== End Send Error ===");
+            
         } catch (Exception e) {
-            logger.error("Failed to send registration email to: {}. Error: {}", user.getEmail(), e.getMessage());
+            logger.error("=== Unexpected Email Error ===");
+            logger.error("Failed to send registration email to: {}", user.getEmail());
+            logger.error("Exception type: {}", e.getClass().getName());
+            logger.error("Error message: {}", e.getMessage());
+            if (e.getCause() != null) {
+                logger.error("Cause: {}", e.getCause().getMessage());
+            }
+            logger.error("Full stack trace:", e);
+            logger.error("=== End Unexpected Error ===");
         }
     }
 }

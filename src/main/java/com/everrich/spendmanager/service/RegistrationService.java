@@ -48,7 +48,13 @@ public class RegistrationService {
         AppUser user = new AppUser(firstName, lastName, email, UserRole.OWNER);
         registration.addUser(user);
         
-        // Save registration (cascades to user)
+        // First save to get the sequence-generated ID
+        registration = registrationRepository.save(registration);
+        
+        // Generate the 6-digit registration ID from the sequence-generated primary key
+        registration.generateRegistrationId();
+        
+        // Save again to persist the registrationId
         registration = registrationRepository.save(registration);
         
         logger.info("Registration initiated for email: {}, Registration ID: {}", email, registration.getRegistrationId());
