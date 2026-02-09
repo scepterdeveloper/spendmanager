@@ -1,4 +1,4 @@
-<header th:fragment="appHeader">
+<header th:fragment="appHeader" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
     <style>
         /* Modern, Clean Base Styles */
         :root {
@@ -84,7 +84,7 @@
             <a href="/dashboard" th:text="${appName}">EverRich</a>
         </div>
         <div class="navbar-links">
-            <span class="navbar-user">👤 User Profile</span>
+            <span class="navbar-user" sec:authorize="isAuthenticated()">👤 <span th:text="${#authentication.principal.fullName}">User</span></span>
         </div>
     </nav>
 </header>
