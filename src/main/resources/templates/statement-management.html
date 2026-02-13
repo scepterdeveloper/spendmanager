@@ -3,6 +3,8 @@
 <head>
     <title th:text="${appName} + ' - Statement Management'">EverRich - Statement Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
         /* Specific tweaks for Statement Page */
@@ -238,12 +240,19 @@
                 spinner.style.display = 'block';
                 uploadButton.disabled = true;
 
+                // Get CSRF token from meta tags
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
                 formData.append('accountId', accountSelect.value);
 
                 fetch('/api/statement/upload', {
                     method: 'POST',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    },
                     body: formData,
                 })
                 .then(response => response.json().then(data => ({ status: response.status, body: data })))
