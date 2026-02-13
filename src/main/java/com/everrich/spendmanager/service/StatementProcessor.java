@@ -17,10 +17,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.everrich.spendmanager.entities.Registration;
+import com.everrich.spendmanager.entities.RegistrationStatus;
 import com.everrich.spendmanager.entities.Statement;
 import com.everrich.spendmanager.entities.StatementStatus;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionCategorizationStatus;
+import com.everrich.spendmanager.multitenancy.TenantContext;
+import com.everrich.spendmanager.repository.RegistrationRepository;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
@@ -33,6 +37,7 @@ public class StatementProcessor {
     private final TransactionService transactionService;
     private final ChatClient chatClient;
     private final PdfProcessor pdfProcessor;
+    private final RegistrationRepository registrationRepository;
     private static final Logger log = LoggerFactory.getLogger(StatementProcessor.class);
     @Value("classpath:/prompts/parse-transactions-prompt.st")
     private Resource parseTransactionsPromptResource;
@@ -43,11 +48,13 @@ public class StatementProcessor {
     public StatementProcessor(StatementService statementService,
             TransactionService transactionService,
             ChatClient.Builder chatClientBuilder,
-            PdfProcessor pdfProcessor) {
+            PdfProcessor pdfProcessor,
+            RegistrationRepository registrationRepository) {
 
         this.transactionService = transactionService;
         this.statementService = statementService;
         this.pdfProcessor = pdfProcessor;
+        this.registrationRepository = registrationRepository;
         this.chatClient = chatClientBuilder.build();
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDate.class,
@@ -57,25 +64,71 @@ public class StatementProcessor {
 
     }
 
+    /**
+     * Scheduled task to process open statements across all tenants.
+     * This method iterates over all active tenants (COMPLETE registrations),
+     * sets the tenant context for each, and processes any open statements.
+     */
     @Scheduled(fixedRate = 60000)
     public void processStatement() {
-
-        List<Statement> openStatements = statementService.getOpenStatements();
-        for (Statement statement : openStatements) {
-            statement.setStatus(StatementStatus.PROCESSING);
-            statementService.saveStatement(statement);
-            List<Transaction> transactions = extractTransactionsFromPdf(statement);
-
-            for (Transaction uncategorizedTransaction : transactions) {
-                uncategorizedTransaction.setAccount(statement.getAccount());
-                Transaction categorizedTransaction = transactionService.categorizeTransaction(uncategorizedTransaction);
-                categorizedTransaction.setStatementId(statement.getId());
-                categorizedTransaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
-                transactionService.saveTransaction(categorizedTransaction);
+        log.debug("Starting scheduled statement processing across all tenants");
+        
+        // Get all active tenants (COMPLETE registrations)
+        List<Registration> activeTenants = registrationRepository.findByStatus(RegistrationStatus.COMPLETE);
+        log.debug("Found {} active tenants to process", activeTenants.size());
+        
+        for (Registration tenant : activeTenants) {
+            String tenantId = tenant.getRegistrationId();
+            try {
+                // Set the tenant context for this tenant
+                TenantContext.setTenantId(tenantId);
+                log.debug("Processing statements for tenant: {}", tenantId);
+                
+                // Process statements for this tenant
+                processStatementsForCurrentTenant();
+                
+            } catch (Exception e) {
+                log.error("Error processing statements for tenant {}: {}", tenantId, e.getMessage(), e);
+            } finally {
+                // Always clear the tenant context
+                TenantContext.clear();
             }
+        }
+        
+        log.debug("Completed scheduled statement processing");
+    }
+    
+    /**
+     * Processes all open statements for the current tenant context.
+     */
+    private void processStatementsForCurrentTenant() {
+        List<Statement> openStatements = statementService.getOpenStatements();
+        log.debug("Found {} open statements for tenant {}", openStatements.size(), TenantContext.getTenantId());
+        
+        for (Statement statement : openStatements) {
+            try {
+                statement.setStatus(StatementStatus.PROCESSING);
+                statementService.saveStatement(statement);
+                List<Transaction> transactions = extractTransactionsFromPdf(statement);
 
-            statement.setStatus(StatementStatus.COMPLETED);
-            statementService.saveStatement(statement);
+                if (transactions != null) {
+                    for (Transaction uncategorizedTransaction : transactions) {
+                        uncategorizedTransaction.setAccount(statement.getAccount());
+                        Transaction categorizedTransaction = transactionService.categorizeTransaction(uncategorizedTransaction);
+                        categorizedTransaction.setStatementId(statement.getId());
+                        categorizedTransaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
+                        transactionService.saveTransaction(categorizedTransaction);
+                    }
+                    statement.setStatus(StatementStatus.COMPLETED);
+                } else {
+                    statement.setStatus(StatementStatus.FAILED);
+                }
+                statementService.saveStatement(statement);
+            } catch (Exception e) {
+                log.error("Error processing statement {}: {}", statement.getId(), e.getMessage(), e);
+                statement.setStatus(StatementStatus.FAILED);
+                statementService.saveStatement(statement);
+            }
         }
     }
 
