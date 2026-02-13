@@ -1,6 +1,7 @@
 package com.everrich.spendmanager.service;
 
 import com.everrich.spendmanager.entities.AppUser;
+import com.everrich.spendmanager.entities.PasswordReset;
 import com.everrich.spendmanager.entities.Registration;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -152,7 +153,7 @@ public class EmailService {
             logger.error("2. Create an App Password at: https://myaccount.google.com/apppasswords");
             logger.error("3. Verify MAIL_USERNAME and MAIL_PASSWORD environment variables are set correctly");
             logger.error("4. Ensure 2-Step Verification is enabled on your Google account");
-            
+
         } catch (MailSendException e) {
             logger.error("=== SMTP Send Failed ===");
             logger.error("Failed to send email to: {}", user.getEmail());
@@ -175,6 +176,66 @@ public class EmailService {
             }
             logger.error("Full stack trace:", e);
             logger.error("=== End Unexpected Error ===");
+        }
+    }
+
+    /**
+     * Send a password reset email to a user with a reset link.
+     *
+     * @param user the user who requested the password reset
+     * @param passwordReset the password reset entity containing the token
+     */
+    public void sendPasswordResetEmail(AppUser user, PasswordReset passwordReset) {
+        String resetUrl = baseUrl + "/password-reset/reset/" + passwordReset.getResetToken();
+
+        // Always log the reset URL for development/debugging purposes
+        logger.info("Password reset URL for {}: {}", user.getEmail(), resetUrl);
+
+        // If email is disabled, just log and return
+        if (!emailEnabled) {
+            logger.info("Email sending is disabled. Skipping password reset email to: {}", user.getEmail());
+            return;
+        }
+
+        String subject = "Reset Your Password - EverRich Spend Manager";
+        String body = String.format(
+            "Dear %s,\n\n" +
+            "We received a request to reset the password for your EverRich Spend Manager account.\n\n" +
+            "To reset your password, please click the link below:\n\n" +
+            "%s\n\n" +
+            "This link will expire in 24 hours for security reasons.\n\n" +
+            "If you did not request a password reset, please ignore this email. Your password will remain unchanged.\n\n" +
+            "Best regards,\n" +
+            "The EverRich Team",
+            user.getFirstName(),
+            resetUrl
+        );
+
+        try {
+            logger.info("Preparing to send password reset email to: {}", user.getEmail());
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(user.getEmail());
+            message.setSubject(subject);
+            message.setText(body);
+
+            logger.info("Attempting to send password reset email via SMTP...");
+            mailSender.send(message);
+            logger.info("Password reset email sent successfully to: {}", user.getEmail());
+
+        } catch (MailAuthenticationException e) {
+            logger.error("SMTP Authentication Failed for password reset email to: {}", user.getEmail());
+            logger.error("Error message: {}", e.getMessage());
+
+        } catch (MailSendException e) {
+            logger.error("Failed to send password reset email to: {}", user.getEmail());
+            logger.error("Error message: {}", e.getMessage());
+
+        } catch (Exception e) {
+            logger.error("Unexpected error sending password reset email to: {}", user.getEmail());
+            logger.error("Exception type: {}", e.getClass().getName());
+            logger.error("Error message: {}", e.getMessage());
         }
     }
 }

@@ -4,6 +4,8 @@
 <head>
     <title th:text="${appName} + ' - Manage Categories'">EverRich - Manage Categories</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
         /* Page-specific styles for Category Management */
@@ -216,6 +218,10 @@
                 setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 500); }, 3000);
             }
 
+            // Get CSRF token from meta tags
+            const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
             suggestBtn.onclick = async () => {
                 const input = document.getElementById('llm-input').value.trim();
                 if (input.length < 5) return showToast("Provide more context.", "error");
@@ -223,7 +229,12 @@
                 suggestBtn.disabled = true;
                 loadingMsg.style.display = 'inline';
                 try {
-                    const res = await fetch('/categories/api/suggest?input=' + encodeURIComponent(input), { method: 'POST' });
+                    const res = await fetch('/categories/api/suggest?input=' + encodeURIComponent(input), { 
+                        method: 'POST',
+                        headers: {
+                            [csrfHeader]: csrfToken
+                        }
+                    });
                     currentSuggestions = await res.json();
                     renderSuggestions();
                     showToast(`AI suggested ${currentSuggestions.length} categories.`);
@@ -276,7 +287,10 @@
                 try {
                     await fetch('/categories/api/merge', { 
                         method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            [csrfHeader]: csrfToken
+                        }, 
                         body: JSON.stringify(selected) 
                     });
                     showToast("Merged successfully!");
