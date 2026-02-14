@@ -64,14 +64,46 @@
             border: 1px solid var(--border-color);
         }
 
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
         .chart-title {
             font-size: 0.8rem;
             font-weight: 700;
-            margin: 0 0 0.75rem 0;
+            margin: 0;
             display: flex;
             align-items: center;
             gap: 0.3rem;
             color: var(--primary-color);
+        }
+
+        .chart-total {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 1px solid #d1fae5;
+            border-radius: 1rem;
+            padding: 0.25rem 0.6rem;
+            margin: 0;
+        }
+
+        .chart-total .sum-icon {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--income-color);
+            opacity: 0.8;
+        }
+
+        .chart-total .sum-value {
+            letter-spacing: 0.02em;
         }
 
         /* Page-specific: Smaller visualization toggle buttons for compact result page */
@@ -165,15 +197,18 @@
 
         <!-- Chart Result (2D) - Dashboard Style -->
         <div th:if="${result.resultType.name() == 'CHART'}" class="chart-card">
-            <h3 class="chart-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent-color)">
-                    <path d="M3 3v18h18"/>
-                    <path d="M18 17V9"/>
-                    <path d="M13 17V5"/>
-                    <path d="M8 17v-4"/>
-                </svg>
-                <span th:text="${result.insightName}">Analysis Results</span>
-            </h3>
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent-color)">
+                        <path d="M3 3v18h18"/>
+                        <path d="M18 17V9"/>
+                        <path d="M13 17V5"/>
+                        <path d="M8 17v-4"/>
+                    </svg>
+                    <span th:text="${result.insightName}">Analysis Results</span>
+                </h3>
+                <span id="chart-total-display" class="chart-total"></span>
+            </div>
             
             <div class="visualization-toggles">
                 <button id="btn-table" onclick="setView('table')" class="active">Table</button>
@@ -214,8 +249,15 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             if (resultData.resultType === 'CHART' && resultData.dataPoints) {
-                // Calculate total for percentages
+                // Calculate total for percentages and display
                 const total = resultData.dataPoints.reduce((sum, dp) => sum + dp.value, 0);
+                
+                // Display total under the title with modern badge style
+                const totalDisplay = document.getElementById('chart-total-display');
+                if (totalDisplay) {
+                    const formattedTotal = total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    totalDisplay.innerHTML = '<span class="sum-icon">∑</span><span class="sum-value">' + formattedTotal + ' €</span>';
+                }
                 
                 // Update percentage column in table
                 const cells = document.querySelectorAll('.percentage-cell');
