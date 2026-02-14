@@ -114,6 +114,20 @@
         @media (min-width: 768px) {
             .title-short { display: none; }
         }
+        
+        /* Clickable row styling */
+        .clickable {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .clickable:hover {
+            background-color: var(--bg-accent-light);
+        }
+        
+        .data-table tbody tr.clickable:hover {
+            background-color: var(--bg-accent-light);
+        }
     </style>
 </head>
 <body>
