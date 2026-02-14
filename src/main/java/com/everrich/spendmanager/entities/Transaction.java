@@ -56,6 +56,8 @@ public class Transaction {
     @JoinColumn(name = "account_id")
     private Account account;
     
+    private boolean reviewed = false;
+    
     @Transient
     private String category;     
     
@@ -135,5 +137,13 @@ public class Transaction {
 
     public void setAccount(Account account) {
         this.account = account;
+    }
+
+    public boolean isReviewed() {
+        return reviewed;
+    }
+
+    public void setReviewed(boolean reviewed) {
+        this.reviewed = reviewed;
     }
 }

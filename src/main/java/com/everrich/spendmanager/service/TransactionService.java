@@ -217,6 +217,20 @@ public class TransactionService {
     }
 
     @Transactional
+    public boolean updateReviewedStatus(Long transactionId, boolean reviewed) {
+        Optional<Transaction> optionalTransaction = transactionRepository.findById(transactionId);
+        if (optionalTransaction.isPresent()) {
+            Transaction transaction = optionalTransaction.get();
+            transaction.setReviewed(reviewed);
+            transactionRepository.save(transaction);
+            log.info("Updated reviewed status for transaction ID {} to {}", transactionId, reviewed);
+            return true;
+        }
+        log.warn("Transaction with ID {} not found for reviewed status update", transactionId);
+        return false;
+    }
+
+    @Transactional
     public void saveAllTransactions(List<Transaction> transactions) {
         transactionRepository.saveAll(transactions);
     }

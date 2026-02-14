@@ -1575,13 +1575,96 @@ body {
   .data-table-wrapper table th:nth-child(1),
   .data-table-wrapper table td:nth-child(1) { width: 10%; } /* Date */
   .data-table-wrapper table th:nth-child(2),
-  .data-table-wrapper table td:nth-child(2) { width: 16%; } /* Account */
+  .data-table-wrapper table td:nth-child(2) { width: 14%; } /* Account */
   .data-table-wrapper table th:nth-child(3),
-  .data-table-wrapper table td:nth-child(3) { width: 40%; } /* Description */
+  .data-table-wrapper table td:nth-child(3) { width: 36%; } /* Description */
   .data-table-wrapper table th:nth-child(4),
-  .data-table-wrapper table td:nth-child(4) { width: 12%; } /* Amount */
+  .data-table-wrapper table td:nth-child(4) { width: 10%; } /* Amount */
   .data-table-wrapper table th:nth-child(5),
-  .data-table-wrapper table td:nth-child(5) { width: 12%; } /* Category */
+  .data-table-wrapper table td:nth-child(5) { width: 10%; } /* Category */
   .data-table-wrapper table th:nth-child(6),
   .data-table-wrapper table td:nth-child(6) { width: 10%; } /* Actions */
+  .data-table-wrapper table th:nth-child(7),
+  .data-table-wrapper table td:nth-child(7) { width: 10%; } /* Reviewed */
+}
+
+/* ================================================================= 
+   REVIEWED STATUS STYLES
+   ================================================================= */
+
+/* Unreviewed transaction highlighting - subtle left border indicator */
+.transaction-unreviewed {
+    border-left: 4px solid #FBBF24 !important;
+    background-color: #FFFBEB !important;
+}
+
+.transaction-unreviewed:hover {
+    background-color: #FEF3C7 !important;
+}
+
+/* Mobile card unreviewed styling */
+.transaction-card.transaction-unreviewed {
+    border-left: 4px solid #FBBF24;
+    background-color: #FFFBEB;
+}
+
+/* Reviewed checkbox styling */
+.reviewed-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reviewed-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--accent-color);
+    transition: transform 0.15s ease;
+}
+
+.reviewed-checkbox:hover {
+    transform: scale(1.1);
+}
+
+.reviewed-checkbox:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+/* Mobile reviewed checkbox positioning */
+.mobile-reviewed-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.mobile-reviewed-checkbox label {
+    font-size: 0.75rem;
+    color: var(--text-mellow);
+    margin: 0;
+}
+
+/* Unreviewed indicator badge for mobile */
+.unreviewed-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    background-color: #FEF3C7;
+    color: #92400E;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.unreviewed-indicator svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Desktop table reviewed column header */
+.reviewed-header {
+    text-align: center !important;
 }

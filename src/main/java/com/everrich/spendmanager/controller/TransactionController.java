@@ -200,6 +200,9 @@ public class TransactionController {
 
             transaction.setCategorizationStatus(TransactionCategorizationStatus.USER_CATEGORIZED);
             
+            // Mark transaction as reviewed when explicitly saved/edited by user
+            transaction.setReviewed(true);
+            
             log.info("Going to save transaction...");
             log.info("T-ID {} | RAG Category (String): {} | Entity Set: {} | Account Set: {}", 
                      transaction.getId(), 

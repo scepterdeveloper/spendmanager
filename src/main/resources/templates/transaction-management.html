@@ -4,6 +4,9 @@
 <head>
     <title th:text="${appName} + ' - Transaction Management'">EverRich - Transaction Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- CSRF Token for AJAX requests -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
         /* Page-specific styles for Transaction Management */
@@ -28,7 +31,8 @@
 <body>
     <div th:replace="fragments/header :: appHeader"></div>
 
-    <div id="toast-container"></div>
+    <div th:replace="~{fragments/toast-script :: #toast-container}"></div>
+    <div th:replace="~{fragments/toast-script :: toastScript}"></div>
     
     <div id="confirmation-modal" class="modal">
         <div class="modal-content">
@@ -172,10 +176,11 @@
                     <th>Amount</th>
                     <th>Category</th>
                     <th>Actions</th>
+                    <th class="reviewed-header">Reviewed</th>
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="transaction : ${transactions}">
+                <tr th:each="transaction : ${transactions}" th:classappend="${!transaction.reviewed ? 'transaction-unreviewed' : ''}">
                     <td th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</td>
                     <td th:text="${transaction.account != null ? transaction.account.id + ' - ' + transaction.account.name : 'N/A'}">Account Info</td>
                     <td th:text="${transaction.description}">Netflix Subscription</td>
@@ -201,9 +206,18 @@
                             </form>
                         </div>
                     </td>
+                    <td>
+                        <div class="reviewed-checkbox-wrapper">
+                            <input type="checkbox" 
+                                   class="reviewed-checkbox" 
+                                   th:checked="${transaction.reviewed}" 
+                                   th:attr="data-transaction-id=${transaction.id}"
+                                   title="Mark as reviewed">
+                        </div>
+                    </td>
                 </tr>
                 <tr th:if="${transactions.empty}">
-                    <td colspan="6" style="text-align: center; padding: 2rem;">No transactions match the current filter criteria.</td>
+                    <td colspan="7" style="text-align: center; padding: 2rem;">No transactions match the current filter criteria.</td>
                 </tr>
             </tbody>
         </table>
@@ -211,7 +225,7 @@
 
         <!-- Mobile Cards -->
         <div class="transaction-list-mobile">
-            <div th:each="transaction : ${transactions}" class="transaction-card">
+            <div th:each="transaction : ${transactions}" class="transaction-card" th:classappend="${!transaction.reviewed ? 'transaction-unreviewed' : ''}">
                 <div class="card-header">
                     <div class="card-date-account">
                         <span th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</span> |
@@ -231,6 +245,15 @@
                     </div>
                     
                     <div class="card-actions-inline">
+                        <!-- Reviewed Checkbox - Mobile -->
+                        <div class="mobile-reviewed-checkbox">
+                            <input type="checkbox" 
+                                   class="reviewed-checkbox" 
+                                   th:checked="${transaction.reviewed}" 
+                                   th:attr="data-transaction-id=${transaction.id}"
+                                   th:id="${'mobile-reviewed-' + transaction.id}"
+                                   title="Mark as reviewed">
+                        </div>
                         <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" 
                            class="btn-icon-edit" title="Edit">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -613,6 +636,86 @@
             window.addEventListener('load', function () {
                 categoryCheckboxes.forEach(cb => cb.disabled = false);
                 accountCheckboxes.forEach(cb => cb.disabled = false);
+            });
+
+            // Reviewed Checkbox - Async Toggle
+            const reviewedCheckboxes = document.querySelectorAll('.reviewed-checkbox');
+            
+            // Get CSRF token from meta tags
+            const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+            
+            reviewedCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', async function() {
+                    const transactionId = this.getAttribute('data-transaction-id');
+                    const isReviewed = this.checked;
+                    const row = this.closest('tr') || this.closest('.transaction-card');
+                    
+                    // Disable checkbox while saving
+                    this.disabled = true;
+                    
+                    try {
+                        const headers = {
+                            'Content-Type': 'application/json',
+                        };
+                        headers[csrfHeader] = csrfToken;
+                        
+                        const response = await fetch(`/api/transactions/${transactionId}/reviewed`, {
+                            method: 'PATCH',
+                            headers: headers,
+                            body: JSON.stringify({ reviewed: isReviewed })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Show success toast
+                            const message = isReviewed 
+                                ? 'Transaction marked as reviewed' 
+                                : 'Transaction marked as not reviewed';
+                            showToast(message, 'success');
+                            
+                            // Update row highlighting
+                            if (row) {
+                                if (isReviewed) {
+                                    row.classList.remove('transaction-unreviewed');
+                                } else {
+                                    row.classList.add('transaction-unreviewed');
+                                }
+                            }
+                            
+                            // Sync the other checkbox (mobile/desktop) with same transaction ID
+                            const allCheckboxesForTransaction = document.querySelectorAll(
+                                `.reviewed-checkbox[data-transaction-id="${transactionId}"]`
+                            );
+                            allCheckboxesForTransaction.forEach(cb => {
+                                if (cb !== this) {
+                                    cb.checked = isReviewed;
+                                    const otherRow = cb.closest('tr') || cb.closest('.transaction-card');
+                                    if (otherRow) {
+                                        if (isReviewed) {
+                                            otherRow.classList.remove('transaction-unreviewed');
+                                        } else {
+                                            otherRow.classList.add('transaction-unreviewed');
+                                        }
+                                    }
+                                }
+                            });
+                        } else {
+                            // Revert checkbox on failure
+                            this.checked = !isReviewed;
+                            showToast('Failed to update transaction status', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error updating reviewed status:', error);
+                        // Revert checkbox on error
+                        this.checked = !isReviewed;
+                        showToast('Error updating transaction status', 'error');
+                    } finally {
+                        // Re-enable checkbox
+                        this.disabled = false;
+                    }
+                });
             });
         });
     </script>
