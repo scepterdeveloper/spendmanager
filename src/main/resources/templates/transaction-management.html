@@ -247,6 +247,7 @@
                     <div class="card-actions-inline">
                         <!-- Reviewed Checkbox - Mobile -->
                         <div class="mobile-reviewed-checkbox">
+                            <label th:for="${'mobile-reviewed-' + transaction.id}" class="reviewed-label">Reviewed</label>
                             <input type="checkbox" 
                                    class="reviewed-checkbox" 
                                    th:checked="${transaction.reviewed}" 
