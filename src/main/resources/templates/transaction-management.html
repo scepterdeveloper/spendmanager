@@ -192,6 +192,7 @@
                         <div class="action-buttons-container">
                             <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
                             <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post" style="display:inline;">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                 <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
                                 <input type="hidden" name="startDate" th:if="${selectedStartDate != null}" th:value="${selectedStartDate}" />
                                 <input type="hidden" name="endDate" th:if="${selectedEndDate != null}" th:value="${selectedEndDate}" />
@@ -263,6 +264,7 @@
                             </svg>
                         </a>
                         <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post" style="display: inline;">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                             <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
                             <input type="hidden" name="startDate" th:if="${selectedStartDate != null}" th:value="${selectedStartDate}" />
                             <input type="hidden" name="endDate" th:if="${selectedEndDate != null}" th:value="${selectedEndDate}" />
@@ -288,6 +290,7 @@
                 <div class="card-actions" style="display: none;">
                     <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
                     <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                         <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
                         <input type="hidden" name="startDate" th:if="${selectedStartDate != null}" th:value="${selectedStartDate}" />
                         <input type="hidden" name="endDate" th:if="${selectedEndDate != null}" th:value="${selectedEndDate}" />
@@ -591,10 +594,12 @@
             function showModal(message, callback) {
                 modalMessage.textContent = message;
                 confirmAction = callback;
+                modal.style.display = 'flex';
                 modal.classList.add('show');
             }
 
             modalConfirmBtn.onclick = () => {
+                modal.style.display = 'none';
                 modal.classList.remove('show');
                 if (confirmAction) {
                     confirmAction(true);
@@ -603,6 +608,7 @@
             };
 
             modalCancelBtn.onclick = () => {
+                modal.style.display = 'none';
                 modal.classList.remove('show');
                 confirmAction = null;
             };
