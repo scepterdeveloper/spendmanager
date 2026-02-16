@@ -33,51 +33,116 @@
             display: flex;
             align-items: center;
         }
-        .navbar-user {
-            margin-left: 1.5rem;
-            color: #D1D5DB;
-            position: relative;
-            cursor: pointer;
-        }
         
-        /* User dropdown menu */
+        /* User dropdown menu - Modern Hover-based */
         .user-dropdown {
             position: relative;
             display: inline-block;
         }
         
-        .user-dropdown-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            top: 100%;
-            background-color: #1F2937;
-            min-width: 160px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border-radius: 0;
-            z-index: 1000;
-            margin-top: 0;
-            overflow: hidden;
+        .navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: #D1D5DB;
+            cursor: pointer;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            font-size: 0.875rem;
         }
         
-        .user-dropdown-content.show {
-            display: block;
+        .navbar-user:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #F9FAFB;
+        }
+        
+        .user-avatar {
+            width: 1.75rem;
+            height: 1.75rem;
+            background: linear-gradient(135deg, var(--accent-color), #059669);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .user-name {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        
+        /* Modern chevron indicator */
+        .dropdown-indicator {
+            width: 0.375rem;
+            height: 0.375rem;
+            border-right: 1.5px solid currentColor;
+            border-bottom: 1.5px solid currentColor;
+            transform: rotate(45deg);
+            transition: transform 0.2s ease;
+            margin-top: -2px;
+            opacity: 0.7;
+        }
+        
+        .user-dropdown:hover .dropdown-indicator,
+        .user-dropdown.active .dropdown-indicator {
+            transform: rotate(-135deg);
+            margin-top: 2px;
+        }
+        
+        .user-dropdown-content {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 0.25rem);
+            background-color: #1F2937;
+            min-width: 140px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25), 0 4px 10px rgba(0, 0, 0, 0.15);
+            border-radius: 0.5rem;
+            z-index: 1000;
+            overflow: hidden;
+            transform: translateY(-8px);
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+        }
+        
+        /* Hover-based dropdown for desktop only (screens wider than 768px) */
+        @media (min-width: 769px) {
+            .user-dropdown:hover .user-dropdown-content {
+                visibility: visible;
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Click/tap based dropdown (active class) - works on all devices */
+        .user-dropdown.active .user-dropdown-content {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
         }
         
         .user-dropdown-content a,
         .user-dropdown-content button {
             color: #E5E7EB;
-            padding: 0.75rem 1rem;
+            padding: 0.625rem 1rem;
             text-decoration: none;
             display: block;
             background: none;
             border: none;
             width: 100%;
             text-align: left;
-            font-size: 0.95rem;
+            font-size: 0.8125rem;
             cursor: pointer;
             font-family: inherit;
-            transition: background-color 0.2s;
+            transition: background-color 0.15s ease;
         }
         
         .user-dropdown-content a:hover,
@@ -87,17 +152,52 @@
         
         .user-dropdown-content .logout-btn {
             color: #FCA5A5;
-            border-top: 1px solid #374151;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         
         .user-dropdown-content .logout-btn:hover {
-            background-color: #7F1D1D;
+            background-color: rgba(127, 29, 29, 0.5);
             color: #FEE2E2;
         }
         
-        .dropdown-arrow {
-            margin-left: 0.25rem;
-            font-size: 0.75rem;
+        .logout-icon {
+            width: 0.875rem;
+            height: 0.875rem;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        /* Responsive adjustments for mobile */
+        @media (max-width: 640px) {
+            .navbar {
+                padding: 0.75rem 1rem;
+            }
+            
+            .navbar-title a {
+                font-size: 1.25rem;
+            }
+            
+            .navbar-user {
+                padding: 0.375rem 0.5rem;
+                font-size: 0.8125rem;
+            }
+            
+            .user-avatar {
+                width: 1.5rem;
+                height: 1.5rem;
+                font-size: 0.625rem;
+            }
+            
+            .user-name {
+                max-width: 80px;
+            }
+            
+            .user-dropdown-content {
+                min-width: 120px;
+            }
         }
 
         /* --- Global Body & Container Styles --- */
@@ -147,11 +247,22 @@
         </div>
         <div class="navbar-links">
             <div class="user-dropdown" sec:authorize="isAuthenticated()" id="user-dropdown">
-                <span class="navbar-user" id="user-menu-toggle">👤 <span th:text="${#authentication.principal.fullName}">User</span> <span class="dropdown-arrow">▼</span></span>
+                <div class="navbar-user" id="user-menu-toggle">
+                    <span class="user-avatar" th:text="${#authentication.principal.fullName != null ? #strings.substring(#authentication.principal.fullName, 0, 1).toUpperCase() : 'U'}">U</span>
+                    <span class="user-name" th:text="${#authentication.principal.fullName}">User</span>
+                    <span class="dropdown-indicator"></span>
+                </div>
                 <div class="user-dropdown-content" id="user-dropdown-content">
                     <form th:action="@{/logout}" method="post" style="margin: 0;">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <button type="submit" class="logout-btn">Logout</button>
+                        <button type="submit" class="logout-btn">
+                            <svg class="logout-icon" viewBox="0 0 24 24">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                <polyline points="16 17 21 12 16 7"/>
+                                <line x1="21" y1="12" x2="9" y2="12"/>
+                            </svg>
+                            Logout
+                        </button>
                     </form>
                 </div>
             </div>
@@ -159,27 +270,34 @@
     </nav>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const userDropdown = document.getElementById('user-dropdown');
             const userMenuToggle = document.getElementById('user-menu-toggle');
-            const dropdownContent = document.getElementById('user-dropdown-content');
             
-            if (userMenuToggle && dropdownContent) {
-                // Toggle dropdown on click/tap
+            if (userDropdown && userMenuToggle) {
+                // Click/tap support for all devices (including mobile emulation)
                 userMenuToggle.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    dropdownContent.classList.toggle('show');
+                    userDropdown.classList.toggle('active');
                 });
                 
-                // Close dropdown when clicking outside
+                // Close dropdown when clicking/tapping outside
                 document.addEventListener('click', function(e) {
-                    if (!dropdownContent.contains(e.target) && !userMenuToggle.contains(e.target)) {
-                        dropdownContent.classList.remove('show');
+                    if (!userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('active');
                     }
                 });
                 
                 // Close dropdown on escape key
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
-                        dropdownContent.classList.remove('show');
+                        userDropdown.classList.remove('active');
+                    }
+                });
+                
+                // Close dropdown when mouse leaves (only for wider screens where hover is enabled)
+                userDropdown.addEventListener('mouseleave', function() {
+                    if (window.innerWidth > 768) {
+                        userDropdown.classList.remove('active');
                     }
                 });
             }
