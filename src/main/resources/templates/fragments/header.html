@@ -35,7 +35,69 @@
         }
         .navbar-user {
             margin-left: 1.5rem;
-            color: #D1D5DB; 
+            color: #D1D5DB;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        /* User dropdown menu */
+        .user-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .user-dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background-color: #1F2937;
+            min-width: 160px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-radius: 0;
+            z-index: 1000;
+            margin-top: 0;
+            overflow: hidden;
+        }
+        
+        .user-dropdown-content.show {
+            display: block;
+        }
+        
+        .user-dropdown-content a,
+        .user-dropdown-content button {
+            color: #E5E7EB;
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            display: block;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background-color 0.2s;
+        }
+        
+        .user-dropdown-content a:hover,
+        .user-dropdown-content button:hover {
+            background-color: #374151;
+        }
+        
+        .user-dropdown-content .logout-btn {
+            color: #FCA5A5;
+            border-top: 1px solid #374151;
+        }
+        
+        .user-dropdown-content .logout-btn:hover {
+            background-color: #7F1D1D;
+            color: #FEE2E2;
+        }
+        
+        .dropdown-arrow {
+            margin-left: 0.25rem;
+            font-size: 0.75rem;
         }
 
         /* --- Global Body & Container Styles --- */
@@ -84,7 +146,43 @@
             <a href="/dashboard" th:text="${appName}">EverRich</a>
         </div>
         <div class="navbar-links">
-            <span class="navbar-user" sec:authorize="isAuthenticated()">👤 <span th:text="${#authentication.principal.fullName}">User</span></span>
+            <div class="user-dropdown" sec:authorize="isAuthenticated()" id="user-dropdown">
+                <span class="navbar-user" id="user-menu-toggle">👤 <span th:text="${#authentication.principal.fullName}">User</span> <span class="dropdown-arrow">▼</span></span>
+                <div class="user-dropdown-content" id="user-dropdown-content">
+                    <form th:action="@{/logout}" method="post" style="margin: 0;">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="logout-btn">Logout</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </nav>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userMenuToggle = document.getElementById('user-menu-toggle');
+            const dropdownContent = document.getElementById('user-dropdown-content');
+            
+            if (userMenuToggle && dropdownContent) {
+                // Toggle dropdown on click/tap
+                userMenuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdownContent.classList.toggle('show');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!dropdownContent.contains(e.target) && !userMenuToggle.contains(e.target)) {
+                        dropdownContent.classList.remove('show');
+                    }
+                });
+                
+                // Close dropdown on escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        dropdownContent.classList.remove('show');
+                    }
+                });
+            }
+        });
+    </script>
 </header>

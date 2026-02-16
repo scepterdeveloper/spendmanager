@@ -28,7 +28,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/css/**", "/login", "/register", "/register/**", "/password-reset/**").permitAll()
+                .requestMatchers("/css/**", "/login", "/logout-success", "/register", "/register/**", "/password-reset/**").permitAll()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .permitAll()
             )
             .logout(logout -> logout
+                .logoutSuccessUrl("/logout-success")
                 .permitAll()
             )
             // Add TenantFilter after authentication to set tenant context
