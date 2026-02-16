@@ -74,11 +74,15 @@
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #E5E7EB; }
         .divider span { padding: 0 1rem; }
         .footer-text { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: #9CA3AF; }
-        /* Mobile: Full screen login */
+        /* Mobile: Full screen login with branded hero */
         @media (max-width: 480px) { 
             body {
                 align-items: stretch;
                 overflow: auto;
+                background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+            }
+            body::before, body::after {
+                display: none;
             }
             .login-wrapper { 
                 max-width: 100%; 
@@ -88,14 +92,103 @@
                 flex-direction: column;
             }
             .login-card { 
-                padding: 2rem 1.5rem; 
+                padding: 0;
                 border-radius: 0;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
-                justify-content: center;
-            } 
-            .login-logo { font-size: 1.75rem; } 
+                box-shadow: none;
+                background: transparent;
+            }
+            /* Mobile Hero Branding Section */
+            .login-header {
+                background: transparent;
+                margin: 0;
+                padding: 3rem 1.5rem 2rem 1.5rem;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+            .login-header::before {
+                content: '';
+                position: absolute;
+                width: 200px;
+                height: 200px;
+                background: var(--brand-color);
+                border-radius: 50%;
+                filter: blur(80px);
+                opacity: 0.3;
+                top: -50px;
+                right: -50px;
+            }
+            .login-header::after {
+                content: '';
+                position: absolute;
+                width: 150px;
+                height: 150px;
+                background: #6366F1;
+                border-radius: 50%;
+                filter: blur(60px);
+                opacity: 0.25;
+                bottom: -30px;
+                left: -30px;
+            }
+            .login-logo {
+                font-size: 2.5rem;
+                color: var(--brand-color);
+                margin-bottom: 0.5rem;
+                position: relative;
+                z-index: 1;
+            }
+            .login-subtitle {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 1rem;
+                position: relative;
+                z-index: 1;
+            }
+            /* Mobile Form Section */
+            .mobile-form-section {
+                padding: 2rem 1.5rem;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            .alert { margin-bottom: 1.25rem; border-radius: 0; }
+            .input-group { margin-bottom: 1.25rem; }
+            .input-group input {
+                padding: 1.1rem 1rem 1.1rem 3rem;
+                font-size: 1rem;
+                border-radius: 0;
+                background: rgba(255, 255, 255, 0.95);
+            }
+            .btn-login {
+                padding: 1.1rem;
+                font-size: 1.05rem;
+                border-radius: 0;
+                margin-top: 0.5rem;
+            }
+            .btn-register {
+                padding: 1rem;
+                border-radius: 0;
+                background: transparent;
+                border-color: var(--brand-color);
+                color: var(--brand-color);
+            }
+            .btn-register:hover {
+                background: var(--brand-color);
+                color: white;
+            }
+            .divider { margin: 1.25rem 0; color: rgba(255, 255, 255, 0.5); }
+            .divider::before, .divider::after { border-color: rgba(255, 255, 255, 0.2); }
+            .footer-text { 
+                margin-top: auto; 
+                padding-top: 1.5rem;
+                padding-bottom: 1rem;
+                color: rgba(255, 255, 255, 0.5);
+            }
+            .forgot-password-link a {
+                color: var(--brand-color);
+            }
         }
     </style>
 </head>
@@ -106,6 +199,7 @@
                 <div class="login-logo">EverRich</div>
                 <div class="login-subtitle">Welcome back! Please sign in.</div>
             </div>
+            <div class="mobile-form-section">
             <!-- Registration Complete Message -->
             <div th:if="${registrationComplete}" class="alert alert-success">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -138,6 +232,7 @@
             <div class="divider"><span>or</span></div>
             <a th:href="@{/register}" class="btn-register">Register</a>
             <div class="footer-text">Secure login powered by Spring Security</div>
+            </div>
         </div>
     </div>
 </body>
