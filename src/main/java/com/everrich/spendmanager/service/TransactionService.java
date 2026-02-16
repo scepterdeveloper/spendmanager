@@ -12,10 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.everrich.spendmanager.entities.Statement;
 import com.everrich.spendmanager.entities.Account;
+import com.everrich.spendmanager.entities.TransactionOperation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
@@ -324,5 +326,37 @@ public class TransactionService {
                 query);
 
         return filteredList;
+    }
+
+    /**
+     * Calculate total credits (PLUS operations) from a list of transactions.
+     */
+    public BigDecimal calculateTotalCredits(List<Transaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        double sum = transactions.stream()
+                .filter(t -> t.getOperation() == TransactionOperation.PLUS)
+                .map(Transaction::getAmount)
+                .filter(amount -> amount != null)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+        return BigDecimal.valueOf(sum);
+    }
+
+    /**
+     * Calculate total debits (MINUS operations) from a list of transactions.
+     */
+    public BigDecimal calculateTotalDebits(List<Transaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        double sum = transactions.stream()
+                .filter(t -> t.getOperation() == TransactionOperation.MINUS)
+                .map(Transaction::getAmount)
+                .filter(amount -> amount != null)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+        return BigDecimal.valueOf(sum);
     }
 }

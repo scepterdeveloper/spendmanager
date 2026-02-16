@@ -18,6 +18,7 @@ import com.everrich.spendmanager.service.TransactionService;
 import com.everrich.spendmanager.entities.TransactionOperation;
 
 import java.beans.PropertyEditorSupport;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -122,6 +123,12 @@ public class TransactionController {
         model.addAttribute("transactions", filteredTransactions);
         model.addAttribute("categories", categoryService.findAll());
         model.addAttribute("accounts", accountService.findAll());
+    
+        // Calculate and add totals for credits and debits
+        BigDecimal totalCredits = transactionService.calculateTotalCredits(filteredTransactions);
+        BigDecimal totalDebits = transactionService.calculateTotalDebits(filteredTransactions);
+        model.addAttribute("totalCredits", totalCredits);
+        model.addAttribute("totalDebits", totalDebits);
     
         model.addAttribute("selectedTimeframe", timeframe);
         model.addAttribute("selectedStartDate", startDateStr); 
