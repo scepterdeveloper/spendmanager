@@ -1,6 +1,6 @@
 package com.everrich.spendmanager.entities;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -25,7 +25,7 @@ public class Transaction {
     private Long statementId; 
     
     @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private LocalDate date;
+    private LocalDateTime date;
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     private double amount;
@@ -91,11 +91,11 @@ public class Transaction {
         this.statementId = statementId;
     }
 
-    public LocalDate getDate() {
+    public LocalDateTime getDate() {
         return date;
     }
 
-    public void setDate(LocalDate date) {
+    public void setDate(LocalDateTime date) {
         this.date = date;
     }
 

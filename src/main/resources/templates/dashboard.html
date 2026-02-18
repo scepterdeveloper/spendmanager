@@ -245,6 +245,15 @@
 
 <body>
     <div th:replace="~{fragments/header :: appHeader}"></div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+    
+    <!-- Flash message data for JavaScript -->
+    <div id="flash-message-data" 
+         th:if="${message}" 
+         th:attr="data-message=${message}, data-type=${messageType}" 
+         style="display: none;"></div>
 
     <div id="category-data" th:attr="data-category-count=${categoryCount}"></div>
 
@@ -348,7 +357,7 @@
                         </div>
                         <div class="link-text-content">
                             <span class="link-label">Create</span>
-                            <span class="link-subtext">Create transactions manually</span>
+                            <span class="link-subtext">Enter/Scan transactions</span>
                         </div>
                     </a>
                     <a th:href="@{/statements}" class="sleek-link">
@@ -367,14 +376,13 @@
                     <a th:href="@{/transactions}" class="sleek-link">
                         <div class="link-icon-wrapper">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="17 8 12 3 7 8" />
-                                <line x1="12" y1="3" x2="12" y2="15" />
+                                <path d="M9 11l3 3L22 4" />
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                             </svg>
                         </div>
                         <div class="link-text-content">
                             <span class="link-label">Review</span>
-                            <span class="link-subtext">View/Edit Transactions</span>
+                            <span class="link-subtext">View/Edit transactions</span>
                         </div>
                     </a>
                 </div>
@@ -439,7 +447,19 @@
                         </div>
                         <div class="link-text-content">
                             <span class="link-label">Accounts</span>
-                            <span class="link-subtext">Manage Accounts</span>
+                            <span class="link-subtext">Manage accounts</span>
+                        </div>
+                    </a>
+                    <a th:href="@{/balances}" class="sleek-link">
+                        <div class="link-icon-wrapper">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <line x1="12" y1="1" x2="12" y2="23" />
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                        </div>
+                        <div class="link-text-content">
+                            <span class="link-label">Balances</span>
+                            <span class="link-subtext">Manage account balances</span>
                         </div>
                     </a>
                 </div>
@@ -459,7 +479,7 @@
                         </div>
                         <div class="link-text-content">
                             <span class="link-label">Autocategorization</span>
-                            <span class="link-subtext">AI Training Data</span>
+                            <span class="link-subtext">Auto categorization config.</span>
                         </div>
                     </a>
                     <a th:href="@{/prompts}" class="sleek-link">
@@ -474,7 +494,7 @@
                         </div>
                         <div class="link-text-content">
                             <span class="link-label">Prompts</span>
-                            <span class="link-subtext">System AI prompts</span>
+                            <span class="link-subtext">Manage LLM prompts</span>
                         </div>
                     </a>
                 </div>
@@ -483,6 +503,10 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <!-- Toast Script -->
+    <script th:replace="~{fragments/toast-script :: toastScript}"></script>
+    
     <script>
         // KPI Carousel Logic
         const container = document.getElementById('kpiContainer');
@@ -510,6 +534,18 @@
         container.addEventListener('scroll', updateArrows);
         window.addEventListener('load', updateArrows);
         window.addEventListener('resize', updateArrows);
+
+        // Show flash message toast if present
+        document.addEventListener('DOMContentLoaded', function () {
+            const flashData = document.getElementById('flash-message-data');
+            if (flashData && flashData.dataset.message) {
+                const message = flashData.dataset.message;
+                const type = flashData.dataset.type || 'success';
+                if (window.showToast) {
+                    window.showToast(message, type);
+                }
+            }
+        });
 
         // Charts Carousel & Rendering Logic
         document.addEventListener('DOMContentLoaded', function () {

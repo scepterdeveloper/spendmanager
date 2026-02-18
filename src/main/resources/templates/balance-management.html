@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title th:text="${appName} + ' - Balances'">EverRich - Balances</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" th:href="@{/css/app-theme.css}">
+    <style>
+        /* Page-specific styles for Balance Management */
+        
+        /* Balance totals header */
+        .balance-totals-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .balance-totals-header h3 {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+        
+        .balance-totals {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.1rem;
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        
+        .balance-totals .total-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            white-space: nowrap;
+        }
+        
+        .balance-totals .total-label {
+            color: #6B7280;
+            font-weight: 500;
+        }
+        
+        .balance-totals .total-amount {
+            font-weight: 600;
+        }
+        
+        .balance-totals .net-positive {
+            color: var(--success-color, #10B981);
+        }
+        
+        .balance-totals .net-negative {
+            color: var(--danger-color, #EF4444);
+        }
+        
+        /* Balance table specific styles */
+        .amount-positive {
+            color: var(--success-color, #10B981);
+        }
+        
+        .amount-negative {
+            color: var(--danger-color, #EF4444);
+        }
+        
+        .net-change-positive {
+            color: var(--success-color, #10B981);
+            font-weight: 600;
+        }
+        
+        .net-change-negative {
+            color: var(--danger-color, #EF4444);
+            font-weight: 600;
+        }
+        
+        /* Balance card for mobile */
+        .balance-card {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .balance-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .balance-card .account-name {
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+        
+        .balance-card .card-body {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+        }
+        
+        .balance-card .balance-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .balance-card .balance-label {
+            font-size: 0.7rem;
+            color: #6B7280;
+            text-transform: uppercase;
+        }
+        
+        .balance-card .balance-value {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        /* Mobile list - hidden on desktop */
+        .balance-list-mobile {
+            display: none;
+        }
+        
+        @media (max-width: 767px) {
+            .page-header h2::after {
+                content: "Balances";
+            }
+
+            .page-header h2 {
+                font-size: 0;
+            }
+
+            .page-header h2::after {
+                font-size: 1.25rem;
+            }
+            
+            .balance-totals-header {
+                flex-direction: row;
+                align-items: baseline;
+                flex-wrap: nowrap;
+            }
+            
+            .balance-totals-header h3 {
+                font-size: 0.85rem;
+                flex-shrink: 0;
+            }
+            
+            .balance-totals {
+                flex-direction: column;
+                align-items: flex-end;
+                font-size: 0.7rem;
+                gap: 0;
+                line-height: 1.2;
+            }
+            
+            /* Hide desktop table, show mobile cards */
+            .data-table-wrapper {
+                display: none;
+            }
+            
+            .balance-list-mobile {
+                display: block;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div th:replace="fragments/header :: appHeader"></div>
+
+    <div th:replace="~{fragments/toast-script :: #toast-container}"></div>
+    <div th:replace="~{fragments/toast-script :: toastScript}"></div>
+
+    <div class="content-container-full">
+        <div class="page-header">
+            <a href="/dashboard" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+                Back
+            </a>
+            <h2>Account Balances</h2>
+        </div>
+
+        <div class="content-wrapper">
+            <form id="filter-form" action="/balances" method="get">
+                <input type="checkbox" id="filter-toggle" name="filter-toggle-state" 
+                    th:checked="${selectedTimeframe != 'current_month' or selectedAccountIds != null}">
+
+                <div class="filter-summary">
+                    <label for="filter-toggle" class="filter-toggle-label">
+                        Applied Filters
+                        <svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </label>
+                    <div class="summary-content" id="filter-summary-content"></div>
+                </div>
+
+                <div class="filter-controls">
+                    <div class="filter-grid">
+                        <!-- Timeframe -->
+                        <div class="filter-field">
+                            <label for="timeframe">Timeframe</label>
+                            <select id="timeframe" name="timeframe">
+                                <option value="current_month" th:selected="${selectedTimeframe == 'current_month'}">This Month</option>
+                                <option value="last_month" th:selected="${selectedTimeframe == 'last_month'}">Previous Month</option>
+                                <option value="current_year" th:selected="${selectedTimeframe == 'current_year'}">This Year</option>
+                                <option value="previous_year" th:selected="${selectedTimeframe == 'previous_year'}">Previous Year</option>
+                                <option value="entire_timeframe" th:selected="${selectedTimeframe == 'entire_timeframe'}">Entire Timeframe</option>
+                                <option value="date_range" th:selected="${selectedTimeframe == 'date_range'}">Date Range</option>
+                            </select>
+                            <div id="date-range-fields" class="date-inputs">
+                                <input type="date" id="start-date" name="startDate" placeholder="From Date"
+                                    th:value="${selectedStartDate != null ? selectedStartDate : ''}" 
+                                    onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+                                <input type="date" id="end-date" name="endDate" placeholder="To Date"
+                                    th:value="${selectedEndDate != null ? selectedEndDate : ''}"
+                                    onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+                            </div>
+                        </div>
+
+                        <!-- Account -->
+                        <div class="filter-field category-group">
+                            <label for="account-display">Account</label>
+                            <div style="display: flex; align-items: center;">
+                                <input type="text" id="account-display" placeholder="Select accounts" readonly style="cursor: pointer; flex: 1;" value="Selected: " />
+                                <span id="account-selected-count" style="margin-left: -50px; font-size: 0.85rem; color: var(--accent-color); font-weight: bold; z-index: 5; min-width: 40px; text-align: left;">All</span>
+                            </div>
+                            <div id="account-list-dropdown" style="display:none;">
+                                <div class="category-toggle-container">
+                                    <div>
+                                        <input type="checkbox" id="select-all-accounts">
+                                        <label for="select-all-accounts">Select All</label>
+                                    </div>
+                                    <div>
+                                        <input type="checkbox" id="clear-all-accounts">
+                                        <label for="clear-all-accounts">Clear All</label>
+                                    </div>
+                                </div>
+                                <div th:each="account : ${accounts}">
+                                    <input type="checkbox" th:id="${'acc-' + account.id}" name="accountIds"
+                                        th:value="${account.id}" class="account-checkbox"
+                                        th:checked="${selectedAccountIds != null and #lists.contains(selectedAccountIds, account.id)}">
+                                    <label th:for="${'acc-' + account.id}" th:text="${account.id + ' - ' + account.name}">Account Name</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="apply-filters-btn" class="btn-filter">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="balance-totals-header">
+            <h3 th:text="${#lists.size(balanceSummaries)} + ' account(s)'">0 account(s)</h3>
+            <div class="balance-totals" th:if="${!balanceSummaries.empty}">
+                <span class="total-item">
+                    <span class="total-label">Total Net Change:</span>
+                    <span class="total-amount" 
+                          th:classappend="${totalNetChange.signum() >= 0 ? 'net-positive' : 'net-negative'}"
+                          th:text="${(totalNetChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(totalNetChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                </span>
+            </div>
+        </div>
+        
+        <!-- Desktop Table -->
+        <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Account</th>
+                    <th>Starting Balance</th>
+                    <th>Closing Balance</th>
+                    <th>Net Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="summary : ${balanceSummaries}">
+                    <td th:text="${summary.accountName}">Account Name</td>
+                    <td th:text="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                    <td th:text="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                    <td th:classappend="${summary.netChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}">
+                        <span th:text="${(summary.netChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </td>
+                </tr>
+                <!-- Totals Row -->
+                <tr th:if="${!balanceSummaries.empty}" style="font-weight: bold; border-top: 2px solid #E5E7EB;">
+                    <td>Total</td>
+                    <td th:text="${#numbers.formatDecimal(totalStartingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                    <td th:text="${#numbers.formatDecimal(totalClosingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                    <td th:classappend="${totalNetChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}">
+                        <span th:text="${(totalNetChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(totalNetChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </td>
+                </tr>
+                <tr th:if="${balanceSummaries.empty}">
+                    <td colspan="4" style="text-align: center; padding: 2rem;">No account balances available.</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="balance-list-mobile">
+            <div th:each="summary : ${balanceSummaries}" class="balance-card">
+                <div class="card-header">
+                    <span class="account-name" th:text="${summary.accountName}">Account Name</span>
+                </div>
+                <div class="card-body">
+                    <div class="balance-item">
+                        <span class="balance-label">Starting</span>
+                        <span class="balance-value" th:text="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </div>
+                    <div class="balance-item">
+                        <span class="balance-label">Closing</span>
+                        <span class="balance-value" th:text="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </div>
+                    <div class="balance-item">
+                        <span class="balance-label">Net Change</span>
+                        <span class="balance-value" 
+                              th:classappend="${summary.netChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}"
+                              th:text="${(summary.netChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Totals Card -->
+            <div th:if="${!balanceSummaries.empty}" class="balance-card" style="background: #F9FAFB; border-color: var(--accent-color);">
+                <div class="card-header">
+                    <span class="account-name" style="color: var(--accent-color);">Total (All Accounts)</span>
+                </div>
+                <div class="card-body">
+                    <div class="balance-item">
+                        <span class="balance-label">Starting</span>
+                        <span class="balance-value" th:text="${#numbers.formatDecimal(totalStartingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </div>
+                    <div class="balance-item">
+                        <span class="balance-label">Closing</span>
+                        <span class="balance-value" th:text="${#numbers.formatDecimal(totalClosingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </div>
+                    <div class="balance-item">
+                        <span class="balance-label">Net Change</span>
+                        <span class="balance-value" 
+                              th:classappend="${totalNetChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}"
+                              th:text="${(totalNetChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(totalNetChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${balanceSummaries.empty}" style="text-align: center; padding: 2rem; background-color: white; border-radius: 0.5rem; border: 1px solid #E5E7EB;">
+                No account balances available.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const timeframeSelect = document.getElementById('timeframe');
+            const dateRangeFields = document.getElementById('date-range-fields');
+            const filterSummaryContent = document.getElementById('filter-summary-content');
+            const applyFiltersBtn = document.getElementById('apply-filters-btn');
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            const accountDisplaySelect = document.getElementById('account-display');
+            const accountListDropdown = document.getElementById('account-list-dropdown');
+            const selectAllAccountsCheckbox = document.getElementById('select-all-accounts');
+            const clearAllAccountsCheckbox = document.getElementById('clear-all-accounts');
+            const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+            const accountSelectedCountSpan = document.getElementById('account-selected-count');
+
+            // Validate Date Range and Enable/Disable Apply Button
+            function validateDateRange() {
+                if (timeframeSelect.value === 'date_range') {
+                    const startDate = startDateInput.value;
+                    const endDate = endDateInput.value;
+                    
+                    if (startDate && endDate) {
+                        applyFiltersBtn.disabled = false;
+                    } else {
+                        applyFiltersBtn.disabled = true;
+                    }
+                } else {
+                    applyFiltersBtn.disabled = false;
+                }
+            }
+
+            // Timeframe and Date Range Toggle
+            function toggleDateRangeFields() {
+                if (timeframeSelect.value === 'date_range') {
+                    dateRangeFields.classList.add('show');
+                } else {
+                    dateRangeFields.classList.remove('show');
+                }
+                validateDateRange();
+                updateFilterSummary();
+            }
+
+            timeframeSelect.addEventListener('change', toggleDateRangeFields);
+            startDateInput.addEventListener('change', () => {
+                validateDateRange();
+                updateFilterSummary();
+            });
+            endDateInput.addEventListener('change', () => {
+                validateDateRange();
+                updateFilterSummary();
+            });
+            toggleDateRangeFields();
+
+            // Account Dropdown
+            accountDisplaySelect.onclick = (e) => {
+                accountListDropdown.style.display = accountListDropdown.style.display === 'none' ? 'block' : 'none';
+                e.stopPropagation();
+            };
+            document.onclick = () => accountListDropdown.style.display = 'none';
+            accountListDropdown.onclick = (e) => e.stopPropagation();
+
+            // Account Selection
+            function updateAccountDisplayCount() {
+                const checkedCount = Array.from(accountCheckboxes).filter(cb => cb.checked).length;
+                const totalCount = accountCheckboxes.length;
+
+                let text;
+                if (checkedCount === 0) {
+                    text = 'None';
+                } else if (checkedCount === totalCount) {
+                    text = 'All';
+                } else {
+                    text = checkedCount;
+                }
+                accountSelectedCountSpan.textContent = text;
+                updateFilterSummary();
+            }
+
+            selectAllAccountsCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    accountCheckboxes.forEach(cb => cb.checked = true);
+                    clearAllAccountsCheckbox.checked = false;
+                }
+                updateAccountDisplayCount();
+            });
+
+            clearAllAccountsCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    accountCheckboxes.forEach(cb => cb.checked = false);
+                    selectAllAccountsCheckbox.checked = false;
+                }
+                updateAccountDisplayCount();
+            });
+
+            accountCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function () {
+                    selectAllAccountsCheckbox.checked = false;
+                    clearAllAccountsCheckbox.checked = false;
+
+                    const allChecked = Array.from(accountCheckboxes).every(c => c.checked);
+                    const noneChecked = Array.from(accountCheckboxes).every(c => !c.checked);
+
+                    if (allChecked) selectAllAccountsCheckbox.checked = true;
+                    if (noneChecked) clearAllAccountsCheckbox.checked = true;
+                    
+                    updateAccountDisplayCount();
+                });
+            });
+
+            // Initialize account select-all/clear-all state on page load
+            const allAccountsChecked = Array.from(accountCheckboxes).every(c => c.checked);
+            const noAccountsChecked = Array.from(accountCheckboxes).every(c => !c.checked);
+            if (allAccountsChecked) selectAllAccountsCheckbox.checked = true;
+            if (noAccountsChecked) clearAllAccountsCheckbox.checked = true;
+            
+            updateAccountDisplayCount();
+
+            // Filter Summary
+            function updateFilterSummary() {
+                let summaryHTML = '';
+
+                const selectedTimeframeText = timeframeSelect.options[timeframeSelect.selectedIndex].text;
+                let timeframeValue = selectedTimeframeText;
+
+                if (timeframeSelect.value === 'date_range') {
+                    const startDate = document.getElementById('start-date').value;
+                    const endDate = document.getElementById('end-date').value;
+
+                    const formatDisplayDate = (dateString) => {
+                        if (!dateString) return '';
+                        try {
+                            return new Date(dateString).toLocaleDateString('en-GB', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            });
+                        } catch (e) {
+                            return dateString;
+                        }
+                    };
+
+                    const formattedStart = formatDisplayDate(startDate);
+                    const formattedEnd = formatDisplayDate(endDate);
+
+                    if (startDate && endDate) {
+                        timeframeValue = `${formattedStart} to ${formattedEnd}`;
+                    } else if (startDate) {
+                        timeframeValue = `From ${formattedStart}`;
+                    } else if (endDate) {
+                        timeframeValue = `Up to ${formattedEnd}`;
+                    } else {
+                        timeframeValue = selectedTimeframeText;
+                    }
+                }
+                summaryHTML += `<div><strong>Timeframe:</strong> ${timeframeValue}</div>`;
+
+                // Account filter
+                const checkedAccounts = Array.from(accountCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => document.querySelector(`label[for="${cb.id}"]`).textContent.trim());
+
+                let accountsValue;
+                if (checkedAccounts.length === accountCheckboxes.length || checkedAccounts.length === 0) {
+                    accountsValue = 'All';
+                } else if (checkedAccounts.length > 2) {
+                    accountsValue = `${checkedAccounts.slice(0, 2).join(', ')}, and ${checkedAccounts.length - 2} more`;
+                } else {
+                    accountsValue = checkedAccounts.join(', ');
+                }
+                summaryHTML += `<div><strong>Accounts:</strong> ${accountsValue}</div>`;
+
+                filterSummaryContent.innerHTML = summaryHTML;
+            }
+
+            updateFilterSummary();
+
+            // Handle Filter Submission
+            const filterForm = document.getElementById('filter-form');
+            filterForm.addEventListener('submit', function (event) {
+                if (clearAllAccountsCheckbox.checked || selectAllAccountsCheckbox.checked) {
+                    accountCheckboxes.forEach(cb => cb.disabled = true);
+                }
+            });
+
+            window.addEventListener('load', function () {
+                accountCheckboxes.forEach(cb => cb.disabled = false);
+            });
+        });
+    </script>
+</body>
+
+</html>

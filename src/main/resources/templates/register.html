@@ -4,95 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - EverRich Spend Manager</title>
-    <link rel="stylesheet" th:href="@{/css/app-theme.css}">
-    <style>
-        :root {
-            --header-bg: #1F2937;
-            --brand-color: #10B981;
-            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(135deg, #1F2937 0%, #111827 50%, #1F2937 100%);
-            font-family: var(--font-family); overflow: hidden;
-        }
-        body::before, body::after {
-            content: ''; position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.4; z-index: 0;
-        }
-        body::before {
-            width: 400px; height: 400px; background: var(--brand-color); top: -100px; right: -100px;
-            animation: float 8s ease-in-out infinite;
-        }
-        body::after {
-            width: 300px; height: 300px; background: #6366F1; bottom: -50px; left: -50px;
-            animation: float 6s ease-in-out infinite reverse;
-        }
-        @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 30px); } }
-        .register-wrapper { width: 100%; max-width: 420px; padding: 1rem; position: relative; z-index: 1; }
-        .register-card {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 0;
-            padding: 2.5rem 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
-        }
-        .register-header { text-align: center; margin-bottom: 2rem; }
-        .register-logo { font-size: 2rem; font-weight: 700; color: var(--brand-color); margin-bottom: 0.25rem; letter-spacing: -0.5px; }
-        .register-subtitle { font-size: 0.875rem; color: #9CA3AF; font-weight: 400; }
-        .input-group { position: relative; margin-bottom: 1.25rem; }
-        .input-group label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: #374151; font-size: 0.875rem; }
-        .input-group input {
-            width: 100%; padding: 0.875rem 1rem; border: 2px solid #E5E7EB; border-radius: 0;
-            font-size: 1rem; font-family: inherit; background: #F9FAFB; transition: all 0.3s ease; outline: none;
-        }
-        .input-group input::placeholder { color: #9CA3AF; }
-        .input-group input:focus { border-color: var(--brand-color); background: #FFFFFF; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
-        .btn-submit {
-            width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, var(--brand-color) 0%, #059669 100%);
-            color: white; border: none; border-radius: 0; font-size: 1rem; font-weight: 600;
-            font-family: inherit; cursor: pointer; transition: all 0.3s ease; margin-top: 1rem; position: relative; overflow: hidden;
-        }
-        .btn-submit::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s ease; }
-        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4); }
-        .btn-submit:hover::before { left: 100%; }
-        .btn-submit:active { transform: translateY(0); }
-        .btn-back {
-            width: 100%; padding: 0.875rem 1.5rem; background: transparent;
-            color: #6B7280; border: 2px solid #E5E7EB; border-radius: 0; font-size: 1rem; font-weight: 500;
-            font-family: inherit; cursor: pointer; transition: all 0.3s ease; margin-top: 0.75rem; text-decoration: none;
-            display: block; text-align: center;
-        }
-        .btn-back:hover { background: #F9FAFB; border-color: #D1D5DB; color: #374151; }
-        .alert { padding: 0.875rem 1rem; border-radius: 0; margin-bottom: 1.5rem; font-size: 0.875rem; text-align: center; }
-        .alert-danger { background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
-        .footer-text { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: #9CA3AF; }
-        @media (max-width: 480px) { .register-card { padding: 2rem 1.5rem; } .register-logo { font-size: 1.75rem; } }
-    </style>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/branding-theme.css}">
 </head>
-<body>
-    <div class="register-wrapper">
-        <div class="register-card">
-            <div class="register-header">
-                <div class="register-logo">EverRich</div>
-                <div class="register-subtitle">Create your account</div>
+<body class="branding-page">
+    <div class="branding-wrapper">
+        <div class="branding-card">
+            <div class="branding-header">
+                <div class="branding-logo">Ever<span class="brand-accent">Rich</span></div>
+                <div class="branding-motto"><span class="motto-highlight">Cash Flow</span> and <span class="motto-highlight">Asset Management</span> for Individuals, Families and Small Businesses</div>
+                <div class="branding-subtitle hide-mobile">Create your account</div>
             </div>
-            <!-- Error Message -->
-            <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-            <form th:action="@{/register}" method="post">
-                <div class="input-group">
-                    <label for="firstName">First Name</label>
-                    <input type="text" id="firstName" name="firstName" placeholder="Enter your first name" required>
-                </div>
-                <div class="input-group">
-                    <label for="lastName">Last Name</label>
-                    <input type="text" id="lastName" name="lastName" placeholder="Enter your last name" required>
-                </div>
-                <div class="input-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="Enter your email address" required>
-                </div>
-                <button type="submit" class="btn-submit">Register</button>
-            </form>
-            <a th:href="@{/login}" class="btn-back">Back to Sign In</a>
-            <div class="footer-text">By registering, you agree to our Terms of Service</div>
+            <div class="mobile-form-section">
+                <!-- Error Message -->
+                <div th:if="${error}" class="branding-alert alert-danger" th:text="${error}"></div>
+                <form th:action="@{/register}" method="post">
+                    <div class="branding-input-group">
+                        <label for="firstName">First Name</label>
+                        <input type="text" id="firstName" name="firstName" placeholder="Enter your first name" required>
+                    </div>
+                    <div class="branding-input-group">
+                        <label for="lastName">Last Name</label>
+                        <input type="text" id="lastName" name="lastName" placeholder="Enter your last name" required>
+                    </div>
+                    <div class="branding-input-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Register</button>
+                </form>
+                <a th:href="@{/login}" class="btn-back">Back to Sign In</a>
+                <div class="branding-footer">By registering, you agree to our Terms of Service</div>
+            </div>
         </div>
     </div>
 </body>

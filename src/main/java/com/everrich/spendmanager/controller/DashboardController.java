@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import com.everrich.spendmanager.service.SavedInsightService;
 
 @Controller
-@RequestMapping("/dashboard")
 public class DashboardController {
 
     private final SavedInsightService savedInsightService;
@@ -20,8 +19,13 @@ public class DashboardController {
         this.savedInsightService = savedInsightService;
     }
 
-    @GetMapping
-    public String prepareDashboard(Model model)    {
+    @GetMapping("/")
+    public String redirectToDashboard() {
+        return "redirect:/dashboard";
+    }
+
+    @GetMapping("/dashboard")
+    public String prepareDashboard(Model model) {
 
         model.addAttribute("appName", "EverRich");
         model.addAttribute("dashBoardKPIs", savedInsightService.getDashBoardKPIs());

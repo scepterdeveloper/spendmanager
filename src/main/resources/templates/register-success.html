@@ -4,79 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration Initiated - EverRich Spend Manager</title>
-    <style>
-        :root {
-            --header-bg: #1F2937;
-            --brand-color: #10B981;
-            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(135deg, #1F2937 0%, #111827 50%, #1F2937 100%);
-            font-family: var(--font-family); overflow: hidden;
-        }
-        body::before, body::after {
-            content: ''; position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.4; z-index: 0;
-        }
-        body::before {
-            width: 400px; height: 400px; background: var(--brand-color); top: -100px; right: -100px;
-            animation: float 8s ease-in-out infinite;
-        }
-        body::after {
-            width: 300px; height: 300px; background: #6366F1; bottom: -50px; left: -50px;
-            animation: float 6s ease-in-out infinite reverse;
-        }
-        @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 30px); } }
-        .success-wrapper { width: 100%; max-width: 480px; padding: 1rem; position: relative; z-index: 1; }
-        .success-card {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 0;
-            padding: 3rem 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
-            text-align: center;
-        }
-        .success-icon {
-            width: 80px; height: 80px; background: linear-gradient(135deg, var(--brand-color) 0%, #059669 100%);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;
-        }
-        .success-icon svg { color: white; }
-        .success-title { font-size: 1.75rem; font-weight: 700; color: #1F2937; margin-bottom: 1rem; }
-        .success-message { font-size: 1rem; color: #6B7280; line-height: 1.6; margin-bottom: 2rem; }
-        .success-message strong { color: #1F2937; }
-        .email-icon { display: inline-block; margin-bottom: 1.5rem; }
-        .btn-login {
-            display: inline-block; padding: 1rem 2rem; background: linear-gradient(135deg, var(--brand-color) 0%, #059669 100%);
-            color: white; border: none; border-radius: 0; font-size: 1rem; font-weight: 600;
-            font-family: inherit; cursor: pointer; transition: all 0.3s ease; text-decoration: none;
-        }
-        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4); }
-        .footer-text { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9CA3AF; }
-        @media (max-width: 480px) { .success-card { padding: 2rem 1.5rem; } .success-title { font-size: 1.5rem; } }
-    </style>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/branding-theme.css}">
 </head>
-<body>
-    <div class="success-wrapper">
-        <div class="success-card">
-            <div class="success-icon">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
+<body class="branding-page">
+    <div class="branding-wrapper wide">
+        <div class="branding-card centered">
+            <div class="branding-header">
+                <div class="branding-logo">Ever<span class="brand-accent">Rich</span></div>
+                <div class="branding-motto"><span class="motto-highlight">Cash Flow</span> and <span class="motto-highlight">Asset Management</span> for Individuals, Families and Small Businesses</div>
             </div>
-            <h1 class="success-title">Check Your Email!</h1>
-            <div class="email-icon">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                </svg>
+            <div class="mobile-form-section">
+                <div class="success-icon-circle">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
+                <h1 class="branding-title">Check Your Email!</h1>
+                <div class="email-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                </div>
+                <p class="branding-message">
+                    Thank you for registering with <strong>EverRich</strong>!<br><br>
+                    We've sent an email to your address with a link to complete your registration. 
+                    Please click the link to set up your password and activate your account.<br><br>
+                    <em>If you don't see the email, please check your spam folder.</em>
+                </p>
+                <a th:href="@{/login}" class="btn-primary btn-inline">Return to Sign In</a>
+                <div class="branding-footer">Didn't receive the email? Please wait a few minutes and check your spam folder.</div>
             </div>
-            <p class="success-message">
-                Thank you for registering with <strong>EverRich Spend Manager</strong>!<br><br>
-                We've sent an email to your address with a link to complete your registration. 
-                Please click the link in the email to set up your password and activate your account.<br><br>
-                <em>If you don't see the email, please check your spam folder.</em>
-            </p>
-            <a th:href="@{/login}" class="btn-login">Return to Sign In</a>
-            <div class="footer-text">Didn't receive the email? Please wait a few minutes and check your spam folder.</div>
         </div>
     </div>
 </body>

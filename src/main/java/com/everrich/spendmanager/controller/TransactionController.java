@@ -20,6 +20,8 @@ import com.everrich.spendmanager.entities.TransactionOperation;
 import java.beans.PropertyEditorSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -44,6 +46,30 @@ public class TransactionController {
     
     @InitBinder
     public void initBinder(WebDataBinder binder) {
+        // Custom editor for LocalDateTime to handle date-only format from HTML form
+        binder.registerCustomEditor(LocalDateTime.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) {
+                if (text != null && !text.isEmpty()) {
+                    try {
+                        // Try parsing as LocalDateTime first (yyyy-MM-ddTHH:mm)
+                        setValue(LocalDateTime.parse(text));
+                    } catch (DateTimeParseException e1) {
+                        try {
+                            // Fall back to date-only format (yyyy-MM-dd) and set time to start of day
+                            LocalDate date = LocalDate.parse(text, DateTimeFormatter.ISO_LOCAL_DATE);
+                            setValue(date.atStartOfDay());
+                        } catch (DateTimeParseException e2) {
+                            log.error("Failed to parse date: {}", text);
+                            setValue(null);
+                        }
+                    }
+                } else {
+                    setValue(null);
+                }
+            }
+        });
+
         binder.registerCustomEditor(Category.class, new PropertyEditorSupport() {
             @Override
             public void setAsText(String categoryId) {
@@ -149,7 +175,7 @@ public class TransactionController {
         
         model.addAttribute("appName", "EverRich");
         Transaction newTransaction = new Transaction();
-        newTransaction.setDate(LocalDate.now()); 
+        newTransaction.setDate(LocalDateTime.now()); 
         
         model.addAttribute("transaction", newTransaction); 
         model.addAttribute("operations", TransactionOperation.values());
@@ -232,7 +258,7 @@ public class TransactionController {
         }
         
         if (isNewTransaction) {
-            return "redirect:/"; 
+            return "redirect:/dashboard"; 
         } else {
             filterParams.forEach(redirectAttributes::addAttribute);
             return "redirect:/transactions";

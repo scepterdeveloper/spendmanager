@@ -4,152 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Complete Registration - EverRich Spend Manager</title>
-    <style>
-        :root {
-            --header-bg: #1F2937;
-            --brand-color: #10B981;
-            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(135deg, #1F2937 0%, #111827 50%, #1F2937 100%);
-            font-family: var(--font-family); overflow: hidden;
-        }
-        body::before, body::after {
-            content: ''; position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.4; z-index: 0;
-        }
-        body::before {
-            width: 400px; height: 400px; background: var(--brand-color); top: -100px; right: -100px;
-            animation: float 8s ease-in-out infinite;
-        }
-        body::after {
-            width: 300px; height: 300px; background: #6366F1; bottom: -50px; left: -50px;
-            animation: float 6s ease-in-out infinite reverse;
-        }
-        @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 30px); } }
-        .complete-wrapper { width: 100%; max-width: 420px; padding: 1rem; position: relative; z-index: 1; }
-        .complete-card {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 0;
-            padding: 2.5rem 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
-        }
-        .complete-header { text-align: center; margin-bottom: 2rem; }
-        .complete-logo { font-size: 2rem; font-weight: 700; color: var(--brand-color); margin-bottom: 0.25rem; letter-spacing: -0.5px; }
-        .complete-subtitle { font-size: 0.875rem; color: #9CA3AF; font-weight: 400; }
-        .welcome-message { text-align: center; margin-bottom: 1.5rem; padding: 1rem; background: #F0FDF4; border: 1px solid #BBF7D0; }
-        .welcome-message strong { color: var(--brand-color); }
-        .input-group { position: relative; margin-bottom: 1.25rem; }
-        .input-group label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: #374151; font-size: 0.875rem; }
-        .password-input-wrapper { position: relative; }
-        .password-input-wrapper input {
-            width: 100%; padding: 0.875rem 3rem 0.875rem 1rem; border: 2px solid #E5E7EB; border-radius: 0;
-            font-size: 1rem; font-family: inherit; background: #F9FAFB; transition: all 0.3s ease; outline: none;
-        }
-        .password-input-wrapper input::placeholder { color: #9CA3AF; }
-        .password-input-wrapper input:focus { border-color: var(--brand-color); background: #FFFFFF; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
-        .toggle-password {
-            position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
-            background: none; border: none; cursor: pointer; color: #9CA3AF; padding: 0.25rem;
-            display: flex; align-items: center; justify-content: center; transition: color 0.2s;
-        }
-        .toggle-password:hover { color: var(--brand-color); }
-        .password-requirements { font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem; }
-        .btn-submit {
-            width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, var(--brand-color) 0%, #059669 100%);
-            color: white; border: none; border-radius: 0; font-size: 1rem; font-weight: 600;
-            font-family: inherit; cursor: pointer; transition: all 0.3s ease; margin-top: 1rem; position: relative; overflow: hidden;
-        }
-        .btn-submit::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s ease; }
-        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4); }
-        .btn-submit:hover::before { left: 100%; }
-        .btn-submit:active { transform: translateY(0); }
-        .alert { padding: 0.875rem 1rem; border-radius: 0; margin-bottom: 1.5rem; font-size: 0.875rem; text-align: center; }
-        .alert-danger { background-color: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
-        .error-card { text-align: center; padding: 3rem 2rem; }
-        .error-icon { color: #DC2626; margin-bottom: 1.5rem; }
-        .error-title { font-size: 1.5rem; font-weight: 700; color: #1F2937; margin-bottom: 1rem; }
-        .error-message { font-size: 1rem; color: #6B7280; line-height: 1.6; margin-bottom: 2rem; }
-        .btn-login {
-            display: inline-block; padding: 1rem 2rem; background: linear-gradient(135deg, var(--brand-color) 0%, #059669 100%);
-            color: white; border: none; border-radius: 0; font-size: 1rem; font-weight: 600;
-            font-family: inherit; cursor: pointer; transition: all 0.3s ease; text-decoration: none;
-        }
-        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4); }
-        .footer-text { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: #9CA3AF; }
-        @media (max-width: 480px) { .complete-card { padding: 2rem 1.5rem; } .complete-logo { font-size: 1.75rem; } }
-    </style>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/branding-theme.css}">
 </head>
-<body>
-    <div class="complete-wrapper">
-        <div class="complete-card">
+<body class="branding-page">
+    <div class="branding-wrapper">
+        <div class="branding-card">
             <!-- Valid Registration - Show Password Form -->
             <div th:if="${valid}">
-                <div class="complete-header">
-                    <div class="complete-logo">EverRich</div>
-                    <div class="complete-subtitle">Complete Your Registration</div>
+                <div class="branding-header">
+                    <div class="branding-logo">Ever<span class="brand-accent">Rich</span></div>
+                    <div class="branding-subtitle">Complete Your Registration</div>
                 </div>
-                <div class="welcome-message" th:if="${userName}">
-                    Welcome, <strong th:text="${userName}">User</strong>! Please set your password to complete registration.
+                <div class="mobile-form-section">
+                    <div class="welcome-message" th:if="${userName}">
+                        Welcome, <strong th:text="${userName}">User</strong>! Please set your password to complete registration.
+                    </div>
+                    <div th:if="${error}" class="branding-alert alert-danger" th:text="${error}"></div>
+                    <form th:action="@{/register/complete/{id}(id=${registrationId})}" method="post">
+                        <div class="branding-input-group">
+                            <label for="password">Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="password" name="password" placeholder="Create a password" required minlength="8">
+                                <button type="button" class="toggle-password" onclick="togglePassword('password', this)">
+                                    <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                    <svg class="eye-closed" style="display:none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                        <line x1="1" y1="1" x2="23" y2="23"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="password-requirements">Password must be at least 8 characters long</div>
+                        </div>
+                        <div class="branding-input-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required minlength="8">
+                                <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword', this)">
+                                    <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                    <svg class="eye-closed" style="display:none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                        <line x1="1" y1="1" x2="23" y2="23"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">Complete Registration</button>
+                    </form>
+                    <div class="branding-footer">Your password will be securely encrypted</div>
                 </div>
-                <!-- Error Message -->
-                <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-                <form th:action="@{/register/complete/{id}(id=${registrationId})}" method="post">
-                    <div class="input-group">
-                        <label for="password">Password</label>
-                        <div class="password-input-wrapper">
-                            <input type="password" id="password" name="password" placeholder="Create a password" required minlength="8">
-                            <button type="button" class="toggle-password" onclick="togglePassword('password', this)" aria-label="Toggle password visibility">
-                                <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                                </svg>
-                                <svg class="eye-closed" style="display:none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                                    <line x1="1" y1="1" x2="23" y2="23"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="password-requirements">Password must be at least 8 characters long</div>
-                    </div>
-                    <div class="input-group">
-                        <label for="confirmPassword">Confirm Password</label>
-                        <div class="password-input-wrapper">
-                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required minlength="8">
-                            <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword', this)" aria-label="Toggle password visibility">
-                                <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                                </svg>
-                                <svg class="eye-closed" style="display:none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                                    <line x1="1" y1="1" x2="23" y2="23"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-submit">Complete Registration</button>
-                </form>
-                <div class="footer-text">Your password will be securely encrypted</div>
             </div>
-            
             <!-- Invalid Registration - Show Error -->
             <div th:unless="${valid}" class="error-card">
-                <div class="error-icon">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-                    </svg>
+                <div class="branding-header">
+                    <div class="branding-logo">Ever<span class="brand-accent">Rich</span></div>
                 </div>
-                <h1 class="error-title">Invalid Link</h1>
-                <p class="error-message" th:text="${error != null} ? ${error} : 'This registration link is invalid or has already been used. Please contact support if you need assistance.'"></p>
-                <a th:href="@{/login}" class="btn-login">Return to Sign In</a>
+                <div class="mobile-form-section">
+                    <div class="error-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                    </div>
+                    <h1 class="error-title">Invalid Link</h1>
+                    <p class="error-message" th:text="${error != null} ? ${error} : 'This registration link is invalid or has already been used.'"></p>
+                    <a th:href="@{/login}" class="btn-primary">Return to Sign In</a>
+                </div>
             </div>
         </div>
     </div>
-    
     <script>
         function togglePassword(inputId, button) {
             const input = document.getElementById(inputId);
             const eyeOpen = button.querySelector('.eye-open');
             const eyeClosed = button.querySelector('.eye-closed');
-            
             if (input.type === 'password') {
                 input.type = 'text';
                 eyeOpen.style.display = 'none';

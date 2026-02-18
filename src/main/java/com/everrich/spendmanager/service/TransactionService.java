@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Arrays;
@@ -26,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import com.everrich.spendmanager.multitenancy.TenantContext;
 
 @Service
 public class TransactionService {
@@ -38,6 +42,7 @@ public class TransactionService {
 
     private final RagService ragService;
     private final VectorStoreService vectorStoreService;
+    private final AccountBalanceService accountBalanceService;
 
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
@@ -47,7 +52,8 @@ public class TransactionService {
             CategoryService categoryService,
             @Lazy StatementService statementService, // Add StatementService to constructor with @Lazy
             RagService ragService,
-            VectorStoreService vectorStoreService) {
+            VectorStoreService vectorStoreService,
+            AccountBalanceService accountBalanceService) {
 
         this.chatClient = chatClientBuilder.build();
         this.transactionRepository = transactionRepository;
@@ -55,6 +61,7 @@ public class TransactionService {
         this.statementService = statementService; // Initialize StatementService
         this.ragService = ragService;
         this.vectorStoreService = vectorStoreService;
+        this.accountBalanceService = accountBalanceService;
 
         log.info("Transaction Service Wired Successfully");
 
@@ -215,7 +222,42 @@ public class TransactionService {
 
     @Transactional
     public Transaction saveTransaction(Transaction transaction) {
-        return transactionRepository.save(transaction);
+        boolean isNew = transaction.getId() == null;
+        Transaction oldTransaction = null;
+        
+        // If updating, capture the old state for balance adjustment
+        if (!isNew) {
+            oldTransaction = transactionRepository.findById(transaction.getId()).orElse(null);
+            if (oldTransaction != null) {
+                // Create a copy of relevant fields for balance comparison
+                oldTransaction = copyTransactionForBalanceComparison(oldTransaction);
+            }
+        }
+        
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        
+        // Trigger async balance update
+        String tenantId = TenantContext.getTenantId();
+        if (isNew) {
+            accountBalanceService.processTransactionCreateAsync(savedTransaction, tenantId);
+        } else if (oldTransaction != null) {
+            accountBalanceService.processTransactionUpdateAsync(oldTransaction, savedTransaction, tenantId);
+        }
+        
+        return savedTransaction;
+    }
+    
+    /**
+     * Creates a shallow copy of transaction with fields needed for balance comparison.
+     */
+    private Transaction copyTransactionForBalanceComparison(Transaction original) {
+        Transaction copy = new Transaction();
+        copy.setId(original.getId());
+        copy.setDate(original.getDate());
+        copy.setAmount(original.getAmount());
+        copy.setOperation(original.getOperation());
+        copy.setAccount(original.getAccount());
+        return copy;
     }
 
     @Transactional
@@ -239,7 +281,20 @@ public class TransactionService {
 
     @Transactional
     public void deleteTransaction(Long id) {
-        transactionRepository.deleteById(id);
+        // Get the transaction before deletion for balance adjustment
+        Optional<Transaction> optionalTransaction = transactionRepository.findById(id);
+        if (optionalTransaction.isPresent()) {
+            Transaction transaction = optionalTransaction.get();
+            String tenantId = TenantContext.getTenantId();
+            
+            // Delete the transaction first
+            transactionRepository.deleteById(id);
+            
+            // Then trigger async balance removal
+            accountBalanceService.processTransactionDeleteAsync(transaction, tenantId);
+        } else {
+            transactionRepository.deleteById(id);
+        }
     }
 
     /**
@@ -254,55 +309,54 @@ public class TransactionService {
         return transactionRepository.findByStatementId(statementId);
     }
 
-    // You should move this class definition to its own file (e.g.,
-    // utils/DateRange.java)
-    private record DateRange(LocalDate start, LocalDate end) {
-        public LocalDate getStart() {
+    // DateRange record using LocalDateTime for timestamp-based queries
+    private record DateTimeRange(LocalDateTime start, LocalDateTime end) {
+        public LocalDateTime getStart() {
             return start;
         }
 
-        public LocalDate getEnd() {
+        public LocalDateTime getEnd() {
             return end;
         }
     }
 
-    private DateRange calculateDateRange(String timeframe, LocalDate startDate, LocalDate endDate) {
-        LocalDate start, end;
+    private DateTimeRange calculateDateTimeRange(String timeframe, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start, end;
         LocalDate today = LocalDate.now();
         YearMonth ym = YearMonth.from(today);
 
         switch (timeframe) {
             case "entire_timeframe":
-                start = LocalDate.of(1900, 1, 1);
-                end = LocalDate.of(9999, 12, 31);
+                start = LocalDateTime.of(1900, 1, 1, 0, 0, 0);
+                end = LocalDateTime.of(9999, 12, 31, 23, 59, 59);
                 break;
             case "last_month":
                 YearMonth lastMonth = ym.minusMonths(1);
-                start = lastMonth.atDay(1);
-                end = lastMonth.atEndOfMonth();
+                start = lastMonth.atDay(1).atStartOfDay();
+                end = lastMonth.atEndOfMonth().atTime(LocalTime.MAX);
                 break;
             case "current_year":
-                start = LocalDate.of(today.getYear(), 1, 1);
-                end = today;
+                start = LocalDate.of(today.getYear(), 1, 1).atStartOfDay();
+                end = today.atTime(LocalTime.MAX);
                 break;
             case "previous_year":
                 LocalDate now = LocalDate.now();
-                start = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear());
-                end = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear());
+                start = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear()).atStartOfDay();
+                end = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear()).atTime(LocalTime.MAX);
                 break;
 
             case "date_range":
-                start = Optional.ofNullable(startDate).orElse(LocalDate.MIN);
-                end = Optional.ofNullable(endDate).orElse(LocalDate.MAX);
+                start = Optional.ofNullable(startDate).map(LocalDate::atStartOfDay).orElse(LocalDateTime.MIN);
+                end = Optional.ofNullable(endDate).map(d -> d.atTime(LocalTime.MAX)).orElse(LocalDateTime.MAX);
                 break;
             case "current_month":
             default:
-                start = ym.atDay(1);
-                end = ym.atEndOfMonth();
+                start = ym.atDay(1).atStartOfDay();
+                end = ym.atEndOfMonth().atTime(LocalTime.MAX);
                 break;
         }
 
-        return new DateRange(start, end);
+        return new DateTimeRange(start, end);
     }
 
     public List<Transaction> getFilteredTransactions(
@@ -313,7 +367,7 @@ public class TransactionService {
             List<Long> categoryIds,
             String query) {
 
-        DateRange range = calculateDateRange(timeframe, customStartDate, customEndDate);
+        DateTimeRange range = calculateDateTimeRange(timeframe, customStartDate, customEndDate);
 
         List<Long> effectiveAccountIds = (accountIds == null || accountIds.isEmpty()) ? null : accountIds;
         List<Long> effectiveCategoryIds = (categoryIds == null || categoryIds.isEmpty()) ? null : categoryIds;

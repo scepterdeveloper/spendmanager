@@ -9,6 +9,8 @@ import com.everrich.spendmanager.entities.Transaction;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
@@ -184,13 +186,17 @@ public class InsightsService {
             return Collections.emptyList();
         }
 
+        // Convert LocalDate to LocalDateTime for repository calls
+        LocalDateTime startDateTime = finalStart.atStartOfDay();
+        LocalDateTime endDateTime = finalEnd.atTime(LocalTime.MAX);
+        
         List<Transaction> transactions;
         if (categoryIds == null || categoryIds.isEmpty()) {
-            transactions = transactionRepository.findByDateRange(finalStart, finalEnd);
+            transactions = transactionRepository.findByDateRange(startDateTime, endDateTime);
         } else {
             // Call the repository method that attempts to filter by categories
             transactions = transactionRepository.findByDateRangeAndCategories(
-                    finalStart, finalEnd, categoryIds);
+                    startDateTime, endDateTime, categoryIds);
 
             // SAFEGUARD: Additional in-memory filtering to ensure category selection is respected
             transactions = transactions.stream()
@@ -284,8 +290,11 @@ public class InsightsService {
                 end = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear());
                 break;
             case "ENTIRE_TIMEFRAME":
-                start = transactionRepository.findMinDate().orElse(null);
-                end = transactionRepository.findMaxDate().orElse(null);
+                // Convert LocalDateTime to LocalDate for the entire timeframe
+                LocalDateTime minDate = transactionRepository.findMinDate().orElse(null);
+                LocalDateTime maxDate = transactionRepository.findMaxDate().orElse(null);
+                start = minDate != null ? minDate.toLocalDate() : null;
+                end = maxDate != null ? maxDate.toLocalDate() : null;
                 break;
             case "DATE_RANGE":
                 // For DATE_RANGE, both customStart and customEnd must be provided
