@@ -4,11 +4,11 @@
 <head>
     <title th:text="${appName} + ' - Transaction Form'">EverRich - Transaction Form</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
-        /* Page-specific styles for Transaction Form */
-        
-        /* Form wrapper styling */
         .form-wrapper {
             margin: 0;
             border: 1px solid var(--border-color);
@@ -62,6 +62,295 @@
                 padding: 0.5rem 1rem;
                 font-size: 0.95rem;
             }
+
+            .ai-assist-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .ai-assist-content {
+                flex-direction: column;
+            }
+
+            .btn-scan {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        .ai-assist-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .ai-assist-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .ai-assist-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-color) 0%, #059669 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ai-assist-icon svg {
+            color: white;
+        }
+
+        .ai-assist-text h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .ai-assist-text p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-mellow);
+        }
+
+        .btn-scan {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .btn-scan:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .camera-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        .camera-modal.active {
+            display: flex;
+        }
+
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-title {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .btn-close-camera {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #cameraVideo,
+        #capturedImage {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #capturedImage {
+            display: none;
+        }
+
+        .camera-loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: white;
+            position: absolute;
+        }
+
+        .camera-loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .camera-footer {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-capture {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 4px solid white;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .btn-capture::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .btn-retake,
+        .btn-use-photo {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-retake {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .btn-use-photo {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .capture-controls {
+            display: flex;
+            justify-content: center;
+        }
+
+        .review-controls {
+            display: none;
+            gap: 1rem;
+        }
+
+        .camera-error {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        #fileInputFallback {
+            display: none;
+        }
+
+        .toast-notification {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1f2937;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            z-index: 2000;
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            max-width: 90%;
+        }
+
+        .toast-notification.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast-notification.error {
+            background: #dc2626;
+        }
+
+        @keyframes field-highlight {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.4);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+        }
+
+        .field-highlighted {
+            animation: field-highlight 0.6s ease-out;
         }
     </style>
 </head>
@@ -95,12 +384,28 @@
         </div>
 
         <div class="form-wrapper">
+            <div th:if="${transaction.id == null}" class="ai-assist-card">
+                <div class="ai-assist-content">
+                    <div class="ai-assist-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                        </svg></div>
+                    <div class="ai-assist-text">
+                        <h4>AI Receipt Scanner</h4>
+                        <p>Take a photo of your receipt to auto-fill the form</p>
+                    </div>
+                </div>
+                <button type="button" id="scanReceiptBtn" class="btn-scan">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+                    Take Photo
+                </button>
+            </div>
+
             <form th:action="@{/transactions/save}" th:object="${transaction}" method="post">
-
                 <input type="hidden" th:field="*{id}" />
-
                 <input type="hidden" th:field="*{statementId}" />
-
                 <div th:each="entry : ${filterParams}">
                     <input type="hidden" th:name="${entry.key}" th:value="${entry.value}" />
                 </div>
@@ -126,11 +431,8 @@
                     <label for="operation">Operation</label>
                     <select id="operation" th:field="*{operation}" required>
                         <option value="" disabled>Select Operation</option>
-
                         <option th:each="op : ${operations}" th:value="${op}" th:text="${op}"
-                            th:selected="${op == transaction.operation}">
-                            Operation (PLUS/MINUS)
-                        </option>
+                            th:selected="${op == transaction.operation}">Operation (PLUS/MINUS)</option>
                     </select>
                 </div>
 
@@ -138,10 +440,9 @@
                     <label for="account">Account</label>
                     <select id="account" th:field="*{account}">
                         <option value="" disabled selected>Select Account</option>
-                        <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.id + ' - ' + account.name}"
-                            th:selected="${transaction.account != null and transaction.account.id == account.id}">
-                            Account Name
-                        </option>
+                        <option th:each="account : ${accounts}" th:value="${account.id}"
+                            th:text="${account.id + ' - ' + account.name}"
+                            th:selected="${transaction.account != null and transaction.account.id == account.id}">Account Name</option>
                     </select>
                 </div>
 
@@ -156,10 +457,9 @@
                     <label for="category">Category</label>
                     <select id="category" th:field="*{categoryEntity}">
                         <option value="" disabled selected>Select Category</option>
-                        <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"
-                            th:selected="${transaction.categoryEntity != null and transaction.categoryEntity.id == category.id}">
-                            Category Name
-                        </option>
+                        <option th:each="category : ${categories}" th:value="${category.id}"
+                            th:text="${category.name}"
+                            th:selected="${transaction.categoryEntity != null and transaction.categoryEntity.id == category.id}">Category Name</option>
                     </select>
                 </div>
 
@@ -169,6 +469,178 @@
         </div>
     </div>
 
+    <!-- Camera Modal -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-header">
+            <h3 class="camera-title">Scan Receipt</h3>
+            <button class="btn-close-camera" id="closeCamera">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="camera-body">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <img id="capturedImage" alt="Captured receipt" />
+            <div class="camera-loading" id="cameraLoading">
+                <div class="spinner"></div>
+                <span>Analyzing receipt...</span>
+            </div>
+            <div class="camera-error" id="cameraError">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M15 9l-6 6M9 9l6 6" />
+                </svg>
+                <p id="errorMessage">Camera access denied</p>
+                <button class="btn-retake" id="useFileFallback">Upload Image Instead</button>
+            </div>
+        </div>
+        <div class="camera-footer">
+            <div class="capture-controls" id="captureControls">
+                <button class="btn-capture" id="captureBtn" title="Take Photo"></button>
+            </div>
+            <div class="review-controls" id="reviewControls">
+                <button class="btn-retake" id="retakeBtn">Retake</button>
+                <button class="btn-use-photo" id="usePhotoBtn">Use Photo</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInputFallback" accept="image/*" capture="environment" />
+    <div class="toast-notification" id="toast"></div>
+
+    <script th:if="${transaction.id == null}">
+    (function () {
+        const scanBtn = document.getElementById('scanReceiptBtn');
+        if (!scanBtn) return;
+        const modal = document.getElementById('cameraModal');
+        const video = document.getElementById('cameraVideo');
+        const capturedImg = document.getElementById('capturedImage');
+        const loading = document.getElementById('cameraLoading');
+        const error = document.getElementById('cameraError');
+        const captureControls = document.getElementById('captureControls');
+        const reviewControls = document.getElementById('reviewControls');
+        const closeBtn = document.getElementById('closeCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const usePhotoBtn = document.getElementById('usePhotoBtn');
+        const fileInput = document.getElementById('fileInputFallback');
+        const useFileFallback = document.getElementById('useFileFallback');
+        const toast = document.getElementById('toast');
+        let stream = null;
+        let capturedBlob = null;
+        const csrf = document.querySelector('meta[name="_csrf"]')?.content;
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+
+        function showToast(msg, isError) {
+            toast.textContent = msg;
+            toast.className = 'toast-notification show' + (isError ? ' error' : '');
+            setTimeout(() => toast.className = 'toast-notification', 4000);
+        }
+
+        async function startCamera() {
+            modal.classList.add('active');
+            error.style.display = 'none';
+            loading.classList.remove('active');
+            capturedImg.style.display = 'none';
+            video.style.display = 'block';
+            captureControls.style.display = 'flex';
+            reviewControls.style.display = 'none';
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                video.srcObject = stream;
+            } catch (e) {
+                error.style.display = 'flex';
+                video.style.display = 'none';
+                captureControls.style.display = 'none';
+            }
+        }
+
+        function stopCamera() {
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            modal.classList.remove('active');
+        }
+
+        function capture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.toBlob(blob => {
+                capturedBlob = blob;
+                capturedImg.src = URL.createObjectURL(blob);
+                video.style.display = 'none';
+                capturedImg.style.display = 'block';
+                captureControls.style.display = 'none';
+                reviewControls.style.display = 'flex';
+            }, 'image/jpeg', 0.9);
+        }
+
+        function retake() {
+            capturedBlob = null;
+            capturedImg.style.display = 'none';
+            video.style.display = 'block';
+            reviewControls.style.display = 'none';
+            captureControls.style.display = 'flex';
+        }
+
+        async function submitImage(blob) {
+            loading.classList.add('active');
+            reviewControls.style.display = 'none';
+            const form = new FormData();
+            form.append('image', blob, 'receipt.jpg');
+            try {
+                const res = await fetch('/api/transactions/scan-receipt', {
+                    method: 'POST',
+                    headers: csrfHeader ? { [csrfHeader]: csrf } : {},
+                    body: form
+                });
+                const data = await res.json();
+                loading.classList.remove('active');
+                if (res.ok) {
+                    stopCamera();
+                    fillForm(data);
+                    showToast('Receipt scanned successfully!', false);
+                } else {
+                    showToast(data.error || 'Failed to scan receipt', true);
+                    retake();
+                }
+            } catch (e) {
+                loading.classList.remove('active');
+                showToast('Network error. Please try again.', true);
+                retake();
+            }
+        }
+
+        function fillForm(data) {
+            const fields = ['date', 'description', 'amount', 'operation'];
+            fields.forEach(f => {
+                const el = document.getElementById(f);
+                if (el && data[f] !== undefined && data[f] !== null) {
+                    el.value = data[f];
+                    el.classList.add('field-highlighted');
+                    setTimeout(() => el.classList.remove('field-highlighted'), 600);
+                }
+            });
+        }
+
+        scanBtn.addEventListener('click', startCamera);
+        closeBtn.addEventListener('click', stopCamera);
+        captureBtn.addEventListener('click', capture);
+        retakeBtn.addEventListener('click', retake);
+        usePhotoBtn.addEventListener('click', () => { if (capturedBlob) submitImage(capturedBlob); });
+        useFileFallback.addEventListener('click', () => { fileInput.click(); });
+        fileInput.addEventListener('change', e => {
+            if (e.target.files[0]) {
+                capturedBlob = e.target.files[0];
+                capturedImg.src = URL.createObjectURL(capturedBlob);
+                error.style.display = 'none';
+                capturedImg.style.display = 'block';
+                reviewControls.style.display = 'flex';
+            }
+        });
+    })();
+    </script>
 </body>
 
 </html>
