@@ -101,6 +101,13 @@ public class StatementService {
     public List<Statement> getStatementsBeingCategorized() {
         return statementRepository.findByStatus(StatementStatus.CATEGORIZING);
     }
+    
+    /**
+     * Gets all statements with the specified status.
+     */
+    public List<Statement> getStatementsByStatus(StatementStatus status) {
+        return statementRepository.findByStatus(status);
+    }
 
     public void saveStatement(Statement statement)  {
         statementRepository.save(statement);

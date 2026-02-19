@@ -72,7 +72,11 @@ public class TransactionService {
                 "Healthcare", "Entertainment", "Income", "Other");
     }
 
-    // @Async("transactionProcessingExecutor")
+    /**
+     * Categorizes a transaction using RAG-LLM but does NOT save it.
+     * The caller is responsible for saving the transaction via saveTransaction()
+     * to ensure account balances are properly updated.
+     */
     public Transaction categorizeTransaction(Transaction transaction) {
 
         log.info("------------------------------------------------------------------------------");
@@ -84,10 +88,9 @@ public class TransactionService {
         transaction.setCategoryEntity(categoryService.findByName(categoryName));
         transaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
         log.info("Resolve Category (with RAG-LLM): DONE");
-        log.info("Saving transaction: START");
-        transactionRepository.save(transaction);
-        log.info("Saving transaction: DONE");
         log.info("------------------------------------------------------------------------------");
+        // Note: Transaction is NOT saved here. Caller must use saveTransaction() 
+        // to ensure account balances are properly updated.
         return transaction;
     }
 
@@ -220,8 +223,24 @@ public class TransactionService {
         return transactionRepository.findById(id);
     }
 
+    /**
+     * Saves a transaction and triggers async balance update.
+     * Use this for interactive (user-initiated) transaction creation/updates.
+     */
     @Transactional
     public Transaction saveTransaction(Transaction transaction) {
+        return saveTransaction(transaction, true);
+    }
+    
+    /**
+     * Saves a transaction with control over balance update behavior.
+     * 
+     * @param transaction The transaction to save
+     * @param asyncBalanceUpdate If true, balance update is done asynchronously. 
+     *                           If false, balance update is done synchronously with application-level locking.
+     */
+    @Transactional
+    public Transaction saveTransaction(Transaction transaction, boolean asyncBalanceUpdate) {
         boolean isNew = transaction.getId() == null;
         Transaction oldTransaction = null;
         
@@ -236,12 +255,23 @@ public class TransactionService {
         
         Transaction savedTransaction = transactionRepository.save(transaction);
         
-        // Trigger async balance update
         String tenantId = TenantContext.getTenantId();
-        if (isNew) {
-            accountBalanceService.processTransactionCreateAsync(savedTransaction, tenantId);
-        } else if (oldTransaction != null) {
-            accountBalanceService.processTransactionUpdateAsync(oldTransaction, savedTransaction, tenantId);
+        if (asyncBalanceUpdate) {
+            // Trigger async balance update (for interactive operations)
+            if (isNew) {
+                accountBalanceService.processTransactionCreateAsync(savedTransaction, tenantId);
+            } else if (oldTransaction != null) {
+                accountBalanceService.processTransactionUpdateAsync(oldTransaction, savedTransaction, tenantId);
+            }
+        } else {
+            // Synchronous balance update with application-level locking (for batch operations like statement processing)
+            // This uses ReentrantLock to prevent race conditions even when multiple threads process
+            // transactions for the same account concurrently
+            if (isNew) {
+                accountBalanceService.processTransactionCreateSync(savedTransaction);
+            } else if (oldTransaction != null) {
+                accountBalanceService.processTransactionUpdateSync(oldTransaction, savedTransaction);
+            }
         }
         
         return savedTransaction;

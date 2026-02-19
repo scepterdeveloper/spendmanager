@@ -279,7 +279,7 @@
                 </thead>
                 <tbody>
                     <tr th:each="transaction : ${transactions}">
-                        <td th:text="${transaction.date}">01.01.2025</td>
+                        <td th:text="${#temporals.format(transaction.date, 'dd MMM yyyy')}">01 Jan 2025</td>
                         <td th:text="${transaction.description}">Transaction Description</td>
 
                         <td th:classappend="${

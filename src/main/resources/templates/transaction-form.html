@@ -412,7 +412,7 @@
 
                 <div class="form-group">
                     <label for="date">Date</label>
-                    <input type="date" id="date" th:field="*{date}"
+                    <input type="date" id="date" name="date"
                         th:value="${transaction.date != null ? #temporals.format(transaction.date, 'yyyy-MM-dd') : ''}"
                         required />
                 </div>
