@@ -14,6 +14,56 @@
             margin-bottom: 1rem;
         }
 
+        /* Clickable amount cells for drill-down */
+        .amount-clickable {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--primary-color);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 1px solid #d1fae5;
+            border-radius: 0.35rem;
+            padding: 0.35rem 0.6rem;
+            font-weight: 600;
+        }
+
+        .amount-clickable:hover {
+            background: linear-gradient(135deg, #d1fae5 0%, #bbf7d0 100%);
+            border-color: var(--income-color);
+            color: var(--income-color);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.15);
+        }
+
+        .drill-icon {
+            display: inline-block;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+        }
+
+        .amount-clickable:hover .drill-icon {
+            opacity: 1;
+            transform: translateX(2px);
+        }
+
+        /* Currency formatting for amount cells */
+        .amount-cell {
+            text-align: right;
+            font-weight: 500;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
+            letter-spacing: 0.02em;
+        }
+
+        .currency-symbol {
+            color: var(--text-mellow);
+            font-size: 0.85em;
+            margin-left: 0.2rem;
+        }
+
         /* KPI Result Display */
         .kpi-result-container {
             display: flex;
@@ -226,9 +276,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr th:each="dp : ${result.dataPoints}">
+                        <tr th:each="dp, iterStat : ${result.dataPoints}">
                             <td th:text="${dp.label}">Label</td>
-                            <td th:text="${#numbers.formatDecimal(dp.value, 1, 2)}">0.00</td>
+                            <!-- Category drill-down: clickable amount when xAxisType is CATEGORY and drillDownEnabled -->
+                            <td class="amount-cell" th:if="${result.drillDownEnabled and result.xAxisType.name() == 'CATEGORY' and dp.categoryId != null}">
+                                <a th:href="@{/insights/drill/transactions(startDate=${result.queryStartDate}, endDate=${result.queryEndDate}, categoryId=${dp.categoryId}, backUrl=${backUrl != null ? backUrl : '/insights/manage'})}"
+                                   class="amount-clickable"
+                                   th:title="'View ' + ${dp.label} + ' transactions'">
+                                    <span th:text="${#numbers.formatDecimal(dp.value, 1, 'POINT', 2, 'COMMA')}">0,00</span><span class="currency-symbol">€</span>
+                                    <svg class="drill-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 18l6-6-6-6"/>
+                                    </svg>
+                                </a>
+                            </td>
+                            <!-- Non-clickable amount (for intervals or when drill-down is disabled) -->
+                            <td class="amount-cell" th:unless="${result.drillDownEnabled and result.xAxisType.name() == 'CATEGORY' and dp.categoryId != null}">
+                                <span th:text="${#numbers.formatDecimal(dp.value, 1, 'POINT', 2, 'COMMA')}">0,00</span><span class="currency-symbol">€</span>
+                            </td>
                             <td class="percentage-cell">-</td>
                         </tr>
                     </tbody>

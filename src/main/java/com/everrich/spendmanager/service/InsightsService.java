@@ -5,12 +5,14 @@ import com.everrich.spendmanager.dto.InsightExecutionResult;
 import com.everrich.spendmanager.dto.InsightExecutionResult.DataPoint;
 import com.everrich.spendmanager.dto.InsightExecutionResult.XAxisType;
 import com.everrich.spendmanager.repository.TransactionRepository;
+import com.everrich.spendmanager.entities.Category;
 import com.everrich.spendmanager.entities.Transaction;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
@@ -62,8 +64,11 @@ public class InsightsService {
             String intervalFunction,
             boolean aggregateResults) {
 
-        // Execute the underlying analysis
-        List<AggregatedInsight> analysisResults = getCategoryInsights(
+        // Calculate the date range for drill-down context
+        DateRange range = calculateDateRange(timeframe, startDate, endDate);
+
+        // Execute the underlying analysis with drill-down data
+        List<DataPoint> dataPointsWithContext = getCategoryInsightsWithDrillDown(
                 timeframe,
                 startDate,
                 endDate,
@@ -81,34 +86,130 @@ public class InsightsService {
         if (aggregateResults) {
             // KPI result (1D - single aggregated value)
             Double aggregatedValue = 0.0;
-            if (!analysisResults.isEmpty() && analysisResults.get(0).getName().equals("Total Aggregated")) {
-                aggregatedValue = analysisResults.get(0).getCumulatedAmount();
+            if (!dataPointsWithContext.isEmpty()) {
+                aggregatedValue = dataPointsWithContext.get(0).getValue();
             }
-            return InsightExecutionResult.createKpiResult(
+            InsightExecutionResult result = InsightExecutionResult.createKpiResult(
                     null, // No ID for ad-hoc insights
                     insightName,
                     insightDescription,
                     aggregatedValue
             );
+            result.setDrillDownEnabled(false); // No drill-down for aggregated results
+            return result;
         } else {
-            // Chart result (2D - multiple data points)
-            List<DataPoint> dataPoints = analysisResults.stream()
-                    .map(ai -> new DataPoint(ai.getName(), ai.getCumulatedAmount()))
-                    .collect(Collectors.toList());
-
             // Determine X-axis type based on whether interval is specified
             XAxisType xAxisType = (interval != null && !interval.isEmpty()) 
                     ? XAxisType.INTERVAL 
                     : XAxisType.CATEGORY;
 
-            return InsightExecutionResult.createChartResult(
+            InsightExecutionResult result = InsightExecutionResult.createChartResult(
                     null, // No ID for ad-hoc insights
                     insightName,
                     insightDescription,
-                    dataPoints,
+                    dataPointsWithContext,
                     xAxisType
             );
+            
+            // Set query context for drill-down navigation
+            result.setQueryStartDate(range.getStart());
+            result.setQueryEndDate(range.getEnd());
+            result.setDrillDownEnabled(true); // Enable drill-down for non-aggregated results
+            
+            return result;
         }
+    }
+    
+    /**
+     * Enhanced analysis method that returns DataPoints with drill-down context (categoryId, intervalKey).
+     */
+    public List<DataPoint> getCategoryInsightsWithDrillDown(
+            String timeframe,
+            LocalDate startDate,
+            LocalDate endDate,
+            List<Long> categoryIds,
+            String interval,
+            String intervalFunction,
+            boolean aggregateResults) {
+
+        DateRange range = calculateDateRange(timeframe, startDate, endDate);
+        LocalDate finalStart = range.getStart();
+        LocalDate finalEnd = range.getEnd();
+
+        if (finalStart == null || finalEnd == null) {
+            return Collections.emptyList();
+        }
+
+        // Convert LocalDate to LocalDateTime for repository calls
+        LocalDateTime startDateTime = finalStart.atStartOfDay();
+        LocalDateTime endDateTime = finalEnd.atTime(LocalTime.MAX);
+        
+        List<Transaction> transactions;
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            transactions = transactionRepository.findByDateRange(startDateTime, endDateTime);
+        } else {
+            transactions = transactionRepository.findByDateRangeAndCategories(
+                    startDateTime, endDateTime, categoryIds);
+            // SAFEGUARD: Additional in-memory filtering
+            transactions = transactions.stream()
+                               .filter(t -> t.getCategoryEntity() != null && categoryIds.contains(t.getCategoryEntity().getId()))
+                               .collect(Collectors.toList());
+        }
+
+        if (transactions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<DataPoint> dataPoints;
+
+        if (interval != null && !"NOT_SPECIFIED".equals(interval)) {
+            // Handle interval-based aggregation (Monthly)
+            if ("MONTHLY".equals(interval) && "SUM".equals(intervalFunction)) {
+                Map<YearMonth, Double> monthlyTotals = transactions.stream()
+                        .collect(Collectors.groupingBy(
+                                t -> YearMonth.from(t.getDate()),
+                                Collectors.summingDouble(Transaction::getAmount)
+                        ));
+
+                dataPoints = monthlyTotals.entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .map(entry -> {
+                            String label = entry.getKey().format(DateTimeFormatter.ofPattern("MMM yyyy"));
+                            String intervalKey = entry.getKey().toString(); // "2025-01" format
+                            return new DataPoint(label, entry.getValue(), null, intervalKey);
+                        })
+                        .collect(Collectors.toList());
+            } else {
+                return Collections.emptyList();
+            }
+        } else {
+            // Category-based aggregation with categoryId for drill-down
+            Map<Category, Double> categoryTotals = transactions.stream()
+                    .filter(t -> t.getCategoryEntity() != null && t.getCategoryEntity().getName() != null)
+                    .collect(Collectors.groupingBy(
+                            Transaction::getCategoryEntity,
+                            Collectors.summingDouble(Transaction::getAmount)
+                    ));
+
+            dataPoints = categoryTotals.entrySet().stream()
+                    .map(entry -> new DataPoint(
+                            entry.getKey().getName(),
+                            entry.getValue(),
+                            entry.getKey().getId() // Include categoryId for drill-down
+                    ))
+                    .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                    .collect(Collectors.toList());
+        }
+
+        // Apply aggregation if requested
+        if (aggregateResults && !dataPoints.isEmpty()) {
+            double totalAggregatedAmount = dataPoints.stream()
+                    .mapToDouble(DataPoint::getValue)
+                    .sum();
+            return Arrays.asList(new DataPoint("Total Aggregated", totalAggregatedAmount));
+        }
+
+        return dataPoints;
     }
 
     /**
@@ -266,6 +367,8 @@ public class InsightsService {
 
     /**
      * Determines the absolute start and end dates based on the requested timeframe string.
+     * Note: This method now uses end-of-month/end-of-year for current periods to ensure
+     * consistency with TransactionService's date range calculations.
      */
     private DateRange calculateDateRange(String timeframe, LocalDate customStart, LocalDate customEnd) {
         LocalDate now = LocalDate.now();
@@ -275,7 +378,7 @@ public class InsightsService {
         switch (timeframe) {
             case "THIS_MONTH":
                 start = now.with(TemporalAdjusters.firstDayOfMonth());
-                end = now;
+                end = now.with(TemporalAdjusters.lastDayOfMonth());  // Fixed: Use end of month, not today
                 break;
             case "LAST_MONTH":
                 start = now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth());
@@ -283,7 +386,7 @@ public class InsightsService {
                 break;
             case "THIS_YEAR":
                 start = now.with(TemporalAdjusters.firstDayOfYear());
-                end = now;
+                end = now.with(TemporalAdjusters.lastDayOfYear());  // Fixed: Use end of year, not today
                 break;
             case "LAST_YEAR":
                 start = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear());
@@ -309,7 +412,7 @@ public class InsightsService {
                 break;
             default:
                 start = now.with(TemporalAdjusters.firstDayOfMonth());
-                end = now;
+                end = now.with(TemporalAdjusters.lastDayOfMonth());  // Fixed: Use end of month for consistency
         }
 
         if (start != null && end != null && start.isAfter(end)) {

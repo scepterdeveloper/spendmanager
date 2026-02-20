@@ -3,7 +3,9 @@ package com.everrich.spendmanager.controller;
 import com.everrich.spendmanager.dto.AggregatedInsight;
 import com.everrich.spendmanager.dto.InsightExecutionResult;
 import com.everrich.spendmanager.entities.Category;
-import com.everrich.spendmanager.repository.CategoryRepository; 
+import com.everrich.spendmanager.entities.Transaction;
+import com.everrich.spendmanager.repository.CategoryRepository;
+import com.everrich.spendmanager.repository.TransactionRepository;
 import com.everrich.spendmanager.service.InsightsService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -23,10 +27,13 @@ public class InsightsController {
 
     private final InsightsService insightsService;
     private final CategoryRepository categoryRepository;
+    private final TransactionRepository transactionRepository;
     
-    public InsightsController(InsightsService insightsService, CategoryRepository categoryRepository) {
+    public InsightsController(InsightsService insightsService, CategoryRepository categoryRepository,
+                              TransactionRepository transactionRepository) {
         this.insightsService = insightsService;
         this.categoryRepository = categoryRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     // 1. Controller for the Thymeleaf Page View (Parameter Collection)
@@ -117,6 +124,58 @@ public class InsightsController {
         } catch (Exception e) {
             System.err.println("Error generating insights: " + e.getMessage());
             return ResponseEntity.status(500).build();
+        }
+    }
+    
+    // 5. Drill-down endpoint for viewing transactions behind an insight data point
+    // URL: GET /insights/drill/transactions
+    @GetMapping("/drill/transactions")
+    public String drillDownTransactions(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam Long categoryId,
+            @RequestParam(required = false) String backUrl,
+            Model model) {
+        
+        model.addAttribute("appName", "EverRich");
+        
+        try {
+            // Fetch the category details
+            Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new IllegalArgumentException("Category not found: " + categoryId));
+            
+            // Convert LocalDate to LocalDateTime for repository calls
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+            
+            // Fetch transactions for the category within the date range
+            List<Transaction> transactions = transactionRepository.findByDateRangeAndCategories(
+                    startDateTime, endDateTime, Collections.singletonList(categoryId));
+            
+            // Additional in-memory filtering to ensure category match
+            transactions = transactions.stream()
+                    .filter(t -> t.getCategoryEntity() != null && t.getCategoryEntity().getId().equals(categoryId))
+                    .sorted((a, b) -> b.getDate().compareTo(a.getDate())) // Sort by date descending
+                    .collect(Collectors.toList());
+            
+            // Calculate total amount for display
+            double totalAmount = transactions.stream()
+                    .mapToDouble(Transaction::getAmount)
+                    .sum();
+            
+            model.addAttribute("transactions", transactions);
+            model.addAttribute("category", category);
+            model.addAttribute("startDate", startDate);
+            model.addAttribute("endDate", endDate);
+            model.addAttribute("totalAmount", totalAmount);
+            model.addAttribute("transactionCount", transactions.size());
+            model.addAttribute("backUrl", backUrl != null && !backUrl.isEmpty() ? backUrl : "/insights");
+            
+            return "insight-drill-transactions";
+            
+        } catch (Exception e) {
+            model.addAttribute("error", "Failed to load drill-down: " + e.getMessage());
+            return "redirect:/insights";
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.everrich.spendmanager.dto;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -29,6 +30,11 @@ public class InsightExecutionResult {
     // For CHART type (2D result)
     private List<DataPoint> dataPoints;
     private XAxisType xAxisType;
+    
+    // Query context for drill-down navigation
+    private LocalDate queryStartDate;
+    private LocalDate queryEndDate;
+    private boolean drillDownEnabled;
     
     // Constructors
     public InsightExecutionResult() {}
@@ -61,6 +67,8 @@ public class InsightExecutionResult {
     public static class DataPoint {
         private String label;
         private Double value;
+        private Long categoryId;    // For category-based drill-down
+        private String intervalKey; // For interval-based drill-down (e.g., "2025-01")
         
         public DataPoint() {}
         
@@ -69,10 +77,27 @@ public class InsightExecutionResult {
             this.value = value;
         }
         
+        public DataPoint(String label, Double value, Long categoryId) {
+            this.label = label;
+            this.value = value;
+            this.categoryId = categoryId;
+        }
+        
+        public DataPoint(String label, Double value, Long categoryId, String intervalKey) {
+            this.label = label;
+            this.value = value;
+            this.categoryId = categoryId;
+            this.intervalKey = intervalKey;
+        }
+        
         public String getLabel() { return label; }
         public void setLabel(String label) { this.label = label; }
         public Double getValue() { return value; }
         public void setValue(Double value) { this.value = value; }
+        public Long getCategoryId() { return categoryId; }
+        public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+        public String getIntervalKey() { return intervalKey; }
+        public void setIntervalKey(String intervalKey) { this.intervalKey = intervalKey; }
     }
     
     // Getters and Setters
@@ -96,4 +121,13 @@ public class InsightExecutionResult {
     
     public XAxisType getXAxisType() { return xAxisType; }
     public void setXAxisType(XAxisType xAxisType) { this.xAxisType = xAxisType; }
+    
+    public LocalDate getQueryStartDate() { return queryStartDate; }
+    public void setQueryStartDate(LocalDate queryStartDate) { this.queryStartDate = queryStartDate; }
+    
+    public LocalDate getQueryEndDate() { return queryEndDate; }
+    public void setQueryEndDate(LocalDate queryEndDate) { this.queryEndDate = queryEndDate; }
+    
+    public boolean isDrillDownEnabled() { return drillDownEnabled; }
+    public void setDrillDownEnabled(boolean drillDownEnabled) { this.drillDownEnabled = drillDownEnabled; }
 }

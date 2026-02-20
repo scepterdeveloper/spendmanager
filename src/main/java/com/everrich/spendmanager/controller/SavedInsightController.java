@@ -65,14 +65,16 @@ public class SavedInsightController {
 
     // Execute a saved insight and show results page (GET /insights/manage/{id}/execute)
     @GetMapping("/{id}/execute")
-    public String executeSavedInsight(@PathVariable Long id, Model model) {
+    public String executeSavedInsight(@PathVariable Long id, 
+                                       @RequestParam(value = "backUrl", required = false) String backUrl,
+                                       Model model) {
         model.addAttribute("appName", "EverRich");
         
         try {
             InsightExecutionResult result = savedInsightService.execute(id);
             model.addAttribute("result", result);
-            // Set back URL to return to insight management page
-            model.addAttribute("backUrl", "/insights/manage");
+            // Set back URL - use provided backUrl if available, otherwise default to insight management page
+            model.addAttribute("backUrl", backUrl != null && !backUrl.isEmpty() ? backUrl : "/insights/manage");
             return "insight-result";
         } catch (Exception e) {
             model.addAttribute("error", "Failed to execute insight: " + e.getMessage());
