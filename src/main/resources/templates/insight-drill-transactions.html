@@ -229,7 +229,7 @@
     <div class="content-container-full">
         
         <div class="page-header">
-            <a href="javascript:history.back()" class="back-link">
+            <a th:href="${backUrl != null ? backUrl : '/insights'}" class="back-link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M19 12H5"></path>
                     <path d="M12 19l-7-7 7-7"></path>

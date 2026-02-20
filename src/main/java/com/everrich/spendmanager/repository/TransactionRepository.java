@@ -20,6 +20,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                 "(:endDate = '9999-12-31 23:59:59' OR t.date <= CAST(:endDate AS timestamp)) AND " +
                 "(CAST(:accountIds AS text) IS NULL OR t.account_id IN (:accountIds)) AND " +
                 "(CAST(:categoryIds AS text) IS NULL OR c.id IN (:categoryIds)) AND " +
+                "(:reviewed IS NULL OR t.reviewed = :reviewed) AND " +
                 "(:query IS NULL OR " +
                 "  LOWER(t.description::text) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                 "  LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))" +
@@ -31,6 +32,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("endDate") LocalDateTime endDate,
             @Param("accountIds") List<Long> accountIds,
             @Param("categoryIds") List<Long> categoryIds,
+            @Param("reviewed") Boolean reviewed,
             @Param("query") String query);
 
     //-------------------------------------------------------------------------

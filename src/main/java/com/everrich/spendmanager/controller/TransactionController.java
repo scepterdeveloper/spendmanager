@@ -116,6 +116,7 @@ public class TransactionController {
         @RequestParam(value = "endDate", required = false) String endDateStr,    
         @RequestParam(required = false) List<Long> accountIds,
         @RequestParam(required = false) List<Long> categoryIds,
+        @RequestParam(required = false) Boolean reviewedFilter,
         @RequestParam(value = "query", required = false) String query,
         Model model,
         @RequestParam Map<String, String> params) { 
@@ -143,6 +144,7 @@ public class TransactionController {
             selectedEndDate,
             accountIds,
             categoryIds,
+            reviewedFilter,
             query 
         );
     
@@ -161,6 +163,7 @@ public class TransactionController {
         model.addAttribute("selectedEndDate", endDateStr);
         model.addAttribute("selectedAccountIds", accountIds);
         model.addAttribute("selectedCategoryIds", categoryIds); 
+        model.addAttribute("selectedReviewedFilter", reviewedFilter);
         model.addAttribute("selectedQuery", query); 
     
         model.addAttribute("filterParams", params);

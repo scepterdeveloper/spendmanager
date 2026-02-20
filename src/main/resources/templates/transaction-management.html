@@ -218,6 +218,16 @@
                             </div>
                         </div>
 
+                        <!-- Reviewed Status -->
+                        <div class="filter-field">
+                            <label for="reviewed-filter">Reviewed</label>
+                            <select id="reviewed-filter" name="reviewedFilter">
+                                <option value="" th:selected="${selectedReviewedFilter == null}">All</option>
+                                <option value="true" th:selected="${selectedReviewedFilter != null and selectedReviewedFilter == true}">Reviewed</option>
+                                <option value="false" th:selected="${selectedReviewedFilter != null and selectedReviewedFilter == false}">Not Reviewed</option>
+                            </select>
+                        </div>
+
                         <!-- Search -->
                         <div class="filter-field">
                             <label for="full-text-query">Search (Description, Category)</label>
@@ -270,7 +280,7 @@
                     <td th:text="${transaction.categoryEntity?.name ?: 'Uncategorized'}">Uncategorized</td>
                     <td>
                         <div class="action-buttons-container">
-                            <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
+                            <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, reviewedFilter=${selectedReviewedFilter}, query=${selectedQuery})}" class="btn-edit">Edit</a>
                             <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post" style="display:inline;">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                 <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
@@ -279,6 +289,7 @@
                                 <div th:if="${selectedAccountIds != null}" th:each="accId : ${selectedAccountIds}">
                                     <input type="hidden" name="accountIds" th:value="${accId}" />
                                 </div>
+                                <input type="hidden" name="reviewedFilter" th:if="${selectedReviewedFilter != null}" th:value="${selectedReviewedFilter}" />
                                 <input type="hidden" name="query" th:if="${selectedQuery != null}" th:value="${selectedQuery}" />
                                 <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
                                     <input type="hidden" name="categoryIds" th:value="${catId}" />
@@ -336,7 +347,7 @@
                                    th:id="${'mobile-reviewed-' + transaction.id}"
                                    title="Mark as reviewed">
                         </div>
-                        <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" 
+                        <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, reviewedFilter=${selectedReviewedFilter}, query=${selectedQuery})}" 
                            class="btn-icon-edit" title="Edit">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -351,6 +362,7 @@
                             <div th:if="${selectedAccountIds != null}" th:each="accId : ${selectedAccountIds}">
                                 <input type="hidden" name="accountIds" th:value="${accId}" />
                             </div>
+                            <input type="hidden" name="reviewedFilter" th:if="${selectedReviewedFilter != null}" th:value="${selectedReviewedFilter}" />
                             <input type="hidden" name="query" th:if="${selectedQuery != null}" th:value="${selectedQuery}" />
                             <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
                                 <input type="hidden" name="categoryIds" th:value="${catId}" />
@@ -368,7 +380,7 @@
                 </div>
 
                 <div class="card-actions" style="display: none;">
-                    <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, query=${selectedQuery})}" class="btn-edit">Edit</a>
+                    <a th:href="@{/transactions/edit/{id}(id=${transaction.id}, timeframe=${selectedTimeframe}, startDate=${selectedStartDate}, endDate=${selectedEndDate}, accountIds=${selectedAccountIds}, categoryIds=${selectedCategoryIds}, reviewedFilter=${selectedReviewedFilter}, query=${selectedQuery})}" class="btn-edit">Edit</a>
                     <form th:action="@{/transactions/{id}/delete(id=${transaction.id})}" method="post">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                         <input type="hidden" name="timeframe" th:if="${selectedTimeframe != null}" th:value="${selectedTimeframe}" />
@@ -377,6 +389,7 @@
                         <div th:if="${selectedAccountIds != null}" th:each="accId : ${selectedAccountIds}">
                             <input type="hidden" name="accountIds" th:value="${accId}" />
                         </div>
+                        <input type="hidden" name="reviewedFilter" th:if="${selectedReviewedFilter != null}" th:value="${selectedReviewedFilter}" />
                         <input type="hidden" name="query" th:if="${selectedQuery != null}" th:value="${selectedQuery}" />
                         <div th:if="${selectedCategoryIds != null}" th:each="catId : ${selectedCategoryIds}">
                             <input type="hidden" name="categoryIds" th:value="${catId}" />
@@ -418,6 +431,7 @@
             const clearAllAccountsCheckbox = document.getElementById('clear-all-accounts');
             const accountCheckboxes = document.querySelectorAll('.account-checkbox');
             const accountSelectedCountSpan = document.getElementById('account-selected-count');
+            const reviewedFilterSelect = document.getElementById('reviewed-filter');
 
             let confirmAction = null;
 
@@ -659,6 +673,18 @@
                 }
                 summaryHTML += `<div><strong>Categories:</strong> ${categoriesValue}</div>`;
 
+                // Reviewed filter
+                const reviewedValue = reviewedFilterSelect.value;
+                let reviewedText;
+                if (reviewedValue === '') {
+                    reviewedText = 'All';
+                } else if (reviewedValue === 'true') {
+                    reviewedText = 'Reviewed';
+                } else {
+                    reviewedText = 'Not Reviewed';
+                }
+                summaryHTML += `<div><strong>Reviewed:</strong> ${reviewedText}</div>`;
+
                 const query = fullTextQueryInput.value.trim();
                 if (query) {
                     summaryHTML += `<div><strong>Keywords:</strong> ${query}</div>`;
@@ -668,6 +694,7 @@
             }
 
             fullTextQueryInput.addEventListener('input', updateFilterSummary);
+            reviewedFilterSelect.addEventListener('change', updateFilterSummary);
             updateFilterSummary();
 
             // Delete Modal

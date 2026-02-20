@@ -489,6 +489,20 @@ public class AccountBalanceService {
         }
     }
 
+    /**
+     * Deletes only the balance entry for a transaction by ID without adjusting subsequent balances.
+     * This is used as a preparatory step before deleting the transaction itself due to FK constraints.
+     * The subsequent balance adjustment is handled separately in processTransactionDeleteAsync.
+     * 
+     * @param transactionId The ID of the transaction whose balance entry should be deleted
+     * @return The number of deleted entries (0 or 1)
+     */
+    public int deleteBalanceEntryByTransactionId(Long transactionId) {
+        int deletedCount = accountBalanceRepository.deleteByTransactionId(transactionId);
+        log.debug("Deleted {} balance entry for transaction ID: {} (FK cleanup)", deletedCount, transactionId);
+        return deletedCount;
+    }
+
     // ========== Query Methods for Balances Page ==========
 
     /**

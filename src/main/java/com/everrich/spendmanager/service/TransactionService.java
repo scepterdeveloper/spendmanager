@@ -317,10 +317,14 @@ public class TransactionService {
             Transaction transaction = optionalTransaction.get();
             String tenantId = TenantContext.getTenantId();
             
-            // Delete the transaction first
+            // First, delete the associated AccountBalance record (if any)
+            // This must be done before deleting the transaction due to foreign key constraint
+            accountBalanceService.deleteBalanceEntryByTransactionId(id);
+            
+            // Now delete the transaction
             transactionRepository.deleteById(id);
             
-            // Then trigger async balance removal
+            // Then trigger async balance adjustment for subsequent transactions
             accountBalanceService.processTransactionDeleteAsync(transaction, tenantId);
         } else {
             transactionRepository.deleteById(id);
@@ -395,6 +399,7 @@ public class TransactionService {
             LocalDate customEndDate,
             List<Long> accountIds,
             List<Long> categoryIds,
+            Boolean reviewed,
             String query) {
 
         DateTimeRange range = calculateDateTimeRange(timeframe, customStartDate, customEndDate);
@@ -407,6 +412,7 @@ public class TransactionService {
                 range.getEnd(),
                 effectiveAccountIds,
                 effectiveCategoryIds,
+                reviewed,
                 query);
 
         return filteredList;

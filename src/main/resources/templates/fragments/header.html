@@ -22,12 +22,18 @@
         .navbar-title a { 
             font-size: 1.75rem; 
             font-weight: 700; 
-            color: var(--accent-color); 
+            color: #FFFFFF; 
             text-decoration: none; 
             transition: color 0.3s;
         }
         .navbar-title a:hover {
-            color: #6EE7B7; 
+            color: #F3F4F6; 
+        }
+        .navbar-title .brand-accent {
+            color: var(--accent-color);
+        }
+        .navbar-title a:hover .brand-accent {
+            color: #6EE7B7;
         }
         .navbar-links {
             display: flex;
@@ -243,7 +249,7 @@
     </style>
     <nav class="navbar">
         <div class="navbar-title">
-            <a href="/dashboard" th:text="${appName}">EverRich</a>
+            <a href="/dashboard">Ever<span class="brand-accent">Rich</span></a>
         </div>
         <div class="navbar-links">
             <div class="user-dropdown" sec:authorize="isAuthenticated()" id="user-dropdown">
