@@ -1,7 +1,10 @@
 package com.everrich.spendmanager.entities;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -19,6 +22,14 @@ public class Statement {
     private LocalDateTime uploadDateTime;
     private StatementStatus status; // Enum: UPLOADING, PROCESSING, COMPLETED, FAILED
     private byte[] content;
+    
+    // Optional statement metadata fields - derived from LLM parsing when available
+    private LocalDate periodStartDate;
+    private LocalDate periodEndDate;
+    private BigDecimal openingBalance;
+    private BigDecimal closingBalance;
+    @Column(length = 500)
+    private String description;
 
     public byte[] getContent() {
         return content;
@@ -62,5 +73,45 @@ public class Statement {
 
     public void setAccount(Account account) {
         this.account = account;
+    }
+
+    public LocalDate getPeriodStartDate() {
+        return periodStartDate;
+    }
+
+    public void setPeriodStartDate(LocalDate periodStartDate) {
+        this.periodStartDate = periodStartDate;
+    }
+
+    public LocalDate getPeriodEndDate() {
+        return periodEndDate;
+    }
+
+    public void setPeriodEndDate(LocalDate periodEndDate) {
+        this.periodEndDate = periodEndDate;
+    }
+
+    public BigDecimal getOpeningBalance() {
+        return openingBalance;
+    }
+
+    public void setOpeningBalance(BigDecimal openingBalance) {
+        this.openingBalance = openingBalance;
+    }
+
+    public BigDecimal getClosingBalance() {
+        return closingBalance;
+    }
+
+    public void setClosingBalance(BigDecimal closingBalance) {
+        this.closingBalance = closingBalance;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

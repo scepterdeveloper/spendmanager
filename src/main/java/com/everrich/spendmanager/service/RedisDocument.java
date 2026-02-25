@@ -28,4 +28,15 @@ public class RedisDocument {
     public void addField(String name, String value)   {
         fields.put(name, value);
     }
+
+    /**
+     * Get a specific field value by name.
+     * Used in Thymeleaf templates for easy field access.
+     * 
+     * @param name The field name
+     * @return The field value, or empty string if not found
+     */
+    public String getField(String name) {
+        return fields.getOrDefault(name, "");
+    }
 }

@@ -139,32 +139,42 @@ public class TransactionService {
 
     /**
      * Handles the manual category correction, triggering the RAG learning loop.
+     * This method receives all necessary data directly to avoid race conditions
+     * with async execution (where the transaction might not be committed yet).
+     * 
+     * NOTE: tenantId must be passed explicitly because @Async methods run in a 
+     * new thread where TenantContext (ThreadLocal) is not propagated.
+     * 
+     * @param description The transaction description
+     * @param newCategoryName The new/corrected category name
+     * @param amount The transaction amount
+     * @param operation The transaction operation (PLUS/MINUS)
+     * @param accountName The account name
+     * @param tenantId The tenant ID (must be captured before async call)
      */
-    @Transactional
     @Async
-    public void updateVectorStore(Long transactionId, String newCategoryName) {
+    public void updateVectorStore(String description, String newCategoryName, Double amount, 
+                                   TransactionOperation operation, String accountName, String tenantId) {
 
-        Optional<Transaction> optionalTransaction = transactionRepository.findById(transactionId);
-        if (optionalTransaction.isEmpty()) {
-            throw new IllegalArgumentException("Transaction with ID " + transactionId + " not found.");
-        }
-
-        Transaction transaction = optionalTransaction.get();
         Category newCategory = categoryService.findByName(newCategoryName);
 
         if (newCategory == null) {
-            throw new IllegalArgumentException("Category with name " + newCategoryName + " not found.");
+            log.error("Category with name '{}' not found. Skipping vector store update.", newCategoryName);
+            return;
         }
-        // 1. **RAG LEARNING STEP**: Index the new, corrected knowledge into the Vector
-        // Store.
-        String accountName = (transaction.getAccount() != null) ? transaction.getAccount().getName() : "Unknown Account";
-        log.warn("Account is null for transaction ID {}. Using '{}' as account name for vector store.", transactionId, accountName);
+        
+        String effectiveAccountName = (accountName != null && !accountName.isEmpty()) ? accountName : "Unknown Account";
+        
+        // **RAG LEARNING STEP**: Index the new, corrected knowledge into the Vector Store.
+        log.info("Updating vector store - Description: '{}', Category: '{}', Account: '{}', Tenant: '{}'", 
+                description, newCategoryName, effectiveAccountName, tenantId);
         vectorStoreService.learnCorrectCategory(
-                transaction.getDescription(),
+                description,
                 newCategoryName,
-                transaction.getAmount(),
-                transaction.getOperation(),
-                accountName);
+                amount,
+                operation,
+                effectiveAccountName,
+                tenantId);
     }
 
     // 🟢 REVISED: Simplified LLM call just for parsing the text into JSON
@@ -341,6 +351,48 @@ public class TransactionService {
             return List.of();
         }
         return transactionRepository.findByStatementId(statementId);
+    }
+    
+    /**
+     * Deletes all transactions associated with a statement ID.
+     * First deletes all account balances in bulk, then deletes transactions.
+     * This is an async operation intended for rollback functionality.
+     */
+    @Async
+    @Transactional
+    public void deleteTransactionsByStatementIdAsync(Long statementId) {
+        if (statementId == null) {
+            log.warn("Cannot delete transactions: statementId is null");
+            return;
+        }
+        
+        // First, bulk delete all account balances for this statement (FK constraint)
+        int deletedBalances = accountBalanceService.deleteBalanceEntriesByStatementId(statementId);
+        log.info("Deleted {} account balances for statement ID {}", deletedBalances, statementId);
+        
+        // Then delete all transactions for this statement
+        List<Transaction> transactions = transactionRepository.findByStatementId(statementId);
+        log.info("Deleting {} transactions for statement ID {}", transactions.size(), statementId);
+        
+        for (Transaction transaction : transactions) {
+            try {
+                transactionRepository.deleteById(transaction.getId());
+            } catch (Exception e) {
+                log.error("Error deleting transaction ID {}: {}", transaction.getId(), e.getMessage());
+            }
+        }
+        
+        log.info("Completed deletion of transactions for statement ID {}", statementId);
+    }
+    
+    /**
+     * Returns the count of transactions for a given statement ID.
+     */
+    public long countTransactionsByStatementId(Long statementId) {
+        if (statementId == null) {
+            return 0;
+        }
+        return transactionRepository.findByStatementId(statementId).size();
     }
 
     // DateRange record using LocalDateTime for timestamp-based queries

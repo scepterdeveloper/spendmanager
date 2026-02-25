@@ -72,7 +72,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             if (tenantStatus == null || tenantStatus == TenantCreationStatus.INITIATED) {
                 log.warn("LOGIN FAILED: Tenant schema not ready for user {}. Status: {}", email, tenantStatus);
                 throw new UsernameNotFoundException(
-                        "Your application is being prepared. Please try to login a few minutes later.");
+                        "Your application is being prepared. Please try to login after a while. Thank you for your patience.");
             }
             
             // If tenant creation failed, prevent login with appropriate message

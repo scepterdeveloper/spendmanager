@@ -13,12 +13,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Controller
@@ -44,7 +46,7 @@ public class InsightsController {
         return "insights"; 
     }
 
-    // 2. Execute ad-hoc insight and redirect to result page
+    // 2. Execute ad-hoc insight and redirect to result page via GET (for proper back navigation)
     // URL: POST /insights/execute
     @PostMapping("/execute")
     public String executeAdHocInsight(
@@ -55,9 +57,7 @@ public class InsightsController {
             @RequestParam(required = false) String interval,
             @RequestParam(required = false) String intervalFunction,
             @RequestParam(defaultValue = "false") boolean aggregateResults,
-            Model model) {
-
-        model.addAttribute("appName", "EverRich");
+            HttpSession session) {
         
         try {
             // Parse category IDs from comma-separated string
@@ -84,15 +84,37 @@ public class InsightsController {
                     aggregateResults
             );
 
-            model.addAttribute("result", result);
-            // Set back URL to return to insights page
-            model.addAttribute("backUrl", "/insights");
-            return "insight-result";
+            // Store result in session with unique ID for GET retrieval
+            String resultId = UUID.randomUUID().toString();
+            session.setAttribute("insight_result_" + resultId, result);
+            
+            // Redirect to GET endpoint for proper browser back navigation support
+            return "redirect:/insights/result/" + resultId;
             
         } catch (Exception e) {
-            model.addAttribute("error", "Failed to execute insight: " + e.getMessage());
-            return "redirect:/insights";
+            return "redirect:/insights?error=" + e.getMessage();
         }
+    }
+
+    // 2b. GET endpoint to view cached ad-hoc insight result (supports browser back navigation)
+    // URL: GET /insights/result/{resultId}
+    @GetMapping("/result/{resultId}")
+    public String viewInsightResult(@PathVariable String resultId, HttpSession session, Model model) {
+        model.addAttribute("appName", "EverRich");
+        
+        InsightExecutionResult result = (InsightExecutionResult) session.getAttribute("insight_result_" + resultId);
+        
+        if (result == null) {
+            // Result expired or invalid - redirect back to insights page
+            return "redirect:/insights?error=Result+expired.+Please+run+the+analysis+again.";
+        }
+        
+        model.addAttribute("result", result);
+        // Set back URL to return to insights page, and resultId for drill-down back navigation
+        model.addAttribute("backUrl", "/insights");
+        model.addAttribute("resultPageUrl", "/insights/result/" + resultId);
+        
+        return "insight-result";
     }
 
     // 3. REST Endpoint to get all categories for the filter dropdown

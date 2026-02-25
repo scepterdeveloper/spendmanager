@@ -58,6 +58,16 @@
         }
         
         /* Balance table specific styles */
+        /* Right-align amount columns in desktop table (columns 2, 3, 4) */
+        .data-table th:nth-child(2),
+        .data-table th:nth-child(3),
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(2),
+        .data-table td:nth-child(3),
+        .data-table td:nth-child(4) {
+            text-align: right;
+        }
+        
         .amount-positive {
             color: var(--success-color, #10B981);
         }

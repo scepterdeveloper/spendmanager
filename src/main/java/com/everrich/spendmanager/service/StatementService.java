@@ -81,8 +81,31 @@ public class StatementService {
      * Retrieves all Statement records from the database.
      */
     public List<Statement> getAllStatements() {
-        // REPLACEMENT: Use JpaRepository's findAll()
-        return statementRepository.findAll();
+        return statementRepository.findAllByOrderByUploadDateTimeDesc();
+    }
+    
+    /**
+     * Retrieves statements filtered by account and date range.
+     * Uses the period dates on statements to determine if they fall within the range.
+     * 
+     * @param account The account to filter by, or null for all accounts
+     * @param startDate The start of the date range filter
+     * @param endDate The end of the date range filter
+     * @return List of statements matching the filter criteria
+     */
+    public List<Statement> getFilteredStatements(Account account, LocalDate startDate, LocalDate endDate) {
+        if (account != null) {
+            return statementRepository.findByAccountAndPeriodOverlapping(account, startDate, endDate);
+        } else {
+            return statementRepository.findByPeriodOverlapping(startDate, endDate);
+        }
+    }
+    
+    /**
+     * Retrieves statements for a specific account.
+     */
+    public List<Statement> getStatementsByAccount(Account account) {
+        return statementRepository.findByAccountOrderByUploadDateTimeDesc(account);
     }
 
     /**
@@ -111,6 +134,66 @@ public class StatementService {
 
     public void saveStatement(Statement statement)  {
         statementRepository.save(statement);
+    }
+    
+    /**
+     * Updates only the editable metadata fields of a statement.
+     * 
+     * @param statementId The ID of the statement to update
+     * @param periodStartDate New period start date (can be null)
+     * @param periodEndDate New period end date (can be null)
+     * @param openingBalance New opening balance (can be null)
+     * @param closingBalance New closing balance (can be null)
+     * @return The updated statement, or null if not found
+     */
+    public Statement updateStatementMetadata(Long statementId, LocalDate periodStartDate, 
+            LocalDate periodEndDate, java.math.BigDecimal openingBalance, java.math.BigDecimal closingBalance) {
+        
+        Optional<Statement> optionalStatement = statementRepository.findById(statementId);
+        if (optionalStatement.isEmpty()) {
+            log.warn("Statement with ID {} not found for metadata update", statementId);
+            return null;
+        }
+        
+        Statement statement = optionalStatement.get();
+        statement.setPeriodStartDate(periodStartDate);
+        statement.setPeriodEndDate(periodEndDate);
+        statement.setOpeningBalance(openingBalance);
+        statement.setClosingBalance(closingBalance);
+        
+        log.info("Updating metadata for statement ID {}: periodStart={}, periodEnd={}, opening={}, closing={}",
+                statementId, periodStartDate, periodEndDate, openingBalance, closingBalance);
+        
+        return statementRepository.save(statement);
+    }
+    
+    /**
+     * Deletes a statement if it has FAILED or ROLLED_BACK status.
+     * 
+     * @param statementId The ID of the statement to delete
+     * @return true if deleted successfully, false otherwise
+     * @throws IllegalStateException if statement status doesn't allow deletion
+     */
+    public boolean deleteStatement(Long statementId) {
+        Optional<Statement> optionalStatement = statementRepository.findById(statementId);
+        if (optionalStatement.isEmpty()) {
+            log.warn("Statement with ID {} not found for deletion", statementId);
+            return false;
+        }
+        
+        Statement statement = optionalStatement.get();
+        StatementStatus status = statement.getStatus();
+        
+        // Only allow deletion for FAILED or ROLLED_BACK statements
+        if (status != StatementStatus.FAILED && status != StatementStatus.ROLLED_BACK) {
+            log.warn("Cannot delete statement ID {} with status {}. Only FAILED or ROLLED_BACK statements can be deleted.", 
+                    statementId, status);
+            throw new IllegalStateException("Only statements with FAILED or ROLLED_BACK status can be deleted. Current status: " + status);
+        }
+        
+        log.info("Deleting statement ID {} with status {}", statementId, status);
+        statementRepository.delete(statement);
+        return true;
     }
 
     private String parseTransactionsWithGemini(String transactionText) {

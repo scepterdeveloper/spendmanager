@@ -135,6 +135,13 @@ public interface AccountBalanceRepository extends JpaRepository<AccountBalance, 
     int deleteByAccountId(@Param("accountId") Long accountId);
 
     /**
+     * Delete all balance entries associated with transactions from a specific statement.
+     */
+    @Modifying
+    @Query("DELETE FROM AccountBalance ab WHERE ab.transaction.id IN (SELECT t.id FROM Transaction t WHERE t.statementId = :statementId)")
+    int deleteByStatementId(@Param("statementId") Long statementId);
+
+    /**
      * Acquire a pessimistic write lock on the latest balance entry for an account.
      * This serializes concurrent balance operations for the same account,
      * preventing race conditions during statement upload processing.

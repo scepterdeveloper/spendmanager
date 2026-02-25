@@ -2,115 +2,420 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <title th:text="${appName} + ' - RAG Configuration'">EverRich - RAG Configuration</title>
+    <title th:text="${appName} + ' - RAG Configuration'">RAG Configuration</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
+    <style>
+        .section-title{margin:0 0 .25rem;color:var(--primary-color);font-size:1rem;font-weight:600}
+        .section-description{color:var(--text-mellow);font-size:.8rem;margin-bottom:.75rem;line-height:1.4}
+        .content-wrapper-compact{border:1px solid var(--border-color);padding:.75rem 1rem;border-radius:.375rem;margin-bottom:1rem;background:var(--bg-white);box-shadow:var(--shadow-sm)}
+        .action-buttons-row{display:flex;gap:.5rem;flex-wrap:wrap}
+        .btn-sleek{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .75rem;border-radius:.25rem;font-weight:500;font-size:.8rem;text-decoration:none;cursor:pointer;border:none;transition:all .2s}
+        .btn-sleek svg{width:14px;height:14px}
+        .btn-sleek-view{background:var(--info-color);color:#fff}.btn-sleek-view:hover{background:#2563EB}
+        .btn-sleek-recreate{background:var(--accent-color);color:#fff}.btn-sleek-recreate:hover{background:#059669}
+        .btn-sleek-reset{background:var(--error-color);color:#fff}.btn-sleek-reset:hover{opacity:.9}
+        .btn-sleek-delete{background:var(--error-color);color:#fff}.btn-sleek-delete:hover{opacity:.9}.btn-sleek-delete:disabled{background:#D1D5DB;cursor:not-allowed}
+        .btn-sleek:disabled{opacity:.6;cursor:not-allowed}
+        .btn-sleek .spinner{display:none;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite}
+        .btn-sleek.loading .spinner{display:inline-block}
+        .btn-sleek.loading .btn-icon{display:none}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .alert-success{background:#D1FAE5;color:#065F46;padding:.75rem;border-radius:.375rem;margin-bottom:1rem;border-left:4px solid var(--success-color);font-size:.875rem}
+        .alert-error{background:#FEE2E2;color:#991B1B;padding:.75rem;border-radius:.375rem;margin-bottom:1rem;border-left:4px solid var(--error-color);font-size:.875rem}
+        .documents-section{margin-top:.5rem}
+        .documents-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;flex-wrap:wrap;gap:.25rem}
+        .documents-header h3{margin:0;color:var(--primary-color);font-size:.9rem}
+        .documents-header-left{display:flex;align-items:center;gap:.5rem}
+        .document-count{background:var(--bg-accent-light);color:var(--accent-color);padding:.1rem .4rem;border-radius:1rem;font-size:.7rem;font-weight:600}
+        .empty-state{text-align:center;padding:2rem 1rem;color:var(--text-mellow);font-size:.875rem}
+        table.document-table{table-layout:fixed!important;width:100%!important}
+        table.document-table th:nth-child(1),table.document-table td:nth-child(1){width:3%!important;text-align:center}
+        table.document-table th:nth-child(2),table.document-table td:nth-child(2){width:15%!important}
+        table.document-table th:nth-child(3),table.document-table td:nth-child(3){width:8%!important}
+        table.document-table th:nth-child(4),table.document-table td:nth-child(4){width:14%!important}
+        table.document-table th:nth-child(5),table.document-table td:nth-child(5){width:60%!important;min-width:40%!important}
+        table.document-table td:nth-child(5){word-break:break-word}
+        .document-table th,.document-table td{padding:.5rem .75rem;font-size:.85rem}
+        .document-operation{padding:.125rem .4rem;border-radius:.2rem;font-size:.7rem;font-weight:500}
+        .operation-plus{background:#D1FAE5;color:#065F46}.operation-minus{background:#FEE2E2;color:#991B1B}
+        .select-checkbox{width:16px;height:16px;cursor:pointer;accent-color:var(--accent-color)}
+        .document-list-mobile{display:none}
+        .document-card{background:var(--bg-white);border:1px solid var(--border-color);border-radius:.375rem;padding:.75rem;margin-bottom:.5rem}
+        .document-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.35rem}
+        .document-card-left{display:flex;align-items:center;gap:.5rem}
+        .document-category{font-weight:600;color:var(--primary-color);font-size:.875rem}
+        .document-content{font-size:.8rem;color:var(--text-mellow);margin-bottom:.35rem;padding-bottom:.35rem;border-bottom:1px solid var(--border-color);word-break:break-word}
+        .document-account{font-size:.75rem;color:var(--text-mellow)}
+        .search-pagination-row{display:flex;justify-content:space-between;align-items:center;gap:.75rem;margin-bottom:.5rem;flex-wrap:wrap}
+        .search-box{display:flex;align-items:center;gap:.35rem;flex:1;max-width:280px}
+        .search-box input{flex:1;padding:.35rem .6rem;border:1px solid var(--border-color);border-radius:.25rem;font-size:.8rem}
+        .search-box input:focus{outline:none;border-color:var(--accent-color)}
+        .search-box svg{width:14px;height:14px;color:var(--text-mellow)}
+        .pagination-controls{display:flex;align-items:center;gap:.25rem}
+        .pagination-controls button{padding:.25rem .5rem;border:1px solid var(--border-color);background:var(--bg-white);border-radius:.2rem;cursor:pointer;font-size:.7rem}
+        .pagination-controls button:hover:not(:disabled){background:var(--bg-gray)}
+        .pagination-controls button:disabled{opacity:.4;cursor:not-allowed}
+        .pagination-info{font-size:.7rem;color:var(--text-mellow)}
+        .per-page-select{padding:.2rem .3rem;border:1px solid var(--border-color);border-radius:.2rem;font-size:.7rem}
+        .filter-info{font-size:.7rem;color:var(--text-mellow);margin-left:.5rem}
+        @media(max-width:767px){.action-buttons-row{flex-direction:column}.btn-sleek{width:100%;justify-content:center;padding:.5rem .75rem}.data-table-wrapper.document-table-wrapper{display:none}.document-list-mobile{display:block}.documents-header{flex-direction:column;align-items:flex-start}.documents-header-left{width:100%;justify-content:space-between}.search-pagination-row{flex-direction:column;align-items:stretch}.search-box{max-width:none}.pagination-controls{justify-content:center}}
+        /* Toast styles */
+        #toast-container{position:fixed;top:1rem;right:1rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem}
+        .toast{padding:.75rem 1rem;border-radius:.375rem;color:#fff;font-size:.875rem;opacity:0;transform:translateX(100%);transition:all .3s ease;max-width:350px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+        .toast.show{opacity:1;transform:translateX(0)}
+        .toast.success{background:#10B981}
+        .toast.error{background:#EF4444}
+        .toast.info{background:#3B82F6}
+        .toast.warning{background:#F59E0B}
+    </style>
 </head>
 <body>
     <div th:replace="fragments/header :: appHeader"></div>
-
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <div id="toast-container"></div>
-    
-    <div id="confirmation-modal" class="modal">
-        <div class="modal-content">
-            <p id="modal-message"></p>
-            <div class="modal-buttons">
-                <button id="modal-confirm-btn" class="btn-delete">Yes, Reset Configuration</button>
-                <button id="modal-cancel-btn" class="btn-cancel">Cancel</button>
-            </div>
-        </div>
-    </div>
-
+    <div id="confirmation-modal" class="modal"><div class="modal-content"><p id="modal-message"></p><div class="modal-buttons"><button id="modal-confirm-btn" class="btn-delete">Confirm</button><button id="modal-cancel-btn" class="btn-cancel">Cancel</button></div></div></div>
     <div class="content-container-full">
-        <div class="page-header">
-            <a href="/dashboard" class="back-link">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 12H5"></path>
-                    <path d="M12 19l-7-7 7-7"></path>
-                </svg>
-                Back
-            </a>
-            <h2>Autocategorization</h2>
-        </div>
-
-        <!-- Success/Error Messages -->
-        <div th:if="${successMessage}" style="background-color: #D1FAE5; color: #065F46; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem; border-left: 4px solid var(--success-color);">
-            <strong>Success!</strong> <span th:text="${successMessage}"></span>
-        </div>
-
-        <div th:if="${errorMessage}" style="background-color: #FEE2E2; color: #991B1B; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem; border-left: 4px solid var(--error-color);">
-            <strong>Error!</strong> <span th:text="${errorMessage}"></span>
-        </div>
-
-        <!-- RAG Configuration -->
-        <div class="content-wrapper">
-            <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--primary-color);">RAG Configuration</h3>
-
-            <div style="background-color: var(--bg-light); padding: 1rem; border-radius: 0.375rem; border-left: 4px solid var(--accent-color); margin-bottom: 1.5rem;">
-                <p style="margin: 0.5rem 0; font-size: 0.95rem; color: var(--text-mellow);"><strong style="color: var(--primary-color);">Index Name:</strong> <span th:text="${indexName}">transaction_index</span></p>
-                <p style="margin: 0.5rem 0; font-size: 0.95rem; color: var(--text-mellow);"><strong style="color: var(--primary-color);">Vector Dimension:</strong> <span th:text="${vectorDimension}">768</span></p>
-                <p style="margin: 0.5rem 0; font-size: 0.95rem; color: var(--text-mellow);"><strong style="color: var(--primary-color);">Status:</strong> Active</p>
+        <div class="page-header"><a href="/dashboard" class="back-link"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>Back</a><h2>Autocategorization</h2></div>
+        <div th:if="${successMessage}" class="alert-success"><strong>Success!</strong> <span th:text="${successMessage}"></span></div>
+        <div th:if="${errorMessage}" class="alert-error"><strong>Error!</strong> <span th:text="${errorMessage}"></span></div>
+        <div class="content-wrapper-compact">
+            <h3 class="section-title">Training Data Management</h3>
+            <p class="section-description">Manage the training data used for automatic transaction categorization.</p>
+            <div class="action-buttons-row">
+                <a href="/rag-config/view" class="btn-sleek btn-sleek-view"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>View</a>
+                <button type="button" id="recreate-btn" class="btn-sleek btn-sleek-recreate"><span class="spinner"></span><svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span class="btn-text">Re-create</span></button>
+                <button type="button" id="reset-btn" class="btn-sleek btn-sleek-reset"><span class="spinner"></span><svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="btn-text">Reset</span></button>
             </div>
-
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <form id="reset-form" th:action="@{/rag-config/reset}" method="post" style="margin: 0;">
-                    <button type="button" id="reset-btn" class="btn-delete" style="padding: 0.75rem 1.5rem;">
-                        Reset Configuration
-                    </button>
-                </form>
-
-                <form id="recreate-form" th:action="@{/rag-config/recreate}" method="post" style="margin: 0;">
-                    <button type="button" id="recreate-btn" class="btn-primary" style="padding: 0.75rem 1.5rem;">
-                        Re-create Configuration
-                    </button>
-                </form>
+        </div>
+        <div th:if="${showDocuments}" class="content-wrapper documents-section">
+            <div class="documents-header">
+                <div class="documents-header-left"><h3>Training Documents</h3><span class="document-count" id="doc-count-display" th:text="${documentCount} + ' documents'">0 documents</span><span class="filter-info" id="filter-info" style="display:none"></span></div>
+                <div th:if="${documents != null and !documents.empty}"><button type="button" id="delete-selected-btn" class="btn-sleek btn-sleek-delete" disabled><span class="spinner"></span><svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="btn-text">Delete (<span id="selected-count">0</span>)</span></button></div>
             </div>
+            <div th:if="${documents == null or documents.empty}" class="empty-state"><p>No training documents found.</p><p>Use "Re-create" to generate training data from your categorized transactions.</p></div>
+            <div th:if="${documents != null and !documents.empty}" class="search-pagination-row">
+                <div class="search-box"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="search-input" placeholder="Search..."></div>
+                <div class="pagination-controls"><select id="per-page" class="per-page-select"><option value="12">12</option><option value="24">24</option><option value="48">48</option><option value="100">100</option></select><button id="prev-btn" disabled>&lt;</button><span class="pagination-info" id="page-info">1 / 1</span><button id="next-btn" disabled>&gt;</button></div>
+            </div>
+            <div th:if="${documents != null and !documents.empty}" class="data-table-wrapper document-table-wrapper">
+                <table class="data-table document-table">
+                    <thead><tr><th><input type="checkbox" id="select-all" class="select-checkbox" title="Select all"></th><th>Category</th><th>Operation</th><th>Account</th><th>Content</th></tr></thead>
+                    <tbody id="table-body"><tr th:each="doc : ${documents}" th:data-category="${doc.getField('category')}" th:data-operation="${doc.getField('operation')}" th:data-account="${doc.getField('account')}" th:data-content="${doc.getField('content_payload')}" th:data-doc-id="${doc.documentId}"><td><input type="checkbox" class="select-checkbox doc-checkbox" th:data-doc-id="${doc.documentId}"></td><td th:text="${doc.getField('category')}">Category</td><td><span th:class="${doc.getField('operation') == 'PLUS' ? 'document-operation operation-plus' : 'document-operation operation-minus'}" th:text="${doc.getField('operation')}">MINUS</span></td><td th:text="${doc.getField('account')}">Account</td><td th:text="${doc.getField('content_payload')}">Content</td></tr></tbody>
+                </table>
+            </div>
+            <div th:if="${documents != null and !documents.empty}" class="document-list-mobile" id="mobile-list"><div th:each="doc : ${documents}" class="document-card" th:data-category="${doc.getField('category')}" th:data-operation="${doc.getField('operation')}" th:data-account="${doc.getField('account')}" th:data-content="${doc.getField('content_payload')}" th:data-doc-id="${doc.documentId}"><div class="document-card-header"><div class="document-card-left"><input type="checkbox" class="select-checkbox doc-checkbox-mobile" th:data-doc-id="${doc.documentId}"><span class="document-category" th:text="${doc.getField('category')}">Category</span></div><span th:class="${doc.getField('operation') == 'PLUS' ? 'document-operation operation-plus' : 'document-operation operation-minus'}" th:text="${doc.getField('operation')}">MINUS</span></div><div class="document-content" th:text="${doc.getField('content_payload')}">Content</div><div class="document-account" th:text="'Account: ' + ${doc.getField('account')}">Account</div></div></div>
         </div>
     </div>
-
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const resetBtn = document.getElementById('reset-btn');
-            const resetForm = document.getElementById('reset-form');
-            const recreateBtn = document.getElementById('recreate-btn');
-            const recreateForm = document.getElementById('recreate-form');
-            const modal = document.getElementById('confirmation-modal');
-            const modalMessage = document.getElementById('modal-message');
-            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-            const modalCancelBtn = document.getElementById('modal-cancel-btn');
-            
-            let currentAction = null;
+    document.addEventListener('DOMContentLoaded',function(){
+        var resetBtn=document.getElementById('reset-btn'),
+            recreateBtn=document.getElementById('recreate-btn'),
+            deleteBtn=document.getElementById('delete-selected-btn'),
+            modal=document.getElementById('confirmation-modal'),
+            modalMsg=document.getElementById('modal-message'),
+            confirmBtn=document.getElementById('modal-confirm-btn'),
+            cancelBtn=document.getElementById('modal-cancel-btn'),
+            action=null;
 
-            resetBtn.addEventListener('click', function () {
-                currentAction = 'reset';
-                modalMessage.textContent = 'Are you sure you want to reset the RAG configuration? This will delete the entire vector search index and all embeddings. This action cannot be undone!';
-                modalConfirmBtn.textContent = 'Yes, Reset Configuration';
-                modalConfirmBtn.className = 'btn-delete';
-                modal.style.display = 'flex';
-            });
+        // Get CSRF token for AJAX requests
+        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+        var csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
 
-            recreateBtn.addEventListener('click', function () {
-                currentAction = 'recreate';
-                modalMessage.textContent = 'Are you sure you want to re-create the RAG configuration? This will load all categorized transactions from the database and create training documents. This may take several minutes.';
-                modalConfirmBtn.textContent = 'Yes, Re-create Configuration';
-                modalConfirmBtn.className = 'btn-primary';
-                modal.style.display = 'flex';
-            });
+        // Helper to set loading state on button
+        function setButtonLoading(btn, isLoading) {
+            if (isLoading) {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
 
-            modalConfirmBtn.addEventListener('click', function () {
-                modal.style.display = 'none';
-                if (currentAction === 'reset') {
-                    resetForm.submit();
-                } else if (currentAction === 'recreate') {
-                    recreateForm.submit();
+        // Async Reset Handler
+        function handleReset() {
+            setButtonLoading(resetBtn, true);
+            var headers = { 'Content-Type': 'application/json' };
+            headers[csrfHeader] = csrfToken;
+            fetch('/rag-config/api/reset', {
+                method: 'POST',
+                headers: headers
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                setButtonLoading(resetBtn, false);
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Refresh after short delay to show updated state
+                    setTimeout(function() { window.location.reload(); }, 1500);
+                } else {
+                    showToast(data.message, 'error');
                 }
+            })
+            .catch(function(error) {
+                setButtonLoading(resetBtn, false);
+                showToast('Failed to reset RAG configuration: ' + error.message, 'error');
             });
+        }
 
-            modalCancelBtn.addEventListener('click', function () {
-                modal.style.display = 'none';
-                currentAction = null;
+        // Async Re-create Handler
+        function handleRecreate() {
+            setButtonLoading(recreateBtn, true);
+            var headers = { 'Content-Type': 'application/json' };
+            headers[csrfHeader] = csrfToken;
+            fetch('/rag-config/api/recreate', {
+                method: 'POST',
+                headers: headers
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                setButtonLoading(recreateBtn, false);
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    setTimeout(function() { window.location.reload(); }, 1500);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(function(error) {
+                setButtonLoading(recreateBtn, false);
+                showToast('Failed to re-create RAG configuration: ' + error.message, 'error');
+            });
+        }
+
+        // Async Delete Handler
+        function handleDeleteSelected() {
+            var ids = getSelectedDocumentIds();
+            if (ids.length === 0) return;
+            
+            setButtonLoading(deleteBtn, true);
+            var headers = { 'Content-Type': 'application/json' };
+            headers[csrfHeader] = csrfToken;
+            fetch('/rag-config/api/delete-selected?documentIds=' + encodeURIComponent(ids.join(',')), {
+                method: 'POST',
+                headers: headers
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                setButtonLoading(deleteBtn, false);
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Remove deleted rows from DOM
+                    ids.forEach(function(docId) {
+                        var row = document.querySelector('tr[data-doc-id="' + docId + '"]');
+                        var card = document.querySelector('.document-card[data-doc-id="' + docId + '"]');
+                        if (row) row.remove();
+                        if (card) card.remove();
+                    });
+                    // Update arrays and re-render
+                    updateAfterDelete(ids);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(function(error) {
+                setButtonLoading(deleteBtn, false);
+                showToast('Failed to delete documents: ' + error.message, 'error');
+            });
+        }
+
+        // Modal handlers
+        resetBtn.onclick = function() {
+            action = 'reset';
+            modalMsg.textContent = 'Are you sure you want to reset the RAG configuration? This will delete all training documents.';
+            confirmBtn.textContent = 'Yes, Reset';
+            confirmBtn.className = 'btn-delete';
+            modal.style.display = 'flex';
+        };
+        
+        recreateBtn.onclick = function() {
+            action = 'recreate';
+            modalMsg.textContent = 'Re-create the RAG configuration? This will reload all categorized transactions.';
+            confirmBtn.textContent = 'Yes, Re-create';
+            confirmBtn.className = 'btn-primary';
+            modal.style.display = 'flex';
+        };
+        
+        confirmBtn.onclick = function() {
+            modal.style.display = 'none';
+            if (action === 'reset') handleReset();
+            else if (action === 'recreate') handleRecreate();
+            else if (action === 'delete-selected') handleDeleteSelected();
+        };
+        
+        cancelBtn.onclick = function() {
+            modal.style.display = 'none';
+            action = null;
+        };
+
+        // Pagination and Search logic
+        var tableBody = document.getElementById('table-body'),
+            mobileList = document.getElementById('mobile-list');
+        if (!tableBody) return;
+        
+        var allRows = Array.from(tableBody.querySelectorAll('tr')),
+            allCards = mobileList ? Array.from(mobileList.querySelectorAll('.document-card')) : [],
+            filteredRows = allRows.slice(),
+            filteredCards = allCards.slice(),
+            currentPage = 1,
+            perPage = 12,
+            totalDocs = parseInt(document.getElementById('doc-count-display').textContent) || allRows.length;
+        
+        var searchInput = document.getElementById('search-input'),
+            perPageSelect = document.getElementById('per-page'),
+            prevBtn = document.getElementById('prev-btn'),
+            nextBtn = document.getElementById('next-btn'),
+            pageInfo = document.getElementById('page-info'),
+            filterInfo = document.getElementById('filter-info'),
+            docCountDisplay = document.getElementById('doc-count-display'),
+            selectAll = document.getElementById('select-all'),
+            selectedCountSpan = document.getElementById('selected-count');
+        
+        function search(term) {
+            term = term.toLowerCase().trim();
+            if (!term) {
+                filteredRows = allRows.slice();
+                filteredCards = allCards.slice();
+            } else {
+                filteredRows = allRows.filter(function(r) {
+                    return (r.dataset.category + ' ' + r.dataset.operation + ' ' + r.dataset.account + ' ' + r.dataset.content).toLowerCase().indexOf(term) >= 0;
+                });
+                filteredCards = allCards.filter(function(c) {
+                    return (c.dataset.category + ' ' + c.dataset.operation + ' ' + c.dataset.account + ' ' + c.dataset.content).toLowerCase().indexOf(term) >= 0;
+                });
+            }
+            currentPage = 1;
+            render();
+            updateFilterInfo(term);
+        }
+        
+        function updateFilterInfo(term) {
+            if (term) {
+                filterInfo.textContent = '(showing ' + filteredRows.length + ' of ' + totalDocs + ')';
+                filterInfo.style.display = 'inline';
+            } else {
+                filterInfo.style.display = 'none';
+            }
+        }
+        
+        function render() {
+            var total = filteredRows.length,
+                pages = Math.max(1, Math.ceil(total / perPage)),
+                start = (currentPage - 1) * perPage,
+                end = start + perPage;
+            
+            allRows.forEach(function(r) { r.style.display = 'none'; });
+            allCards.forEach(function(c) { c.style.display = 'none'; });
+            
+            filteredRows.slice(start, end).forEach(function(r) { r.style.display = ''; });
+            filteredCards.slice(start, end).forEach(function(c) { c.style.display = ''; });
+            
+            pageInfo.textContent = currentPage + ' / ' + pages;
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= pages;
+            
+            if (selectAll) selectAll.checked = false;
+            updateSelectionCount();
+        }
+        
+        function updateAfterDelete(deletedIds) {
+            allRows = allRows.filter(function(r) { return deletedIds.indexOf(r.dataset.docId) === -1; });
+            allCards = allCards.filter(function(c) { return deletedIds.indexOf(c.dataset.docId) === -1; });
+            filteredRows = filteredRows.filter(function(r) { return deletedIds.indexOf(r.dataset.docId) === -1; });
+            filteredCards = filteredCards.filter(function(c) { return deletedIds.indexOf(c.dataset.docId) === -1; });
+            totalDocs = allRows.length;
+            docCountDisplay.textContent = totalDocs + ' documents';
+            render();
+        }
+        
+        if (searchInput) searchInput.addEventListener('input', function() { search(this.value); });
+        if (perPageSelect) perPageSelect.addEventListener('change', function() { perPage = parseInt(this.value); currentPage = 1; render(); });
+        if (prevBtn) prevBtn.addEventListener('click', function() { if (currentPage > 1) { currentPage--; render(); } });
+        if (nextBtn) nextBtn.addEventListener('click', function() { var pages = Math.max(1, Math.ceil(filteredRows.length / perPage)); if (currentPage < pages) { currentPage++; render(); } });
+        
+        function updateSelectionCount() {
+            var ids = getSelectedDocumentIds();
+            if (selectedCountSpan) selectedCountSpan.textContent = ids.length;
+            if (deleteBtn) deleteBtn.disabled = ids.length === 0;
+        }
+        
+        function getSelectedDocumentIds() {
+            var ids = [];
+            document.querySelectorAll('.doc-checkbox:checked').forEach(function(cb) {
+                if (cb.closest('tr').style.display !== 'none') ids.push(cb.dataset.docId);
+            });
+            document.querySelectorAll('.doc-checkbox-mobile:checked').forEach(function(cb) {
+                if (cb.closest('.document-card').style.display !== 'none' && ids.indexOf(cb.dataset.docId) === -1) ids.push(cb.dataset.docId);
+            });
+            return ids;
+        }
+        
+        if (selectAll) selectAll.addEventListener('change', function() {
+            var checked = this.checked,
+                start = (currentPage - 1) * perPage,
+                end = start + perPage;
+            filteredRows.slice(start, end).forEach(function(r) {
+                var cb = r.querySelector('.doc-checkbox');
+                if (cb) cb.checked = checked;
+            });
+            filteredCards.slice(start, end).forEach(function(c) {
+                var cb = c.querySelector('.doc-checkbox-mobile');
+                if (cb) cb.checked = checked;
+            });
+            updateSelectionCount();
+        });
+        
+        document.querySelectorAll('.doc-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var docId = this.dataset.docId;
+                document.querySelectorAll('.doc-checkbox-mobile').forEach(function(m) {
+                    if (m.dataset.docId === docId) m.checked = cb.checked;
+                });
+                updateSelectionCount();
             });
         });
+        
+        document.querySelectorAll('.doc-checkbox-mobile').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var docId = this.dataset.docId;
+                document.querySelectorAll('.doc-checkbox').forEach(function(d) {
+                    if (d.dataset.docId === docId) d.checked = cb.checked;
+                });
+                updateSelectionCount();
+            });
+        });
+        
+        if (deleteBtn) deleteBtn.addEventListener('click', function() {
+            var ids = getSelectedDocumentIds();
+            if (ids.length === 0) return;
+            action = 'delete-selected';
+            modalMsg.textContent = 'Delete ' + ids.length + ' selected document(s)? This cannot be undone.';
+            confirmBtn.textContent = 'Yes, Delete';
+            confirmBtn.className = 'btn-delete';
+            modal.style.display = 'flex';
+        });
+        
+        render();
+    });
+
+    // Toast notification function
+    (function() {
+        var toastContainer = document.getElementById('toast-container');
+        window.showToast = function(message, type) {
+            type = type || 'success';
+            var toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(function() { toast.classList.add('show'); }, 10);
+            setTimeout(function() {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', function() { toast.remove(); });
+            }, 5000);
+        };
+    })();
     </script>
 </body>
 </html>

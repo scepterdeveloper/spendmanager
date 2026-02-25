@@ -21,10 +21,16 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     Registration complete! You can now sign in.
                 </div>
-                <!-- Error Message -->
-                <div th:if="${param.error}" class="branding-alert alert-danger">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                    Invalid email or password. If you recently registered, please check your email to complete the registration.
+                <!-- Pending/Processing Message (friendly style for tenant setup in progress) -->
+                <div th:if="${param.error != null and param.message != null and #strings.contains(param.message[0], 'being prepared')}" class="branding-alert alert-pending">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="alert-content" th:text="${param.message[0]}">Processing message</span>
+                </div>
+                <!-- Error Message (for actual errors like bad credentials) -->
+                <div th:if="${param.error != null and (param.message == null or !#strings.contains(param.message[0], 'being prepared'))}" class="branding-alert alert-danger">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    <span class="alert-content" th:if="${param.message != null}" th:text="${param.message[0]}">Error message</span>
+                    <span class="alert-content" th:if="${param.message == null}">Invalid email or password. If you recently registered, please check your email to complete the registration.</span>
                 </div>
                 <!-- Logout Success Message -->
                 <div th:if="${param.logout}" class="branding-alert alert-success">

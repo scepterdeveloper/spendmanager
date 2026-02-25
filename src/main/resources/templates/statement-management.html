@@ -20,7 +20,45 @@
         /* Status Color Coding */
         .status-COMPLETED { color: var(--success-color); font-weight: 600; } 
         .status-FAILED { color: var(--error-color); font-weight: 600; } 
-        .status-PROCESSING { color: #F59E0B; font-weight: 600; } 
+        .status-PROCESSING { color: #F59E0B; font-weight: 600; }
+        .status-CATEGORIZING { color: #F59E0B; font-weight: 600; }
+        .status-OPEN { color: #3B82F6; font-weight: 600; }
+        .status-ROLLED_BACK { color: #8B5CF6; font-weight: 600; }
+
+        /* Action icons styling */
+        .stmt-actions { display: inline-flex; gap: 0.5rem; margin-left: auto; vertical-align: middle; float: right; }
+        .action-icon { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.25rem; cursor: pointer; border: none; background: transparent; transition: all 0.2s; }
+        .action-icon svg { width: 16px; height: 16px; }
+        .action-icon.edit { color: #3B82F6; }
+        .action-icon.edit:hover { background: #DBEAFE; color: #1D4ED8; }
+        .action-icon.rollback { color: #EF4444; }
+        .action-icon.rollback:hover:not(:disabled) { background: #FEE2E2; color: #B91C1C; }
+        .action-icon.delete { color: #DC2626; }
+        .action-icon.delete:hover:not(:disabled) { background: #FEE2E2; color: #991B1B; }
+        .action-icon:disabled { color: #D1D5DB; cursor: not-allowed; opacity: 0.5; }
+
+        /* Modal styles */
+        .modal-overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: #fff; padding: 2rem; border-radius: 0; max-width: 500px; width: 90%; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #E5E7EB; padding-bottom: 1rem; }
+        .modal-header h3 { margin: 0; font-size: 1.25rem; }
+        .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6B7280; }
+        .modal-form-field { margin-bottom: 1rem; }
+        .modal-form-field label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-dark); }
+        .modal-form-field input { width: 100%; padding: 0.75rem; border: 2px solid #D1D5DB; border-radius: 0; font-size: 1rem; }
+        .modal-form-field input:focus { outline: none; border-color: var(--accent-color); }
+        .modal-form-field input[readonly] { background: #F3F4F6; color: #6B7280; }
+        .modal-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .btn-cancel { background: #E5E7EB; color: #374151; padding: 0.75rem 1.5rem; border: none; border-radius: 0; cursor: pointer; font-weight: 500; }
+        .btn-danger { background: #EF4444; color: #fff; padding: 0.75rem 1.5rem; border: none; border-radius: 0; cursor: pointer; font-weight: 500; }
+        .modal-buttons { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+        /* Toast notification */
+        .toast { position: fixed; bottom: 1rem; right: 1rem; padding: 1rem 1.5rem; border-radius: 0; color: #fff; font-weight: 500; z-index: 2000; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: #10B981; }
+        .toast.error { background: #EF4444; }
 
         .upload-controls {
             display: flex;
@@ -35,7 +73,7 @@
             padding: 0.75rem;
             font-size: 0.95rem;
             border: 2px solid #D1D5DB;
-            border-radius: 0.375rem;
+            border-radius: 0;
             font-family: inherit;
             transition: all 0.2s ease;
         }
@@ -47,36 +85,147 @@
             box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
         }
 
-        .upload-controls input[type="file"] {
-            cursor: pointer;
-            background-color: white;
+        /* Custom File Upload Styling */
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
         }
 
-        .upload-controls input[type="file"]:hover {
+        .file-upload-dropzone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            border: 2px dashed #D1D5DB;
+            border-radius: 0;
+            background-color: #FAFAFA;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 120px;
+        }
+
+        .file-upload-dropzone:hover {
             border-color: var(--accent-color);
             background-color: var(--bg-accent-light);
         }
 
-        .upload-controls input[type="file"]::file-selector-button {
-            padding: 0.5rem 1rem;
-            margin-right: 0.75rem;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 0.25rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
+        .file-upload-dropzone.dragover {
+            border-color: var(--accent-color);
+            background-color: var(--bg-accent-light);
+            border-style: solid;
         }
 
-        .upload-controls input[type="file"]::file-selector-button:hover {
-            background-color: #059669;
+        .file-upload-dropzone.has-file {
+            border-color: var(--accent-color);
+            border-style: solid;
+            background-color: var(--bg-accent-light);
+        }
+
+        .file-upload-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 0.75rem;
+            color: #9CA3AF;
+            transition: color 0.2s ease;
+        }
+
+        .file-upload-dropzone:hover .file-upload-icon,
+        .file-upload-dropzone.dragover .file-upload-icon {
+            color: var(--accent-color);
+        }
+
+        .file-upload-dropzone.has-file .file-upload-icon {
+            color: var(--accent-color);
+        }
+
+        .file-upload-text {
+            text-align: center;
+        }
+
+        .file-upload-text-main {
+            font-size: 0.95rem;
+            color: var(--primary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .file-upload-text-main .browse-link {
+            color: var(--accent-color);
+            font-weight: 600;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .file-upload-text-sub {
+            font-size: 0.8rem;
+            color: var(--text-mellow);
+        }
+
+        .file-upload-selected {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background-color: white;
+            border-radius: 0;
+            border: 1px solid var(--border-accent-light);
+        }
+
+        .file-upload-selected-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--accent-color);
+            flex-shrink: 0;
+        }
+
+        .file-upload-selected-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            word-break: break-all;
+        }
+
+        .file-upload-selected-remove {
+            width: 20px;
+            height: 20px;
+            margin-left: auto;
+            color: #9CA3AF;
+            cursor: pointer;
+            transition: color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .file-upload-selected-remove:hover {
+            color: var(--error-color);
+        }
+
+        .file-upload-input {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            overflow: hidden;
         }
 
         @media (max-width: 767px) {
             .upload-controls { flex-direction: column; align-items: stretch; }
             .title-full { display: none; }
             .title-short { display: inline; }
+            
+            /* Mobile Upload button - icon only, compact */
+            .btn-upload-mobile {
+                padding: 0.5rem !important;
+                min-width: auto !important;
+                width: 36px !important;
+                height: 36px !important;
+            }
+            .btn-upload-mobile .title-full,
+            .btn-upload-mobile .title-short {
+                display: none !important;
+            }
+            .btn-upload-mobile svg {
+                margin-right: 0 !important;
+            }
             
             /* Restrict filename length to 30 characters in mobile list */
             .mobile-card-title {
@@ -93,7 +242,7 @@
                 padding: 0.5rem;
                 font-size: 0.9rem;
                 border: 1px solid #D1D5DB;
-                border-radius: 0.25rem;
+                border-radius: 0;
                 width: 100%;
                 max-width: 100%;
             }
@@ -109,6 +258,13 @@
                 padding: 0.5rem 1rem;
                 font-size: 0.95rem;
                 width: 100%;
+            }
+            
+            /* Mobile card actions inline - matches transaction-management style */
+            .mobile-card-actions {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
             }
         }
         
@@ -135,67 +291,138 @@
     <div th:replace="~{fragments/header :: appHeader}"></div>
     
     <div class="content-container-full">
-        
+
         <div class="page-header">
             <a href="/dashboard" class="back-link">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 Back
             </a>
             <h2>
                 <span class="title-full">Statement Management</span>
                 <span class="title-short">Statements</span>
             </h2>
+            <button type="button" class="btn-primary btn-upload-mobile" onclick="openUploadModal();" style="margin-left: auto;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.5rem; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="title-full">Upload Statement</span>
+                <span class="title-short">Upload</span>
+            </button>
         </div>
 
-        <div class="content-wrapper">
-            <h3 style="margin-top: 0; margin-bottom: 1rem;">Upload New Statement (PDF)</h3>
-            
-            <div id="message-container"></div>
-            
-            <form id="uploadForm">
-                <div class="upload-controls">
-                    <select id="accountSelect" name="accountId" required style="flex: 1;">
-                        <option value="">-- Select an Account --</option>
-                        <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"></option>
-                    </select>
-                    
-                    <input type="file" id="fileInput" name="file" accept="application/pdf" required style="flex: 2;">
+        <div id="message-container"></div>
 
-                    <button type="submit" id="uploadButton" class="btn-primary" disabled title="Please select an account and a file.">
-                        Upload and Start Processing
-                    </button>
+        <!-- Filter Section -->
+        <div class="content-wrapper">
+            <form id="filter-form" action="/statements" method="get">
+                <input type="checkbox" id="filter-toggle" name="filter-toggle-state" 
+                    th:checked="${selectedTimeframe != 'current_month' or selectedAccountId != null}">
+
+                <div class="filter-summary">
+                    <label for="filter-toggle" class="filter-toggle-label">
+                        Applied Filters
+                        <svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </label>
+                    <div class="summary-content" id="filter-summary-content"></div>
+                </div>
+
+                <div class="filter-controls">
+                    <div class="filter-grid">
+                        <!-- Timeframe -->
+                        <div class="filter-field">
+                            <label for="timeframe">Timeframe</label>
+                            <select id="timeframe" name="timeframe">
+                                <option value="current_month" th:selected="${selectedTimeframe == 'current_month' or selectedTimeframe == null}">This Month</option>
+                                <option value="last_month" th:selected="${selectedTimeframe == 'last_month'}">Previous Month</option>
+                                <option value="current_year" th:selected="${selectedTimeframe == 'current_year'}">This Year</option>
+                                <option value="previous_year" th:selected="${selectedTimeframe == 'previous_year'}">Previous Year</option>
+                                <option value="entire_timeframe" th:selected="${selectedTimeframe == 'entire_timeframe'}">Entire Timeframe</option>
+                                <option value="date_range" th:selected="${selectedTimeframe == 'date_range'}">Date Range</option>
+                            </select>
+                            <div id="date-range-fields" class="date-inputs">
+                                <input type="date" id="start-date" name="startDate" placeholder="From Date"
+                                    th:value="${selectedStartDate != null ? selectedStartDate : ''}" 
+                                    onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+                                <input type="date" id="end-date" name="endDate" placeholder="To Date"
+                                    th:value="${selectedEndDate != null ? selectedEndDate : ''}"
+                                    onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+                            </div>
+                        </div>
+
+                        <!-- Account -->
+                        <div class="filter-field">
+                            <label for="filter-account">Account</label>
+                            <select id="filter-account" name="accountId">
+                                <option value="">All Accounts</option>
+                                <option th:each="account : ${accounts}" 
+                                        th:value="${account.id}" 
+                                        th:text="${account.name}"
+                                        th:selected="${selectedAccountId != null and selectedAccountId == account.id}">Account Name</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="apply-filters-btn" class="btn-filter">Apply Filters</button>
                 </div>
             </form>
-            
-            <div id="loading-spinner">
-                <svg class="animate-spin" style="display:inline; margin-right: 5px; vertical-align: middle;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                Processing your file... Please wait or navigate to the list below.
-            </div>
         </div>
 
         <div id="statement-list-section">
             <div class="data-table-wrapper">
-                <table class="data-table">
+                <table class="data-table" style="table-layout: fixed; width: 100%;">
                     <thead>
                         <tr>
-                            <th>Uploaded Statements</th> 
+                            <th style="width: 7%;">ID</th>
+                            <th style="width: 20%;">File Name</th>
+                            <th style="width: 15%;">Account</th>
+                            <th style="width: 14%;">Uploaded</th>
+                            <th style="width: 12%;">Start Date</th>
+                            <th style="width: 12%;">End Date</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 10%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr th:each="stmt : ${statements}"
                             th:data-status-name="${stmt.status.name()}"
-                            th:data-href="${stmt.status.name() == 'COMPLETED' ? '/statements/' + stmt.id : ''}">
+                            th:data-href="${stmt.status.name() == 'COMPLETED' ? '/statements/' + stmt.id + '?timeframe=' + (selectedTimeframe != null ? selectedTimeframe : 'current_month') + (selectedAccountId != null ? '&accountId=' + selectedAccountId : '') + (selectedStartDate != null ? '&startDate=' + selectedStartDate : '') + (selectedEndDate != null ? '&endDate=' + selectedEndDate : '') : ''}"
+                            th:classappend="${stmt.status.name() == 'COMPLETED' ? 'clickable' : ''}">
+                            <td th:text="${stmt.id}">ID</td>
+                            <td style="word-wrap: break-word; overflow-wrap: break-word;" th:text="${stmt.originalFileName}">File.pdf</td>
+                            <td th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">Account</td>
+                            <td th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">Date</td>
+                            <td th:text="${stmt.periodStartDate != null ? #temporals.format(stmt.periodStartDate, 'dd MMM yyyy') : '-'}">Start Date</td>
+                            <td th:text="${stmt.periodEndDate != null ? #temporals.format(stmt.periodEndDate, 'dd MMM yyyy') : '-'}">End Date</td>
                             <td>
-                                <strong>
-                                    <span th:text="${stmt.id}">ID</span> - <span th:text="${stmt.originalFileName}">File.pdf</span>
-                                </strong><br/>
-                                <span style="font-size: 0.8em; color: var(--text-mellow);">Account - <span th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">Account</span></span><br/>
-                                <span style="font-size: 0.8em; color: var(--text-mellow);">Uploaded - <span th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">Date</span></span><br/>
-                                
-                                <span style="font-size: 0.9em; display: inline-block; margin-top: 0.25rem;"
-                                      th:text="${stmt.status}"
-                                      th:classappend="'status-' + ${stmt.status.name()}">STATUS</span>
+                                <span th:text="${stmt.status}" th:classappend="'status-' + ${stmt.status.name()}">STATUS</span>
                             </td>
+                            <td>
+                                <span class="stmt-actions" style="float: none;">
+                                    <button type="button" class="action-icon edit" title="Edit Statement" th:data-id="${stmt.id}" onclick="openEditModal(this.dataset.id); event.stopPropagation();">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    </button>
+                                    <button type="button" class="action-icon rollback" 
+                                            th:title="${stmt.status.name() == 'ROLLED_BACK' ? 'Already rolled back' : (stmt.status.name() == 'COMPLETED' ? 'Rollback Transactions' : 'Can only rollback completed statements')}" 
+                                            th:data-id="${stmt.id}" 
+                                            th:data-name="${stmt.originalFileName}" 
+                                            th:disabled="${stmt.status.name() != 'COMPLETED'}"
+                                            th:onclick="${stmt.status.name() == 'COMPLETED'} ? 'openRollbackModal(this.dataset.id, this.dataset.name); event.stopPropagation();' : 'event.stopPropagation();'">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+                                    </button>
+                                    <button type="button" class="action-icon delete" 
+                                            th:title="${(stmt.status.name() == 'FAILED' or stmt.status.name() == 'ROLLED_BACK') ? 'Delete Statement' : 'Can only delete failed or rolled back statements'}"
+                                            th:data-id="${stmt.id}" 
+                                            th:data-name="${stmt.originalFileName}" 
+                                            th:disabled="${stmt.status.name() != 'FAILED' and stmt.status.name() != 'ROLLED_BACK'}"
+                                            th:onclick="${(stmt.status.name() == 'FAILED' or stmt.status.name() == 'ROLLED_BACK')} ? 'openDeleteModal(this.dataset.id, this.dataset.name); event.stopPropagation();' : 'event.stopPropagation();'">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    </button>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr th:if="${statements.empty}">
+                            <td colspan="8" style="text-align: center; padding: 2rem;">No statements found.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -205,7 +432,7 @@
                 <div th:each="stmt : ${statements}" 
                      class="mobile-card"
                      th:data-status-name="${stmt.status.name()}"
-                     th:data-href="${stmt.status.name() == 'COMPLETED' ? '/statements/' + stmt.id : ''}"
+                     th:data-href="${stmt.status.name() == 'COMPLETED' ? '/statements/' + stmt.id + '?timeframe=' + (selectedTimeframe != null ? selectedTimeframe : 'current_month') + (selectedAccountId != null ? '&accountId=' + selectedAccountId : '') + (selectedStartDate != null ? '&startDate=' + selectedStartDate : '') + (selectedEndDate != null ? '&endDate=' + selectedEndDate : '') : ''}"
                      th:classappend="${stmt.status.name() == 'COMPLETED' ? 'clickable' : ''}">
                     
                     <div class="mobile-card-header">
@@ -215,15 +442,37 @@
                               th:classappend="'status-' + ${stmt.status.name()}">STATUS</span>
                     </div>
                     
-                    <div class="mobile-card-description">
-                        <div style="margin-bottom: 4px;">
-                            <strong>ID:</strong> <span th:text="${stmt.id}">ID</span>
+                    <div class="card-description">
+                        <strong>Account:</strong> <span th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">Account</span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <div class="detail-item">
+                            <strong>Uploaded</strong>
+                            <span th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">Date</span>
                         </div>
-                        <div style="margin-bottom: 4px;">
-                            <strong>Account:</strong> <span th:text="${stmt.account != null ? stmt.account.name : 'N/A'}">Account</span>
-                        </div>
-                        <div>
-                            <strong>Uploaded:</strong> <span th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">Date</span>
+                        
+                        <!-- Mobile Card Actions inline -->
+                        <div class="card-actions-inline">
+                            <button type="button" class="action-icon edit" title="Edit Statement" th:data-id="${stmt.id}" onclick="openEditModal(this.dataset.id); event.stopPropagation();">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button type="button" class="action-icon rollback" 
+                                    th:title="${stmt.status.name() == 'ROLLED_BACK' ? 'Already rolled back' : (stmt.status.name() == 'COMPLETED' ? 'Rollback Transactions' : 'Can only rollback completed statements')}" 
+                                    th:data-id="${stmt.id}" 
+                                    th:data-name="${stmt.originalFileName}" 
+                                    th:disabled="${stmt.status.name() != 'COMPLETED'}"
+                                    th:onclick="${stmt.status.name() == 'COMPLETED'} ? 'openRollbackModal(this.dataset.id, this.dataset.name); event.stopPropagation();' : 'event.stopPropagation();'">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+                            </button>
+                            <button type="button" class="action-icon delete" 
+                                    th:title="${(stmt.status.name() == 'FAILED' or stmt.status.name() == 'ROLLED_BACK') ? 'Delete Statement' : 'Can only delete failed or rolled back statements'}"
+                                    th:data-id="${stmt.id}" 
+                                    th:data-name="${stmt.originalFileName}" 
+                                    th:disabled="${stmt.status.name() != 'FAILED' and stmt.status.name() != 'ROLLED_BACK'}"
+                                    th:onclick="${(stmt.status.name() == 'FAILED' or stmt.status.name() == 'ROLLED_BACK')} ? 'openDeleteModal(this.dataset.id, this.dataset.name); event.stopPropagation();' : 'event.stopPropagation();'">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -233,6 +482,105 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Filter form elements
+            const timeframeSelect = document.getElementById('timeframe');
+            const dateRangeFields = document.getElementById('date-range-fields');
+            const filterSummaryContent = document.getElementById('filter-summary-content');
+            const applyFiltersBtn = document.getElementById('apply-filters-btn');
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            const filterAccountSelect = document.getElementById('filter-account');
+
+            // Validate Date Range and Enable/Disable Apply Button
+            function validateDateRange() {
+                if (timeframeSelect.value === 'date_range') {
+                    const startDate = startDateInput.value;
+                    const endDate = endDateInput.value;
+                    
+                    if (startDate && endDate) {
+                        applyFiltersBtn.disabled = false;
+                    } else {
+                        applyFiltersBtn.disabled = true;
+                    }
+                } else {
+                    applyFiltersBtn.disabled = false;
+                }
+            }
+
+            // Timeframe and Date Range Toggle
+            function toggleDateRangeFields() {
+                if (timeframeSelect.value === 'date_range') {
+                    dateRangeFields.classList.add('show');
+                } else {
+                    dateRangeFields.classList.remove('show');
+                }
+                validateDateRange();
+                updateFilterSummary();
+            }
+
+            timeframeSelect.addEventListener('change', toggleDateRangeFields);
+            startDateInput.addEventListener('change', () => {
+                validateDateRange();
+                updateFilterSummary();
+            });
+            endDateInput.addEventListener('change', () => {
+                validateDateRange();
+                updateFilterSummary();
+            });
+            filterAccountSelect.addEventListener('change', updateFilterSummary);
+            toggleDateRangeFields();
+
+            // Filter Summary
+            function updateFilterSummary() {
+                let summaryHTML = '';
+
+                const selectedTimeframeText = timeframeSelect.options[timeframeSelect.selectedIndex].text;
+                let timeframeValue = selectedTimeframeText;
+
+                if (timeframeSelect.value === 'date_range') {
+                    const startDate = startDateInput.value;
+                    const endDate = endDateInput.value;
+
+                    const formatDisplayDate = (dateString) => {
+                        if (!dateString) return '';
+                        try {
+                            return new Date(dateString).toLocaleDateString('en-GB', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            });
+                        } catch (e) {
+                            return dateString;
+                        }
+                    };
+
+                    const formattedStart = formatDisplayDate(startDate);
+                    const formattedEnd = formatDisplayDate(endDate);
+
+                    if (startDate && endDate) {
+                        timeframeValue = `${formattedStart} to ${formattedEnd}`;
+                    } else if (startDate) {
+                        timeframeValue = `From ${formattedStart}`;
+                    } else if (endDate) {
+                        timeframeValue = `Up to ${formattedEnd}`;
+                    } else {
+                        timeframeValue = selectedTimeframeText;
+                    }
+                }
+                summaryHTML += `<div><strong>Timeframe:</strong> ${timeframeValue}</div>`;
+
+                // Account filter
+                const selectedAccountText = filterAccountSelect.value 
+                    ? filterAccountSelect.options[filterAccountSelect.selectedIndex].text 
+                    : 'All Accounts';
+                summaryHTML += `<div><strong>Account:</strong> ${selectedAccountText}</div>`;
+
+                filterSummaryContent.innerHTML = summaryHTML;
+            }
+
+            updateFilterSummary();
+
+            // Upload form elements
             const uploadForm = document.getElementById('uploadForm');
             const fileInput = document.getElementById('fileInput');
             const accountSelect = document.getElementById('accountSelect');
@@ -247,11 +595,83 @@
             }
 
             accountSelect.addEventListener('change', updateUploadButtonState);
-            fileInput.addEventListener('change', updateUploadButtonState);
+            fileInput.addEventListener('change', function() {
+                updateUploadButtonState();
+                updateDropzoneUI();
+            });
+
+            // File Upload Dropzone Interactions
+            const dropzone = document.getElementById('fileDropzone');
+            const dropzoneDefault = document.getElementById('dropzoneDefault');
+            const dropzoneSelected = document.getElementById('dropzoneSelected');
+            const selectedFileName = document.getElementById('selectedFileName');
+            const removeFileBtn = document.getElementById('removeFileBtn');
+
+            function updateDropzoneUI() {
+                if (fileInput.files.length > 0) {
+                    dropzoneDefault.style.display = 'none';
+                    dropzoneSelected.style.display = 'flex';
+                    selectedFileName.textContent = fileInput.files[0].name;
+                    dropzone.classList.add('has-file');
+                } else {
+                    dropzoneDefault.style.display = 'block';
+                    dropzoneSelected.style.display = 'none';
+                    selectedFileName.textContent = '';
+                    dropzone.classList.remove('has-file');
+                }
+            }
+
+            // Click on dropzone opens file dialog
+            dropzone.addEventListener('click', function(e) {
+                if (e.target !== removeFileBtn && !removeFileBtn.contains(e.target)) {
+                    fileInput.click();
+                }
+            });
+
+            // Remove file button
+            removeFileBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                fileInput.value = '';
+                updateDropzoneUI();
+                updateUploadButtonState();
+            });
+
+            // Drag and drop handlers
+            dropzone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('dragover');
+            });
+
+            dropzone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('dragover');
+            });
+
+            dropzone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type === 'application/pdf') {
+                        // Create a new DataTransfer to set files
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+                        updateDropzoneUI();
+                        updateUploadButtonState();
+                    } else {
+                        showToast('Please select a PDF file', 'error');
+                    }
+                }
+            });
 
             uploadForm.addEventListener('submit', function (event) {
                 event.preventDefault();
-                messageContainer.innerHTML = '';
                 spinner.style.display = 'block';
                 uploadButton.disabled = true;
 
@@ -276,17 +696,18 @@
                     updateUploadButtonState();
 
                     if (result.status >= 200 && result.status < 300) {
-                        messageContainer.innerHTML = `<div class="alert alert-success">${result.body.message} Refreshing list...</div>`;
-                        // Reload to update the list and ensure it's visible
-                        setTimeout(() => window.location.reload(), 2000);
+                        closeUploadModal();
+                        showToast(result.body.message || 'Statement uploaded successfully!', 'success');
+                        // Reload to update the list
+                        setTimeout(() => window.location.reload(), 1500);
                     } else {
-                        messageContainer.innerHTML = `<div class="alert alert-error">Upload Error: ${result.body.message || 'An unknown error occurred.'}</div>`;
+                        showToast('Upload Error: ' + (result.body.message || 'An unknown error occurred.'), 'error');
                     }
                 })
                 .catch(error => {
                     spinner.style.display = 'none';
                     updateUploadButtonState();
-                    messageContainer.innerHTML = `<div class="alert alert-error">A network error prevented the upload.</div>`;
+                    showToast('A network error prevented the upload.', 'error');
                 });
             });
 
@@ -306,6 +727,350 @@
 
             attachClickEvents();
         });
+
+        // Toast notification
+        function showToast(message, type) {
+            let toast = document.getElementById('toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast';
+                toast.className = 'toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Get CSRF token
+        function getCsrf() {
+            return {
+                token: document.querySelector('meta[name="_csrf"]').getAttribute('content'),
+                header: document.querySelector('meta[name="_csrf_header"]').getAttribute('content')
+            };
+        }
+
+        // Edit Modal Functions
+        let currentEditId = null;
+        function openEditModal(id) {
+            currentEditId = id;
+            const modal = document.getElementById('editModal');
+            const csrf = getCsrf();
+            
+            // Fetch statement details
+            fetch('/api/statement/' + id, {
+                headers: { [csrf.header]: csrf.token }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Read-only fields use textContent
+                    document.getElementById('edit-filename').textContent = data.originalFileName || '';
+                    document.getElementById('edit-account').textContent = data.accountName || '';
+                    const statusEl = document.getElementById('edit-status');
+                    statusEl.textContent = data.statementStatus || '';
+                    // Apply status color class
+                    statusEl.className = 'status-' + (data.statementStatus || '').toUpperCase().replace(' ', '_');
+                    // Editable fields use value
+                    document.getElementById('edit-periodStart').value = data.periodStartDate || '';
+                    document.getElementById('edit-periodEnd').value = data.periodEndDate || '';
+                    document.getElementById('edit-openingBalance').value = data.openingBalance || '';
+                    document.getElementById('edit-closingBalance').value = data.closingBalance || '';
+                    modal.classList.add('show');
+                } else {
+                    showToast('Failed to load statement', 'error');
+                }
+            })
+            .catch(() => showToast('Network error', 'error'));
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+            currentEditId = null;
+        }
+
+        function saveEditModal() {
+            if (!currentEditId) return;
+            const csrf = getCsrf();
+            const formData = new FormData();
+            formData.append('periodStartDate', document.getElementById('edit-periodStart').value);
+            formData.append('periodEndDate', document.getElementById('edit-periodEnd').value);
+            formData.append('openingBalance', document.getElementById('edit-openingBalance').value);
+            formData.append('closingBalance', document.getElementById('edit-closingBalance').value);
+
+            fetch('/api/statement/' + currentEditId + '/update', {
+                method: 'POST',
+                headers: { [csrf.header]: csrf.token },
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('Statement updated', 'success');
+                    closeEditModal();
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast(data.message || 'Update failed', 'error');
+                }
+            })
+            .catch(() => showToast('Network error', 'error'));
+        }
+
+        // Rollback Modal Functions
+        let currentRollbackId = null;
+        function openRollbackModal(id, name) {
+            currentRollbackId = id;
+            document.getElementById('rollback-stmt-name').textContent = name || 'Statement #' + id;
+            document.getElementById('rollbackModal').classList.add('show');
+        }
+
+        function closeRollbackModal() {
+            document.getElementById('rollbackModal').classList.remove('show');
+            currentRollbackId = null;
+        }
+
+        function confirmRollback() {
+            if (!currentRollbackId) return;
+            const csrf = getCsrf();
+            
+            fetch('/api/statement/' + currentRollbackId + '/rollback', {
+                method: 'DELETE',
+                headers: { [csrf.header]: csrf.token }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast(data.message || 'Rollback initiated', 'success');
+                    closeRollbackModal();
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast(data.message || 'Rollback failed', 'error');
+                }
+            })
+            .catch(() => showToast('Network error', 'error'));
+        }
+
+        // Delete Modal Functions
+        let currentDeleteId = null;
+        function openDeleteModal(id, name) {
+            currentDeleteId = id;
+            document.getElementById('delete-stmt-name').textContent = name || 'Statement #' + id;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+            currentDeleteId = null;
+        }
+
+        function confirmDelete() {
+            if (!currentDeleteId) return;
+            const csrf = getCsrf();
+            
+            fetch('/api/statement/' + currentDeleteId, {
+                method: 'DELETE',
+                headers: { [csrf.header]: csrf.token }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast(data.message || 'Statement deleted', 'success');
+                    closeDeleteModal();
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast(data.message || 'Delete failed', 'error');
+                }
+            })
+            .catch(() => showToast('Network error', 'error'));
+        }
+
+        // Upload Modal Functions
+        function openUploadModal() {
+            // Reset form state
+            const form = document.getElementById('uploadForm');
+            const fileInput = document.getElementById('fileInput');
+            const accountSelect = document.getElementById('accountSelect');
+            const uploadButton = document.getElementById('uploadButton');
+            const spinner = document.getElementById('loading-spinner');
+            
+            form.reset();
+            uploadButton.disabled = true;
+            spinner.style.display = 'none';
+            
+            document.getElementById('uploadModal').classList.add('show');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.remove('show');
+        }
     </script>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal-overlay" onclick="if(event.target===this) closeEditModal();">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Statement</h3>
+                <button type="button" class="close-modal" onclick="closeEditModal();">&times;</button>
+            </div>
+            
+            <!-- Read-only info section - stacked layout with label above value, all left-aligned -->
+            <div style="background: #F9FAFB; border-radius: 0; padding: 1rem; margin-bottom: 1.5rem;">
+                <!-- Row 1: File Name (full width) -->
+                <div style="margin-bottom: 1rem; text-align: left;">
+                    <div style="color: #6B7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">File Name</div>
+                    <div id="edit-filename" style="font-weight: 500; color: var(--text-dark);"></div>
+                </div>
+                <!-- Row 2: Account (left column) and Status (right column) - both left-aligned -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="text-align: left;">
+                        <div style="color: #6B7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Account</div>
+                        <div id="edit-account" style="font-weight: 500; color: var(--text-dark);"></div>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="color: #6B7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Status</div>
+                        <div id="edit-status" style="font-weight: 500;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Editable fields - stacked layout with label above input, labels left-aligned -->
+            <div class="modal-form-row">
+                <div class="modal-form-field">
+                    <label style="font-size: 0.75rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: left; display: block;">Period Start</label>
+                    <input type="date" id="edit-periodStart">
+                </div>
+                <div class="modal-form-field">
+                    <label style="font-size: 0.75rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: left; display: block;">Period End</label>
+                    <input type="date" id="edit-periodEnd">
+                </div>
+            </div>
+            <div class="modal-form-row">
+                <div class="modal-form-field">
+                    <label style="font-size: 0.75rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: left; display: block;">Opening Balance</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6B7280;">€</span>
+                        <input type="number" step="0.01" id="edit-openingBalance" placeholder="0.00" style="padding-left: 1.75rem; text-align: right;">
+                    </div>
+                </div>
+                <div class="modal-form-field">
+                    <label style="font-size: 0.75rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; text-align: left; display: block;">Closing Balance</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6B7280;">€</span>
+                        <input type="number" step="0.01" id="edit-closingBalance" placeholder="0.00" style="padding-left: 1.75rem; text-align: right;">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeEditModal();">Cancel</button>
+                <button type="button" class="btn-primary" onclick="saveEditModal();">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rollback Modal -->
+    <div id="rollbackModal" class="modal-overlay" onclick="if(event.target===this) closeRollbackModal();">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Rollback</h3>
+                <button type="button" class="close-modal" onclick="closeRollbackModal();">&times;</button>
+            </div>
+            <p>Are you sure you want to rollback all transactions from:</p>
+            <p><strong id="rollback-stmt-name">Statement</strong></p>
+            <p style="color: var(--error-color); font-size: 0.9rem;">This action will delete all transactions associated with this statement.</p>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeRollbackModal();">Cancel</button>
+                <button type="button" class="btn-danger" onclick="confirmRollback();">Rollback</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="deleteModal" class="modal-overlay" onclick="if(event.target===this) closeDeleteModal();">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <button type="button" class="close-modal" onclick="closeDeleteModal();">&times;</button>
+            </div>
+            <p>Are you sure you want to permanently delete:</p>
+            <p><strong id="delete-stmt-name">Statement</strong></p>
+            <p style="color: var(--error-color); font-size: 0.9rem;">This action cannot be undone. The statement record will be permanently removed.</p>
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeDeleteModal();">Cancel</button>
+                <button type="button" class="btn-danger" onclick="confirmDelete();">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal-overlay" onclick="if(event.target===this) closeUploadModal();">
+        <div class="modal-content" style="max-width: 550px;">
+            <div class="modal-header">
+                <h3>Upload New Statement (PDF)</h3>
+                <button type="button" class="close-modal" onclick="closeUploadModal();">&times;</button>
+            </div>
+            
+            <form id="uploadForm">
+                <div class="modal-form-field">
+                    <label for="accountSelect">Select Account</label>
+                    <select id="accountSelect" name="accountId" required style="width: 100%; padding: 0.75rem; border: 2px solid #D1D5DB; border-radius: 0; font-size: 1rem;">
+                        <option value="">-- Select an Account --</option>
+                        <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"></option>
+                    </select>
+                </div>
+                
+                <div class="modal-form-field">
+                    <label>PDF Statement File</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="fileInput" name="file" accept="application/pdf" required class="file-upload-input">
+                        <div id="fileDropzone" class="file-upload-dropzone">
+                            <!-- Default state: upload prompt -->
+                            <div id="dropzoneDefault">
+                                <svg class="file-upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <div class="file-upload-text">
+                                    <div class="file-upload-text-main">
+                                        Drag and drop your PDF here, or <span class="browse-link">browse</span>
+                                    </div>
+                                    <div class="file-upload-text-sub">Only PDF files are accepted</div>
+                                </div>
+                            </div>
+                            <!-- Selected state: show filename -->
+                            <div id="dropzoneSelected" class="file-upload-selected" style="display: none;">
+                                <svg class="file-upload-selected-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                                <span id="selectedFileName" class="file-upload-selected-name"></span>
+                                <svg id="removeFileBtn" class="file-upload-selected-remove" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="loading-spinner">
+                    <svg class="animate-spin" style="display:inline; margin-right: 5px; vertical-align: middle;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Processing your file... Please wait.
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeUploadModal();">Cancel</button>
+                    <button type="submit" id="uploadButton" class="btn-primary" disabled title="Please select an account and a file.">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.5rem; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Upload and Process
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

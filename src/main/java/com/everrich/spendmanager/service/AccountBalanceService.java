@@ -503,6 +503,19 @@ public class AccountBalanceService {
         return deletedCount;
     }
 
+    /**
+     * Deletes all balance entries associated with transactions from a specific statement.
+     * This is used for bulk cleanup during statement rollback.
+     * 
+     * @param statementId The ID of the statement whose transaction balances should be deleted
+     * @return The number of deleted balance entries
+     */
+    public int deleteBalanceEntriesByStatementId(Long statementId) {
+        int deletedCount = accountBalanceRepository.deleteByStatementId(statementId);
+        log.info("Deleted {} balance entries for statement ID: {} (rollback cleanup)", deletedCount, statementId);
+        return deletedCount;
+    }
+
     // ========== Query Methods for Balances Page ==========
 
     /**

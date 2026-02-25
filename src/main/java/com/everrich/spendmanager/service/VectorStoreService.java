@@ -40,14 +40,40 @@ public class VectorStoreService {
         redisAdapter.createTransactionIndex();
     }
 
+    /**
+     * Learns a correct category for RAG-based categorization.
+     * This overload uses TenantContext to get the tenant ID.
+     */
     public void learnCorrectCategory(String transactionDescription, String correctCategory, double amount,
             TransactionOperation operation, String accountName) {
+        learnCorrectCategory(transactionDescription, correctCategory, amount, operation, accountName, null);
+    }
+    
+    /**
+     * Learns a correct category for RAG-based categorization with explicit tenant ID.
+     * Use this overload for async operations where TenantContext may not be available.
+     * 
+     * @param transactionDescription The transaction description
+     * @param correctCategory The correct category name
+     * @param amount The transaction amount
+     * @param operation The transaction operation (PLUS/MINUS)
+     * @param accountName The account name
+     * @param tenantId The tenant ID (pass null to use TenantContext)
+     */
+    public void learnCorrectCategory(String transactionDescription, String correctCategory, double amount,
+            TransactionOperation operation, String accountName, String tenantId) {
 
         // 1. 🟢 Apply the cleaning logic to the description before indexing
         String cleanedDescription = normalizeDescription(transactionDescription);
         String operationName = operation.name(); // Get the string "PLUS" or "MINUS"
-        redisAdapter.createDocument(correctCategory, cleanedDescription, operationName, accountName);
-
+        
+        if (tenantId != null && !tenantId.isEmpty()) {
+            // Use explicit tenant ID (for async operations)
+            redisAdapter.createDocument(correctCategory, cleanedDescription, operationName, accountName, tenantId);
+        } else {
+            // Use TenantContext (for synchronous operations)
+            redisAdapter.createDocument(correctCategory, cleanedDescription, operationName, accountName);
+        }
     }
 
     public String similaritySearch(Transaction transaction) {

@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import java.util.OptionalInt;
 
+import com.everrich.spendmanager.multitenancy.TenantContext;
+
 @Service
 public class RedisAdapter {
 
@@ -102,6 +104,7 @@ public class RedisAdapter {
             argsBuilder.add("category").add("TAG");
             argsBuilder.add("operation").add("TAG");
             argsBuilder.add("account").add("TAG");
+            argsBuilder.add("tenant").add("TAG");  // Multi-tenancy support: tenant ID for filtering
             argsBuilder.add("vector").add("AS").add("vector");
             argsBuilder.add("VECTOR");
             argsBuilder.add("FLAT");
@@ -173,14 +176,43 @@ public class RedisAdapter {
         }
     }
 
+    /**
+     * Creates a document in Redis for RAG-based category determination.
+     * Uses TenantContext to get the current tenant ID for multi-tenancy support.
+     * 
+     * @param categoryName The category name for this transaction pattern
+     * @param description The transaction description
+     * @param operation The operation type (e.g., PLUS, MINUS)
+     * @param accountName The account name
+     * @return The Redis key of the created document, or null on error
+     */
     public String createDocument(String categoryName, String description, String operation, String accountName) {
+        // Get tenant ID from context (uses ThreadLocal)
+        String tenantId = TenantContext.getTenantId();
+        return createDocument(categoryName, description, operation, accountName, tenantId);
+    }
+
+    /**
+     * Creates a document in Redis for RAG-based category determination with explicit tenant ID.
+     * Use this overload for async operations where TenantContext may not be available.
+     * 
+     * @param categoryName The category name for this transaction pattern
+     * @param description The transaction description
+     * @param operation The operation type (e.g., PLUS, MINUS)
+     * @param accountName The account name
+     * @param tenantId The tenant ID for multi-tenancy filtering (pass null for default)
+     * @return The Redis key of the created document, or null on error
+     */
+    public String createDocument(String categoryName, String description, String operation, String accountName, String tenantId) {
 
         StatefulRedisConnection<String, String> connection = null;
-        //log.info("Starting creation...with description " + description);
-        //log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
+
+        // Normalize tenant ID - use "default" if null or empty
+        String effectiveTenantId = (tenantId != null && !tenantId.isEmpty()) ? tenantId : "default";
 
         try {
-            String searchKey = "doc:" + UUID.randomUUID().toString();
+            // Include tenant ID in document key for easier bulk operations per tenant
+            String searchKey = "doc:" + effectiveTenantId + ":" + UUID.randomUUID().toString();
             String contentPayload = accountName + " " + operation + " " + description;
 
             connection = redisClient.connect();
@@ -196,18 +228,19 @@ public class RedisAdapter {
                     .add("category").add(categoryName)
                     .add("operation").add(operation)
                     .add("account").add(accountName)
+                    .add("tenant").add(effectiveTenantId)  // Multi-tenancy: store tenant ID
                     .add("content_payload").add(contentPayload);
 
             hsetArgs.add("vector").add(vectorByteArray);
             CommandOutput<String, String, Long> output = new IntegerOutput<>(StringCodec.UTF8);
             syncCommands.dispatch(HSET_COMMAND, output, hsetArgs);
 
-            log.info("✅ Document created with key: " + searchKey
-                    + " (Vector Size: " + vectorByteArray.length + " bytes)");
+            log.info("✅ Document created with key: {} (Tenant: {}, Vector Size: {} bytes)", 
+                    searchKey, effectiveTenantId, vectorByteArray.length);
             return searchKey;
 
         } catch (Exception e) {
-            System.err.println("Error creating document:");
+            log.error("Error creating document for tenant {}: {}", effectiveTenantId, e.getMessage());
             e.printStackTrace();
             return null;
         } finally {
@@ -216,12 +249,38 @@ public class RedisAdapter {
         }
     }
 
+    /**
+     * Searches for similar documents in Redis using vector similarity.
+     * Uses TenantContext to get the current tenant ID for multi-tenancy filtering.
+     * 
+     * @param description The transaction description to search for
+     * @param operation The operation type
+     * @param accountName The account name
+     * @return List of matching RedisDocuments, or null on error
+     */
     public List<RedisDocument> searchDocuments(String description, String operation, String accountName) {
+        // Get tenant ID from context (uses ThreadLocal)
+        String tenantId = TenantContext.getTenantId();
+        return searchDocuments(description, operation, accountName, tenantId);
+    }
 
-        //log.info("Starting search...with description " + description);
-        //log.info("Connection pramas: " + REDIS_URI + " " + INDEX_NAME);
+    /**
+     * Searches for similar documents in Redis with explicit tenant ID filtering.
+     * Use this overload for async operations where TenantContext may not be available.
+     * 
+     * @param description The transaction description to search for
+     * @param operation The operation type
+     * @param accountName The account name
+     * @param tenantId The tenant ID for filtering (pass null for default)
+     * @return List of matching RedisDocuments filtered by tenant, or null on error
+     */
+    public List<RedisDocument> searchDocuments(String description, String operation, String accountName, String tenantId) {
+
         StatefulRedisConnection<String, String> connection = null;
         RedisCommands<String, String> syncCommands = null;
+
+        // Normalize tenant ID - use "default" if null or empty
+        String effectiveTenantId = (tenantId != null && !tenantId.isEmpty()) ? tenantId : "default";
 
         try {
             float[] queryVectorFloats = generateEmbeddingVector(accountName + " " + operation + " " + description, "query");
@@ -230,13 +289,12 @@ public class RedisAdapter {
             connection = redisClient.connect();
             syncCommands = connection.sync();
 
-            //log.info("Connection established for search.");
-            //log.info("Query vector size being sent: " + queryVectorByteArray.length + " bytes");
-
             CommandArgs<String, String> argsBuilder = new CommandArgs<>(StringCodec.UTF8);
             argsBuilder.add(this.INDEX_NAME);
 
-            String queryFilter = "*=>[KNN 1 @vector $query_vec]";
+            // Multi-tenancy: Add tenant filter to the KNN query
+            // Format: (@tenant:{tenantId})=>[KNN 1 @vector $query_vec]
+            String queryFilter = "(@tenant:{" + effectiveTenantId + "})=>[KNN 1 @vector $query_vec]";
             argsBuilder.add(queryFilter);
             argsBuilder.add("DIALECT").add(2);
 
@@ -246,10 +304,11 @@ public class RedisAdapter {
             argsBuilder.add(queryVectorByteArray); // CRITICAL: Inject the raw byte array
 
             // D. RETURN (Fields to retrieve)
-            argsBuilder.add("RETURN").add(5);
+            argsBuilder.add("RETURN").add(6);
             argsBuilder.add("category");
             argsBuilder.add("operation");
             argsBuilder.add("account");
+            argsBuilder.add("tenant");  // Include tenant in results for verification
             argsBuilder.add("content_payload");
             argsBuilder.add("__vector_score"); // Use the implicit score field
 
@@ -262,16 +321,14 @@ public class RedisAdapter {
             return formatSearchResults(results);
 
         } catch (Exception e) {
-            log.error("Error executing FT.SEARCH command:" + e.getMessage());
+            log.error("Error executing FT.SEARCH command for tenant {}: {}", effectiveTenantId, e.getMessage());
             e.printStackTrace();
             return null;
         } finally {
             // --- 6. Cleanup ---
             if (connection != null)
                 connection.close();
-            //log.info("Connection closed after search.");
         }
-
     }
 
     private List<RedisDocument> formatSearchResults(List<Object> rawResults) {
@@ -321,6 +378,160 @@ public class RedisAdapter {
 
     public int getVectorDimension() {
         return this.TARGET_VECTOR_DIMENSION;
+    }
+
+    /**
+     * Retrieves all documents for a specific tenant.
+     * Used for viewing the RAG configuration documents.
+     * 
+     * @param tenantId The tenant ID whose documents should be retrieved
+     * @return List of RedisDocuments for the tenant
+     */
+    public List<RedisDocument> getDocumentsByTenant(String tenantId) {
+        StatefulRedisConnection<String, String> connection = null;
+        
+        // Normalize tenant ID
+        String effectiveTenantId = (tenantId != null && !tenantId.isEmpty()) ? tenantId : "default";
+        List<RedisDocument> documents = new ArrayList<>();
+        
+        try {
+            log.info("Retrieving all documents for tenant '{}'", effectiveTenantId);
+            connection = redisClient.connect();
+            RedisCommands<String, String> syncCommands = connection.sync();
+            
+            // Pattern to match tenant documents: doc:<tenantId>:*
+            String pattern = "doc:" + effectiveTenantId + ":*";
+            
+            // Use SCAN to find all matching keys
+            io.lettuce.core.ScanArgs scanArgs = io.lettuce.core.ScanArgs.Builder.matches(pattern).limit(1000);
+            io.lettuce.core.KeyScanCursor<String> cursor = syncCommands.scan(scanArgs);
+            
+            while (true) {
+                List<String> keys = cursor.getKeys();
+                for (String key : keys) {
+                    // Fetch hash fields for each key
+                    java.util.Map<String, String> hashFields = syncCommands.hgetall(key);
+                    if (!hashFields.isEmpty()) {
+                        RedisDocument doc = new RedisDocument();
+                        doc.setDocumentId(key);
+                        hashFields.forEach((fieldName, fieldValue) -> {
+                            // Skip the vector field as it's binary data
+                            if (!"vector".equals(fieldName)) {
+                                doc.addField(fieldName, fieldValue);
+                            }
+                        });
+                        documents.add(doc);
+                    }
+                }
+                
+                if (cursor.isFinished()) {
+                    break;
+                }
+                
+                cursor = syncCommands.scan(cursor, scanArgs);
+            }
+            
+            log.info("✅ Retrieved {} documents for tenant '{}'", documents.size(), effectiveTenantId);
+            return documents;
+            
+        } catch (Exception e) {
+            log.error("Error retrieving documents for tenant '{}': {}", effectiveTenantId, e.getMessage(), e);
+            throw new RuntimeException("Failed to retrieve tenant documents: " + e.getMessage(), e);
+        } finally {
+            if (connection != null) {
+                connection.close();
+            }
+        }
+    }
+
+    /**
+     * Deletes all documents for a specific tenant.
+     * Useful for tenant cleanup or data migration.
+     * 
+     * @param tenantId The tenant ID whose documents should be deleted
+     * @return The number of documents deleted
+     */
+    public int deleteDocumentsByTenant(String tenantId) {
+        StatefulRedisConnection<String, String> connection = null;
+        
+        // Normalize tenant ID
+        String effectiveTenantId = (tenantId != null && !tenantId.isEmpty()) ? tenantId : "default";
+        
+        try {
+            log.info("Deleting all documents for tenant '{}' from Redis...", effectiveTenantId);
+            connection = redisClient.connect();
+            RedisCommands<String, String> syncCommands = connection.sync();
+            
+            // Pattern to match tenant documents: doc:<tenantId>:*
+            String pattern = "doc:" + effectiveTenantId + ":*";
+            
+            // Use SCAN to find all matching keys
+            io.lettuce.core.ScanArgs scanArgs = io.lettuce.core.ScanArgs.Builder.matches(pattern).limit(1000);
+            io.lettuce.core.KeyScanCursor<String> cursor = syncCommands.scan(scanArgs);
+            
+            int totalDeleted = 0;
+            
+            while (true) {
+                List<String> keys = cursor.getKeys();
+                if (!keys.isEmpty()) {
+                    Long deleted = syncCommands.del(keys.toArray(new String[0]));
+                    totalDeleted += deleted != null ? deleted.intValue() : 0;
+                }
+                
+                if (cursor.isFinished()) {
+                    break;
+                }
+                
+                cursor = syncCommands.scan(cursor, scanArgs);
+            }
+            
+            log.info("✅ Deleted {} documents for tenant '{}'", totalDeleted, effectiveTenantId);
+            return totalDeleted;
+            
+        } catch (Exception e) {
+            log.error("Error deleting documents for tenant '{}': {}", effectiveTenantId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete tenant documents: " + e.getMessage(), e);
+        } finally {
+            if (connection != null) {
+                connection.close();
+            }
+        }
+    }
+
+    /**
+     * Deletes specific documents by their Redis keys.
+     * Used for selective document deletion from the RAG configuration.
+     * 
+     * @param documentKeys List of document keys to delete
+     * @return The number of documents successfully deleted
+     */
+    public int deleteDocumentsByKeys(List<String> documentKeys) {
+        if (documentKeys == null || documentKeys.isEmpty()) {
+            log.info("No document keys provided for deletion");
+            return 0;
+        }
+        
+        StatefulRedisConnection<String, String> connection = null;
+        
+        try {
+            log.info("Deleting {} specific documents from Redis...", documentKeys.size());
+            connection = redisClient.connect();
+            RedisCommands<String, String> syncCommands = connection.sync();
+            
+            Long deleted = syncCommands.del(documentKeys.toArray(new String[0]));
+            int deletedCount = deleted != null ? deleted.intValue() : 0;
+            
+            log.info("✅ Deleted {} documents", deletedCount);
+            return deletedCount;
+            
+        } catch (Exception e) {
+            log.error("Error deleting documents: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to delete documents: " + e.getMessage(), e);
+        } finally {
+            if (connection != null) {
+                connection.close();
+            }
+        }
     }
 
     /**

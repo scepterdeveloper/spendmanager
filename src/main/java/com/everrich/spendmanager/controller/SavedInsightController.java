@@ -5,10 +5,13 @@ import com.everrich.spendmanager.entities.SavedInsight;
 import com.everrich.spendmanager.service.SavedInsightService;
 import com.everrich.spendmanager.service.CategoryService;
 
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+
+import java.util.UUID;
 
 @Controller
 @RequestMapping("/insights/manage")
@@ -63,23 +66,44 @@ public class SavedInsightController {
         return "redirect:/insights/manage";
     }
 
-    // Execute a saved insight and show results page (GET /insights/manage/{id}/execute)
+    // Execute a saved insight and redirect to GET result page (for proper back navigation)
+    // URL: GET /insights/manage/{id}/execute
     @GetMapping("/{id}/execute")
-    public String executeSavedInsight(@PathVariable Long id, 
-                                       @RequestParam(value = "backUrl", required = false) String backUrl,
-                                       Model model) {
-        model.addAttribute("appName", "EverRich");
-        
+    public String executeSavedInsight(@PathVariable Long id, HttpSession session) {
         try {
             InsightExecutionResult result = savedInsightService.execute(id);
-            model.addAttribute("result", result);
-            // Set back URL - use provided backUrl if available, otherwise default to insight management page
-            model.addAttribute("backUrl", backUrl != null && !backUrl.isEmpty() ? backUrl : "/insights/manage");
-            return "insight-result";
+            
+            // Store result in session with unique ID for GET retrieval
+            String resultId = UUID.randomUUID().toString();
+            session.setAttribute("saved_insight_result_" + resultId, result);
+            
+            // Redirect to GET endpoint for proper browser back navigation support
+            return "redirect:/insights/manage/result/" + resultId;
+            
         } catch (Exception e) {
-            model.addAttribute("error", "Failed to execute insight: " + e.getMessage());
-            return "redirect:/insights/manage";
+            return "redirect:/insights/manage?error=" + e.getMessage();
         }
+    }
+
+    // GET endpoint to view cached saved insight result (supports browser back navigation)
+    // URL: GET /insights/manage/result/{resultId}
+    @GetMapping("/result/{resultId}")
+    public String viewSavedInsightResult(@PathVariable String resultId, HttpSession session, Model model) {
+        model.addAttribute("appName", "EverRich");
+        
+        InsightExecutionResult result = (InsightExecutionResult) session.getAttribute("saved_insight_result_" + resultId);
+        
+        if (result == null) {
+            // Result expired or invalid - redirect back to insights management page
+            return "redirect:/insights/manage?error=Result+expired.+Please+run+the+insight+again.";
+        }
+        
+        model.addAttribute("result", result);
+        // Set back URL to return to insight management page, and resultId for drill-down back navigation
+        model.addAttribute("backUrl", "/insights/manage");
+        model.addAttribute("resultPageUrl", "/insights/manage/result/" + resultId);
+        
+        return "insight-result";
     }
 
     // REST endpoint for executing insight (GET /insights/manage/{id}/execute/api)

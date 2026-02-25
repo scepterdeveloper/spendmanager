@@ -370,35 +370,80 @@ body.branding-page::after {
     padding: 1rem 2rem;
 }
 
-/* Alerts */
+/* Alerts - Modern Card Style */
 .branding-alert {
-    padding: 0.875rem 1rem;
-    border-radius: 0;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
     margin-bottom: 1.5rem;
-    font-size: 0.875rem;
-    text-align: center;
+    font-size: 0.9rem;
+    text-align: left;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+    align-items: flex-start;
+    gap: 0.75rem;
+    line-height: 1.5;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.branding-alert svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.branding-alert .alert-content {
+    flex: 1;
 }
 
 .branding-alert.alert-danger {
-    background-color: var(--error-bg);
-    color: var(--error-color);
-    border: 1px solid var(--error-border);
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    color: #991B1B;
+    border-left: 4px solid var(--error-color);
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
 }
 
 .branding-alert.alert-success {
-    background-color: var(--success-bg);
-    color: var(--success-color);
-    border: 1px solid var(--success-border);
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+    color: #166534;
+    border-left: 4px solid var(--success-color);
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
 }
 
 .branding-alert.alert-info {
-    background-color: #EFF6FF;
-    color: #2563EB;
-    border: 1px solid #BFDBFE;
+    background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+    color: #075985;
+    border-left: 4px solid #0EA5E9;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+}
+
+/* Pending/Processing Alert - Friendly amber/warm style */
+.branding-alert.alert-pending {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    color: #92400E;
+    border-left: 4px solid #F59E0B;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+}
+
+.branding-alert.alert-pending svg {
+    color: #F59E0B;
+}
+
+.branding-alert.alert-info svg {
+    color: #0EA5E9;
+}
+
+.branding-alert.alert-success svg {
+    color: var(--success-color);
+}
+
+.branding-alert.alert-danger svg {
+    color: var(--error-color);
 }
 
 /* Welcome Message Box */

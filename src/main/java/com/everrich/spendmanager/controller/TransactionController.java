@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.everrich.spendmanager.multitenancy.TenantContext;
+
 @Controller
 @RequestMapping("/transactions")
 public class TransactionController {
@@ -246,9 +248,21 @@ public class TransactionController {
                      transaction.getCategoryEntity() != null ? transaction.getCategoryEntity().getName() : "NULL",
                      transaction.getAccount() != null ? transaction.getAccount().getName() : "NULL");
 
+            // Capture tenant ID BEFORE async call (ThreadLocal won't propagate to async thread)
+            String tenantId = TenantContext.getTenantId();
+            
             transactionService.saveTransaction(transaction);
             if(transaction.getCategoryEntity() != null && (originalCategoryId == null || !transaction.getCategoryEntity().getId().equals(originalCategoryId))) {
-                transactionService.updateVectorStore(transaction.getId(), transaction.getCategory());
+                // Pass transaction data and tenantId directly to avoid race conditions with async execution
+                String accountName = transaction.getAccount() != null ? transaction.getAccount().getName() : null;
+                transactionService.updateVectorStore(
+                    transaction.getDescription(), 
+                    transaction.getCategory(),
+                    transaction.getAmount(),
+                    transaction.getOperation(),
+                    accountName,
+                    tenantId
+                );
             }
             
             String message = isNewTransaction ? "New transaction created successfully!" : "Transaction updated successfully!";

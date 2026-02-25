@@ -280,7 +280,7 @@
                             <td th:text="${dp.label}">Label</td>
                             <!-- Category drill-down: clickable amount when xAxisType is CATEGORY and drillDownEnabled -->
                             <td class="amount-cell" th:if="${result.drillDownEnabled and result.xAxisType.name() == 'CATEGORY' and dp.categoryId != null}">
-                                <a th:href="@{/insights/drill/transactions(startDate=${result.queryStartDate}, endDate=${result.queryEndDate}, categoryId=${dp.categoryId}, backUrl=${backUrl != null ? backUrl : '/insights/manage'})}"
+                                <a th:href="@{/insights/drill/transactions(startDate=${result.queryStartDate}, endDate=${result.queryEndDate}, categoryId=${dp.categoryId}, backUrl=${resultPageUrl != null ? resultPageUrl : (backUrl != null ? backUrl : '/insights/manage')})}"
                                    class="amount-clickable"
                                    th:title="'View ' + ${dp.label} + ' transactions'">
                                     <span th:text="${#numbers.formatDecimal(dp.value, 1, 'POINT', 2, 'COMMA')}">0,00</span><span class="currency-symbol">€</span>

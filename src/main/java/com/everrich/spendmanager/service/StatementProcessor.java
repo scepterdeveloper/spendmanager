@@ -1,11 +1,12 @@
 package com.everrich.spendmanager.service;
 
-import java.lang.reflect.Type;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,6 +24,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.everrich.spendmanager.dto.ParsedStatementDTO;
 import com.everrich.spendmanager.entities.Registration;
 import com.everrich.spendmanager.entities.RegistrationStatus;
 import com.everrich.spendmanager.entities.Statement;
@@ -34,12 +36,11 @@ import com.everrich.spendmanager.repository.RegistrationRepository;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
-import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
-import java.io.IOException;
+import java.math.BigDecimal;
 
 /**
  * Processes PDF statements to extract transactions.
@@ -301,6 +302,13 @@ public class StatementProcessor {
         }
     }
 
+    /**
+     * Extracts transactions from a PDF statement and updates the statement with metadata.
+     * The LLM response now includes both statement-level metadata and transactions.
+     * 
+     * @param statement The statement to extract transactions from (will be updated with metadata)
+     * @return List of transactions extracted from the statement
+     */
     public List<Transaction> extractTransactionsFromPdf(Statement statement) {
 
         try {
@@ -312,16 +320,69 @@ public class StatementProcessor {
             log.info("--------------------Parsed JSON from PDF->LLM------------------------");
             log.info(cleanJson);
             log.info("---------------------------------------------------------------------");
-            List<Transaction> transactions = deserializeTransactions(cleanJson);
-            log.info("Parse-clean (LLM Based) and deserialized transactions: DONE - " + transactions.size()
-                    + " transaction(s)");
+            
+            // Deserialize to ParsedStatementDTO which contains both metadata and transactions
+            ParsedStatementDTO parsedStatement = deserializeParsedStatement(cleanJson);
+            
+            if (parsedStatement == null) {
+                log.warn("Failed to deserialize LLM response for statement {}", statement.getId());
+                return Collections.emptyList();
+            }
+            
+            // Apply statement metadata if available
+            applyStatementMetadata(statement, parsedStatement);
+            
+            List<Transaction> transactions = parsedStatement.getTransactions();
+            if (transactions == null) {
+                transactions = Collections.emptyList();
+            }
+            
+            log.info("Parse-clean (LLM Based) and deserialized: {} transaction(s), metadata applied: periodStart={}, periodEnd={}, openingBal={}, closingBal={}",
+                    transactions.size(),
+                    statement.getPeriodStartDate(),
+                    statement.getPeriodEndDate(),
+                    statement.getOpeningBalance(),
+                    statement.getClosingBalance());
 
             return transactions;
         } catch (Exception e) {
             log.error("Error while processing PDF to extract transactions", e);
             statement.setStatus(StatementStatus.FAILED);
-            // statementRepository.save(statement); TODO: Implement retry and fail
             return null;
+        }
+    }
+    
+    /**
+     * Applies metadata from the parsed statement DTO to the statement entity.
+     * Only non-null values from the DTO are applied.
+     * 
+     * @param statement The statement entity to update
+     * @param parsedStatement The parsed statement DTO containing metadata
+     */
+    private void applyStatementMetadata(Statement statement, ParsedStatementDTO parsedStatement) {
+        if (parsedStatement.getPeriodStartDate() != null) {
+            statement.setPeriodStartDate(parsedStatement.getPeriodStartDate());
+            log.debug("Set periodStartDate to {}", parsedStatement.getPeriodStartDate());
+        }
+        
+        if (parsedStatement.getPeriodEndDate() != null) {
+            statement.setPeriodEndDate(parsedStatement.getPeriodEndDate());
+            log.debug("Set periodEndDate to {}", parsedStatement.getPeriodEndDate());
+        }
+        
+        if (parsedStatement.getOpeningBalance() != null) {
+            statement.setOpeningBalance(parsedStatement.getOpeningBalance());
+            log.debug("Set openingBalance to {}", parsedStatement.getOpeningBalance());
+        }
+        
+        if (parsedStatement.getClosingBalance() != null) {
+            statement.setClosingBalance(parsedStatement.getClosingBalance());
+            log.debug("Set closingBalance to {}", parsedStatement.getClosingBalance());
+        }
+        
+        if (parsedStatement.getDescription() != null && !parsedStatement.getDescription().isBlank()) {
+            statement.setDescription(parsedStatement.getDescription());
+            log.debug("Set description to {}", parsedStatement.getDescription());
         }
     }
 
@@ -355,10 +416,20 @@ public class StatementProcessor {
         return cleaned;
     }
 
-    private List<Transaction> deserializeTransactions(String json) {
-        Type transactionListType = new TypeToken<List<Transaction>>() {
-        }.getType();
-        return gson.fromJson(json, transactionListType);
+    /**
+     * Deserializes the LLM JSON response to a ParsedStatementDTO.
+     * This includes both statement metadata and the list of transactions.
+     * 
+     * @param json The JSON string from the LLM
+     * @return ParsedStatementDTO containing metadata and transactions
+     */
+    private ParsedStatementDTO deserializeParsedStatement(String json) {
+        try {
+            return gson.fromJson(json, ParsedStatementDTO.class);
+        } catch (Exception e) {
+            log.error("Error deserializing parsed statement JSON: {}", e.getMessage(), e);
+            return null;
+        }
     }
     
     /**

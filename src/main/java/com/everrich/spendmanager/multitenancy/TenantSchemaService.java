@@ -2,7 +2,10 @@ package com.everrich.spendmanager.multitenancy;
 
 import com.everrich.spendmanager.entities.Registration;
 import com.everrich.spendmanager.entities.TenantCreationStatus;
+import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.repository.RegistrationRepository;
+import com.everrich.spendmanager.repository.TransactionRepository;
+import com.everrich.spendmanager.service.RedisAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -26,13 +29,19 @@ public class TenantSchemaService {
     private final DataSource dataSource;
     private final MultiTenancyProperties multiTenancyProperties;
     private final RegistrationRepository registrationRepository;
+    private final RedisAdapter redisAdapter;
+    private final TransactionRepository transactionRepository;
 
     public TenantSchemaService(DataSource dataSource,
                                MultiTenancyProperties multiTenancyProperties,
-                               RegistrationRepository registrationRepository) {
+                               RegistrationRepository registrationRepository,
+                               RedisAdapter redisAdapter,
+                               TransactionRepository transactionRepository) {
         this.dataSource = dataSource;
         this.multiTenancyProperties = multiTenancyProperties;
         this.registrationRepository = registrationRepository;
+        this.redisAdapter = redisAdapter;
+        this.transactionRepository = transactionRepository;
     }
 
     /**
@@ -55,26 +64,31 @@ public class TenantSchemaService {
                 registrationId, schemaName);
 
         try {
-            logger.info("Step 1/4: Creating schema {}", schemaName);
+            logger.info("Step 1/5: Creating schema {}", schemaName);
             createSchema(schemaName);
-            logger.info("Step 1/4: Schema {} created successfully", schemaName);
+            logger.info("Step 1/5: Schema {} created successfully", schemaName);
             
-            logger.info("Step 2/4: Copying table structures to {}", schemaName);
+            logger.info("Step 2/5: Copying table structures to {}", schemaName);
             copyTableStructures(schemaName);
-            logger.info("Step 2/4: Table structures copied successfully to {}", schemaName);
+            logger.info("Step 2/5: Table structures copied successfully to {}", schemaName);
             
-            logger.info("Step 3/4: Copying default data to {}", schemaName);
+            logger.info("Step 3/5: Copying default data to {}", schemaName);
             copyDefaultData(schemaName);
-            logger.info("Step 3/4: Default data copied successfully to {}", schemaName);
+            logger.info("Step 3/5: Default data copied successfully to {}", schemaName);
+            
+            // Step 4: Initialize RAG configuration (ensure index exists)
+            logger.info("Step 4/5: Initializing RAG configuration for tenant {}", registrationId);
+            initializeRagConfiguration(registrationId);
+            logger.info("Step 4/5: RAG configuration initialized for tenant {}", registrationId);
             
             // Update status to COMPLETED - fetch fresh entity within transaction
-            logger.info("Step 4/4: Updating tenant creation status to COMPLETED for registration ID: {}", registration.getId());
+            logger.info("Step 5/5: Updating tenant creation status to COMPLETED for registration ID: {}", registration.getId());
             Registration freshRegistration = registrationRepository.findById(registration.getId())
                     .orElseThrow(() -> new RuntimeException("Registration not found: " + registration.getId()));
             freshRegistration.setTenantCreationStatus(TenantCreationStatus.COMPLETED);
             registrationRepository.save(freshRegistration);
             registrationRepository.flush(); // Ensure immediate write to database
-            logger.info("Step 4/4: Tenant creation status updated to COMPLETED for registration: {}", registrationId);
+            logger.info("Step 5/5: Tenant creation status updated to COMPLETED for registration: {}", registrationId);
             
             logger.info("=== TENANT SCHEMA CREATION COMPLETE === Registration: {}, Schema: {}", 
                     registrationId, schemaName);
@@ -278,6 +292,76 @@ public class TenantSchemaService {
             String sql = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
             stmt.execute(sql);
             logger.warn("Dropped schema: {}", schemaName);
+        }
+    }
+
+    /**
+     * Initializes the RAG configuration for a new tenant.
+     * This ensures the Redis vector index exists and creates RAG training documents
+     * for any transactions that were copied from the default schema.
+     * 
+     * The RAG system uses a shared index with tenant-specific document prefixes.
+     * This method:
+     * 1. Ensures the shared transaction index exists in Redis
+     * 2. Sets the TenantContext to the new tenant
+     * 3. Queries the copied transactions from the tenant's schema
+     * 4. Creates RAG documents for each categorized transaction
+     *
+     * @param tenantId The tenant/registration ID
+     */
+    private void initializeRagConfiguration(String tenantId) {
+        String previousTenantId = null;
+        try {
+            // Ensure the shared Redis index exists
+            // This is idempotent - if the index already exists, it will be skipped
+            redisAdapter.createTransactionIndex();
+            
+            logger.info("RAG index ensured for tenant '{}'. Index: '{}', Document prefix: 'doc:{}:'",
+                    tenantId, redisAdapter.getIndexName(), tenantId);
+            
+            // Set tenant context to the new tenant to query their transactions
+            previousTenantId = TenantContext.getTenantId();
+            TenantContext.setTenantId(tenantId);
+            
+            // Query all transactions that were copied to the new tenant's schema
+            java.util.List<Transaction> transactions = transactionRepository.findAll();
+            logger.info("Found {} transactions to process for RAG training in tenant '{}'", 
+                    transactions.size(), tenantId);
+            
+            int processedCount = 0;
+            int skippedCount = 0;
+            
+            for (Transaction transaction : transactions) {
+                // Only process transactions that have a category and account assigned
+                if (transaction.getCategoryEntity() != null && transaction.getAccount() != null) {
+                    String categoryName = transaction.getCategoryEntity().getName();
+                    String description = transaction.getDescription();
+                    String operationName = transaction.getOperation().name(); // "PLUS" or "MINUS"
+                    String accountName = transaction.getAccount().getName();
+                    
+                    // Create document in Redis with explicit tenant ID
+                    redisAdapter.createDocument(categoryName, description, operationName, accountName, tenantId);
+                    processedCount++;
+                } else {
+                    skippedCount++;
+                }
+            }
+            
+            logger.info("RAG training data created for tenant '{}'. Processed: {}, Skipped: {}", 
+                    tenantId, processedCount, skippedCount);
+            
+        } catch (Exception e) {
+            // Log warning but don't fail tenant creation - RAG can be initialized later
+            logger.warn("Warning: Could not fully initialize RAG configuration for tenant '{}': {}. " +
+                    "The tenant can still function, and RAG can be recreated via the RAG Config page.",
+                    tenantId, e.getMessage());
+        } finally {
+            // Restore the previous tenant context
+            if (previousTenantId != null) {
+                TenantContext.setTenantId(previousTenantId);
+            } else {
+                TenantContext.clear();
+            }
         }
     }
 }
