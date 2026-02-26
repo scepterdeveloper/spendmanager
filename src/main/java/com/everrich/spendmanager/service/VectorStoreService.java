@@ -83,6 +83,12 @@ public class VectorStoreService {
                 transaction.getAccount().getName());
         String context = "";
 
+        // Handle null or empty results gracefully (e.g., when vector store is empty/reset)
+        if (searchResults == null || searchResults.isEmpty()) {
+            log.info("No similar documents found in vector store for transaction: {}", transaction.getDescription());
+            return context;
+        }
+
         for (RedisDocument redisDocument : searchResults) {
 
             context += "Description: " + redisDocument.getFields().get("description_op") + ", Corrected Category: "
