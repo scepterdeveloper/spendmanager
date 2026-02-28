@@ -123,10 +123,18 @@
                     </div>
 
                     <div style="grid-column: 1 / -1; margin-top: 5px;">
-                        <div class="form-check">
-                            <input type="checkbox" id="aggregateResults" name="aggregateResults" class="form-check-input">
-                            <label for="aggregateResults">Aggregate Total Only</label>
+                        <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Result Type</label>
+                        <div class="radio-group" style="display: flex; gap: 1.5rem;">
+                            <div class="form-check">
+                                <input type="radio" id="resultTypeChart" name="resultType" value="chart" class="form-check-input" checked>
+                                <label for="resultTypeChart">Chart</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="radio" id="resultTypeKpi" name="resultType" value="kpi" class="form-check-input">
+                                <label for="resultTypeKpi">KPI</label>
+                            </div>
                         </div>
+                        <input type="hidden" id="aggregateResults" name="aggregateResults" value="false">
                     </div>
 
                     <div style="grid-column: 1 / -1;">
@@ -213,6 +221,17 @@
                 updateCategoryUI();
             }
             loadCategories();
+
+            // Result Type radio button handler - sync with hidden aggregateResults field
+            const resultTypeRadios = document.querySelectorAll('input[name="resultType"]');
+            const aggregateResultsHidden = document.getElementById('aggregateResults');
+            
+            resultTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // KPI = aggregateResults true, Chart = aggregateResults false
+                    aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
+                });
+            });
         });
         /*]]>*/
     </script>

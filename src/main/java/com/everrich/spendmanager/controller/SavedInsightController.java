@@ -69,13 +69,20 @@ public class SavedInsightController {
     // Execute a saved insight and redirect to GET result page (for proper back navigation)
     // URL: GET /insights/manage/{id}/execute
     @GetMapping("/{id}/execute")
-    public String executeSavedInsight(@PathVariable Long id, HttpSession session) {
+    public String executeSavedInsight(@PathVariable Long id, 
+                                       @RequestParam(required = false) String backUrl,
+                                       HttpSession session) {
         try {
             InsightExecutionResult result = savedInsightService.execute(id);
             
             // Store result in session with unique ID for GET retrieval
             String resultId = UUID.randomUUID().toString();
             session.setAttribute("saved_insight_result_" + resultId, result);
+            
+            // Store backUrl in session if provided (for proper back navigation from dashboard, etc.)
+            if (backUrl != null && !backUrl.isEmpty()) {
+                session.setAttribute("saved_insight_backUrl_" + resultId, backUrl);
+            }
             
             // Redirect to GET endpoint for proper browser back navigation support
             return "redirect:/insights/manage/result/" + resultId;
@@ -99,8 +106,11 @@ public class SavedInsightController {
         }
         
         model.addAttribute("result", result);
-        // Set back URL to return to insight management page, and resultId for drill-down back navigation
-        model.addAttribute("backUrl", "/insights/manage");
+        
+        // Get backUrl from session if available (supports navigation from dashboard, insights.html, etc.)
+        // Default to /insights/manage if not specified
+        String backUrl = (String) session.getAttribute("saved_insight_backUrl_" + resultId);
+        model.addAttribute("backUrl", backUrl != null ? backUrl : "/insights/manage");
         model.addAttribute("resultPageUrl", "/insights/manage/result/" + resultId);
         
         return "insight-result";

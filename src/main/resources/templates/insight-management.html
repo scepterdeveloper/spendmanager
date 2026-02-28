@@ -191,12 +191,22 @@
                     </div>
                 </div>
 
-                <!-- Aggregate Results and Dashboard Display -->
+                <!-- Result Type and Dashboard Display -->
                 <div class="form-group">
-                    <div class="form-check">
-                        <input type="checkbox" id="aggregateResults" th:field="*{aggregateResults}" />
-                        <label for="aggregateResults">Aggregate Results</label>
+                    <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Result Type</label>
+                    <div class="radio-group" style="display: flex; gap: 1.5rem; margin-bottom: 0.75rem;">
+                        <div class="form-check">
+                            <input type="radio" id="resultTypeChart" name="resultType" value="chart" class="form-check-input" 
+                                   th:checked="${newInsight.aggregateResults == null or newInsight.aggregateResults == false}">
+                            <label for="resultTypeChart">Chart</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="radio" id="resultTypeKpi" name="resultType" value="kpi" class="form-check-input"
+                                   th:checked="${newInsight.aggregateResults == true}">
+                            <label for="resultTypeKpi">KPI</label>
+                        </div>
                     </div>
+                    <input type="hidden" id="aggregateResults" th:field="*{aggregateResults}" />
                     <div class="form-check">
                         <input type="checkbox" id="showOnDashboard" th:field="*{showOnDashboard}" />
                         <label for="showOnDashboard">Show on Dashboard</label>
@@ -225,7 +235,7 @@
                         <th>Name</th>
                         <th>Description</th>
                         <th>Timeframe</th>
-                        <th>Aggregate</th>
+                        <th>Type</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -245,7 +255,7 @@
                                        insight.timeframe == 'ENTIRE_TIMEFRAME' ? 'Entire Timeframe' : 
                                        insight.timeframe == 'DATE_RANGE' ? 'Date Range' : 
                                        insight.timeframe}">This Month</td>
-                        <td th:text="${insight.aggregateResults ? 'Yes' : 'No'}">No</td>
+                        <td th:text="${insight.aggregateResults == true ? 'KPI' : 'Chart'}">Chart</td>
                         <td>
                             <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="btn-edit">
                                 Edit
@@ -283,7 +293,7 @@
                                                                   insight.timeframe == 'ENTIRE_TIMEFRAME' ? 'Entire Timeframe' : 
                                                                   insight.timeframe == 'DATE_RANGE' ? 'Date Range' : 
                                                                   insight.timeframe}">This Month</span> | 
-                    <strong>Aggregate:</strong> <span th:text="${insight.aggregateResults ? 'Yes' : 'No'}">No</span>
+                    <strong>Type:</strong> <span th:text="${insight.aggregateResults == true ? 'KPI' : 'Chart'}">Chart</span>
                 </div>
 
                 <div class="mobile-card-actions">
@@ -527,6 +537,17 @@
                  } else {
                     showToast("Please use 'Cancel Edit' to hide the form.", 'error');
                  }
+            });
+
+            // --- Result Type Radio Button Handler ---
+            const resultTypeRadios = document.querySelectorAll('input[name="resultType"]');
+            const aggregateResultsHidden = document.getElementById('aggregateResults');
+            
+            resultTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // KPI = aggregateResults true, Chart = aggregateResults false
+                    aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
+                });
             });
         });
 
