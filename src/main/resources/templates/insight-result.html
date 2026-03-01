@@ -89,7 +89,7 @@
             right: 0;
             height: 3px;
             border-radius: 0.4rem 0.4rem 0 0;
-            background: var(--income-color);
+            background: var(--kpi-border-color, var(--income-color));
         }
 
         .kpi-title {
@@ -239,7 +239,7 @@
 
         <!-- KPI Result (Aggregated / 1D) - Dashboard Style -->
         <div th:if="${result.resultType.name() == 'KPI'}" class="kpi-result-container">
-            <div class="kpi-card">
+            <div class="kpi-card" th:style="'--kpi-border-color: ' + (${result.kpiColorOrDefault})">
                 <div class="kpi-title" th:text="${result.insightName}">Total Amount</div>
                 <div class="kpi-value" th:text="${#numbers.formatDecimal(result.aggregatedValue, 1, 2)}">0.00</div>
             </div>

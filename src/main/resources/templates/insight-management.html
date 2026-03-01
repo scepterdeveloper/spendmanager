@@ -5,55 +5,198 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
-        /* Page-specific styles for Insight Management */
+        /* Page-specific styles for insight-management */
         
-        /* Form grid layouts */
-        .form-row {
+        /* Combined row: Name + Description + Timeframe */
+        .compact-row-main {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .form-row-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 1rem;
-        }
-
-        /* Page-specific: Date range fields toggle - will be shown via inline style if DATE_RANGE */
-        #date-range-fields {
-            display: none;
+            grid-template-columns: 2fr 2fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
         }
         
-        #date-range-fields.show {
-            display: grid !important;
+        /* Combined row: Interval + Function + Categories */
+        .compact-row-secondary {
+            display: grid;
+            grid-template-columns: 1fr 1fr 2fr;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Inline options section */
+        .compact-options {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: #F9FAFB;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.75rem;
+            min-height: 48px;
+        }
+        
+        .compact-options .option-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+        
+        .compact-options .option-group-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-mellow);
+            white-space: nowrap;
+        }
+        
+        /* Ensure consistent height for color select wrapper */
+        .compact-options .color-select-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: 100%;
+        }
+        
+        .compact-options .color-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        
+        /* Page-specific styles */
+        #date-range-fields { display: none; }
+        #date-range-fields.show { display: grid !important; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+        /* Category field wrapper */
+        .category-field-wrapper { position: relative; }
+        #category-list-dropdown label { display: inline; font-size: 0.85rem; text-transform: none; letter-spacing: normal; color: var(--primary-color); margin-left: 0.5rem; }
+
+        /* Color section always visible */
+        #kpi-color-section { display: flex; }
+
+        /* Small select for Result Type and Color */
+        .select-sm {
+            min-width: 90px;
+        }
+        
+        /* Compact form button sizing */
+        .compact-form .btn-primary,
+        .compact-form .btn-cancel {
+            min-width: 80px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        .compact-form .btn-cancel {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
         }
 
-        /* Mobile responsive title override */
+        /* Mobile responsive - page specific */
         @media (max-width: 767px) {
-            .page-header h2 {
-                font-size: 0;
-            }
-
-            .page-header h2::after {
-                content: "Manage Insights";
-                font-size: 1.25rem;
-            }
-
-            .form-row,
-            .form-row-3 {
+            .page-header h2 { font-size: 0; }
+            .page-header h2::after { content: "Manage Insights"; font-size: 1.25rem; }
+            
+            /* Stack form rows on mobile */
+            .compact-row-main,
+            .compact-row-secondary {
                 grid-template-columns: 1fr;
+                gap: 0.5rem;
             }
-
-            #category-list-dropdown {
-                position: fixed;
-                left: 5%;
-                right: 5%;
-                top: 50%;
-                transform: translateY(-50%);
-                min-width: unset;
-                max-width: 90%;
-                max-height: 60vh;
+            
+            /* Mobile: 2-column layout for small fields */
+            .compact-row-secondary {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .compact-row-secondary .modal-form-field:last-child {
+                grid-column: 1 / -1;
+            }
+            
+            /* Mobile options: stacked layout per user specification */
+            .compact-options {
+                display: grid;
+                grid-template-columns: auto auto 1fr;
+                grid-template-rows: auto auto auto auto;
+                gap: 0.75rem;
+                padding: 0.75rem;
+                align-items: center;
+            }
+            
+            /* Type (2nd child after hidden input) - row 1 col 1, vertical layout */
+            .compact-options .option-group:nth-child(2) {
+                grid-row: 1;
+                grid-column: 1;
+                justify-self: start;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+            
+            /* Color - row 1 col 2, vertical layout */
+            .compact-options #kpi-color-section {
+                grid-row: 1;
+                grid-column: 2;
+                justify-self: start;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+            
+            /* Dashboard - row 2, left aligned */
+            .compact-options .option-group:nth-child(4) {
+                grid-row: 2;
+                grid-column: 1 / -1;
+                justify-self: start;
+            }
+            
+            /* Save button - row 3 full width, no bottom gap */
+            .compact-options .save-button-group {
+                grid-row: 3;
+                grid-column: 1 / -1;
+                margin-left: 0;
+                margin-bottom: 0;
+                width: 100%;
+            }
+            
+            .compact-options .save-button-group .btn-primary {
+                width: 100% !important;
+            }
+            
+            /* Cancel button - row 4 full width, minimal gap */
+            .compact-options .cancel-button-group {
+                grid-row: 4;
+                grid-column: 1 / -1;
+                width: 100%;
+                margin-top: -0.65rem;
+            }
+            
+            .compact-options .cancel-button-group .btn-cancel {
+                width: 100% !important;
+                display: block;
+            }
+            
+            /* Date range fields mobile */
+            #date-range-fields.show {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .compact-row-main {
+                grid-template-columns: 1fr 1fr;
+            }
+            .compact-row-secondary {
+                grid-template-columns: 1fr 1fr;
+            }
+            .compact-row-secondary .modal-form-field:last-child {
+                grid-column: 1 / -1;
             }
         }
     </style>
@@ -93,26 +236,21 @@
         </div>        
 
         <div class="content-wrapper" id="manual-form-content">
-            <form th:action="@{/insights/manage}" th:object="${newInsight}" method="post">
+            <form th:action="@{/insights/manage}" th:object="${newInsight}" method="post" class="compact-form">
                 
                 <input type="hidden" th:field="*{id}" />
                 
-                <!-- Basic Info -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="name">Insight Name *</label>
+                <!-- Row 1: Name + Description + Timeframe -->
+                <div class="compact-row-main">
+                    <div class="modal-form-field">
+                        <label for="name">Name *</label>
                         <input type="text" id="name" th:field="*{name}" placeholder="e.g., Monthly Groceries" required />
                     </div>
-                    
-                    <div class="form-group">
+                    <div class="modal-form-field">
                         <label for="description">Description</label>
-                        <input type="text" id="description" th:field="*{description}" placeholder="Brief description of this insight" />
+                        <input type="text" id="description" th:field="*{description}" placeholder="Optional" />
                     </div>
-                </div>
-
-                <!-- Filter Parameters -->
-                <div class="form-row-3">
-                    <div class="form-group">
+                    <div class="modal-form-field">
                         <label for="timeframe">Timeframe *</label>
                         <select id="timeframe" th:field="*{timeframe}" required>
                             <option value="THIS_MONTH">This Month</option>
@@ -123,104 +261,110 @@
                             <option value="DATE_RANGE">Date Range</option>
                         </select>
                     </div>
+                </div>
 
-                    <div class="form-group">
+                <!-- Row 2: Interval + Function + Categories -->
+                <div class="compact-row-secondary">
+                    <div class="modal-form-field">
                         <label for="intervalType">Interval</label>
                         <select id="intervalType" th:field="*{intervalType}">
                             <option value="NOT_SPECIFIED">Not Specified</option>
                             <option value="MONTHLY">Monthly</option>
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label for="intervalFunction">Interval Function</label>
+                    <div class="modal-form-field">
+                        <label for="intervalFunction">Function</label>
                         <select id="intervalFunction" th:field="*{intervalFunction}">
                             <option value="SUM">SUM</option>
                             <option value="AVG">AVG</option>
                             <option value="COUNT">COUNT</option>
                         </select>
                     </div>
+                    <div class="modal-form-field">
+                        <label for="category-display">Categories</label>
+                        <div class="category-field-wrapper">
+                            <input type="text" id="category-display" placeholder="Click to select" readonly style="cursor: pointer;" />
+                            <input type="hidden" id="categoryIds" th:field="*{categoryIds}" />
+                            <div id="category-list-dropdown" style="display: none;">
+                                <div class="category-toggle-container">
+                                    <div><input type="checkbox" id="select-all-categories" /><label for="select-all-categories">Select All</label></div>
+                                    <div><input type="checkbox" id="clear-all-categories" /><label for="clear-all-categories">Clear All</label></div>
+                                </div>
+                                <div th:each="cat : ${categories}">
+                                    <input type="checkbox" class="category-checkbox" th:id="'cat-' + ${cat.id}" th:value="${cat.id}" />
+                                    <label th:for="'cat-' + ${cat.id}" th:text="${cat.name}">Category Name</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Date Range (conditionally shown) -->
-                <div class="form-row" id="date-range-fields" th:classappend="${newInsight.timeframe == 'DATE_RANGE' ? 'show' : ''}">
-                    <div class="form-group">
+                <div id="date-range-fields" th:classappend="${newInsight.timeframe == 'DATE_RANGE' ? 'show' : ''}">
+                    <div class="modal-form-field">
                         <label for="startDate">Start Date</label>
                         <input type="date" id="startDate" name="startDate" th:value="${newInsight.startDate}" />
                     </div>
-                    <div class="form-group">
+                    <div class="modal-form-field">
                         <label for="endDate">End Date</label>
                         <input type="date" id="endDate" name="endDate" th:value="${newInsight.endDate}" />
                     </div>
                 </div>
 
-                <!-- Categories (dropdown like insights.html) -->
-                <div class="form-group category-group">
-                    <label for="category-display">Categories</label>
-                    <input 
-                        type="text" 
-                        id="category-display" 
-                        placeholder="Click to select categories" 
-                        readonly 
-                        style="cursor: pointer;"
-                        value="Selected: "
-                    />
-                    <span id="selected-count" style="display: inline;">0</span>
-                    <input type="hidden" id="categoryIds" th:field="*{categoryIds}" />
-                    
-                    <div id="category-list-dropdown" style="display: none;">
-                        <div class="category-toggle-container">
-                            <div>
-                                <input type="checkbox" id="select-all-categories" />
-                                <label for="select-all-categories">Select All</label>
-                            </div>
-                            <div>
-                                <input type="checkbox" id="clear-all-categories" />
-                                <label for="clear-all-categories">Clear All</label>
-                            </div>
-                        </div>
-                        <div th:each="cat : ${categories}">
-                            <input 
-                                type="checkbox" 
-                                class="category-checkbox" 
-                                th:id="'cat-' + ${cat.id}" 
-                                th:value="${cat.id}" 
-                            />
-                            <label th:for="'cat-' + ${cat.id}" th:text="${cat.name}">Category Name</label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Result Type and Dashboard Display -->
-                <div class="form-group">
-                    <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Result Type</label>
-                    <div class="radio-group" style="display: flex; gap: 1.5rem; margin-bottom: 0.75rem;">
-                        <div class="form-check">
-                            <input type="radio" id="resultTypeChart" name="resultType" value="chart" class="form-check-input" 
-                                   th:checked="${newInsight.aggregateResults == null or newInsight.aggregateResults == false}">
-                            <label for="resultTypeChart">Chart</label>
-                        </div>
-                        <div class="form-check">
-                            <input type="radio" id="resultTypeKpi" name="resultType" value="kpi" class="form-check-input"
-                                   th:checked="${newInsight.aggregateResults == true}">
-                            <label for="resultTypeKpi">KPI</label>
-                        </div>
-                    </div>
+                <!-- Inline Options Section -->
+                <div class="compact-options">
                     <input type="hidden" id="aggregateResults" th:field="*{aggregateResults}" />
-                    <div class="form-check">
-                        <input type="checkbox" id="showOnDashboard" th:field="*{showOnDashboard}" />
-                        <label for="showOnDashboard">Show on Dashboard</label>
+                    
+                    <div class="option-group">
+                        <span class="option-group-label">Type</span>
+                        <div class="color-select-wrapper">
+                            <select id="resultTypeSelect" name="resultType" class="select-sm">
+                                <option value="chart" th:selected="${newInsight.aggregateResults == null or newInsight.aggregateResults == false}">📊 Chart</option>
+                                <option value="kpi" th:selected="${newInsight.aggregateResults == true}">🎯 KPI</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary">
-                        <span th:text="${newInsight.id != null ? 'Update Insight' : 'Save Insight'}">Save Insight</span>
-                    </button>
-
-                    <a th:if="${newInsight.id != null}" th:href="@{/insights/manage}" class="btn-cancel">
-                        Cancel Edit
-                    </a>
+                    
+                    <div id="kpi-color-section" class="option-group">
+                        <span class="option-group-label">Color</span>
+                        <div class="color-select-wrapper">
+                            <span id="colorIndicator" class="color-indicator" th:style="'background-color: ' + (${newInsight.kpiColor != null ? newInsight.kpiColor : '#10B981'}) + ';'"></span>
+                            <select id="kpiColor" th:field="*{kpiColor}" class="select-sm">
+                                <option value="#10B981" th:selected="${newInsight.kpiColor == null or newInsight.kpiColor == '#10B981'}">Emerald</option>
+                                <option value="#14B8A6" th:selected="${newInsight.kpiColor == '#14B8A6'}">Teal</option>
+                                <option value="#06B6D4" th:selected="${newInsight.kpiColor == '#06B6D4'}">Cyan</option>
+                                <option value="#3B82F6" th:selected="${newInsight.kpiColor == '#3B82F6'}">Blue</option>
+                                <option value="#8B5CF6" th:selected="${newInsight.kpiColor == '#8B5CF6'}">Violet</option>
+                                <option value="#A855F7" th:selected="${newInsight.kpiColor == '#A855F7'}">Purple</option>
+                                <option value="#EC4899" th:selected="${newInsight.kpiColor == '#EC4899'}">Pink</option>
+                                <option value="#F43F5E" th:selected="${newInsight.kpiColor == '#F43F5E'}">Rose</option>
+                                <option value="#EF4444" th:selected="${newInsight.kpiColor == '#EF4444'}">Red</option>
+                                <option value="#F97316" th:selected="${newInsight.kpiColor == '#F97316'}">Orange</option>
+                                <option value="#FBBF24" th:selected="${newInsight.kpiColor == '#FBBF24'}">Amber</option>
+                                <option value="#84CC16" th:selected="${newInsight.kpiColor == '#84CC16'}">Lime</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="option-group">
+                        <span class="option-group-label">Dashboard</span>
+                        <label class="toggle-switch-simple">
+                            <input type="checkbox" name="showOnDashboard" th:checked="${newInsight.showOnDashboard}" value="true" />
+                            <span class="slider-track"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="option-group save-button-group" style="margin-left: auto;">
+                        <button type="submit" class="btn-primary" style="width: 80px;">
+                            <span th:text="${newInsight.id != null ? 'Update' : 'Save'}">Save</span>
+                        </button>
+                    </div>
+                    
+                    <div th:if="${newInsight.id != null}" class="option-group cancel-button-group">
+                        <a th:href="@{/insights/manage}" class="btn-cancel" style="width: 80px;">
+                            Cancel
+                        </a>
+                    </div>
                 </div>
             </form>
         </div>
@@ -342,7 +486,6 @@
             const intervalFunctionSelect = document.getElementById('intervalFunction');
             const categoryDisplaySelect = document.getElementById('category-display');
             const categoryListDropdown = document.getElementById('category-list-dropdown');
-            const selectedCountSpan = document.getElementById('selected-count');
 
             let confirmAction = null;
 
@@ -382,13 +525,13 @@
 
                 let text;
                 if (checkedCount === 0) {
-                    text = 'None';
+                    text = 'No categories selected';
                 } else if (checkedCount === totalCount) {
-                    text = 'All';
+                    text = 'All categories selected';
                 } else {
-                    text = checkedCount;
+                    text = checkedCount + ' of ' + totalCount + ' categories selected';
                 }
-                selectedCountSpan.textContent = text;
+                categoryDisplaySelect.value = text;
                 updateCategoryIds();
             }
 
@@ -539,15 +682,22 @@
                  }
             });
 
-            // --- Result Type Radio Button Handler ---
-            const resultTypeRadios = document.querySelectorAll('input[name="resultType"]');
+            // --- Result Type Select Handler ---
+            const resultTypeSelect = document.getElementById('resultTypeSelect');
             const aggregateResultsHidden = document.getElementById('aggregateResults');
             
-            resultTypeRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
-                    // KPI = aggregateResults true, Chart = aggregateResults false
-                    aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
-                });
+            resultTypeSelect.addEventListener('change', function() {
+                // KPI = aggregateResults true, Chart = aggregateResults false
+                aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
+            });
+
+            // --- KPI Color Dropdown Logic ---
+            const kpiColorSelect = document.getElementById('kpiColor');
+            const colorIndicator = document.getElementById('colorIndicator');
+            
+            // Update color indicator when dropdown changes
+            kpiColorSelect.addEventListener('change', function() {
+                colorIndicator.style.backgroundColor = this.value;
             });
         });
 

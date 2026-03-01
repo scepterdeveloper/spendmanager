@@ -44,14 +44,11 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #E5E7EB; padding-bottom: 1rem; }
         .modal-header h3 { margin: 0; font-size: 1.25rem; }
         .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6B7280; }
-        .modal-form-field { margin-bottom: 1rem; }
-        .modal-form-field label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-dark); }
-        .modal-form-field input { width: 100%; padding: 0.75rem; border: 2px solid #D1D5DB; border-radius: 0; font-size: 1rem; }
-        .modal-form-field input:focus { outline: none; border-color: var(--accent-color); }
+        /* modal-form-field styles now managed centrally via app-theme.css */
         .modal-form-field input[readonly] { background: #F3F4F6; color: #6B7280; }
-        .modal-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .btn-cancel { background: #E5E7EB; color: #374151; padding: 0.75rem 1.5rem; border: none; border-radius: 0; cursor: pointer; font-weight: 500; }
-        .btn-danger { background: #EF4444; color: #fff; padding: 0.75rem 1.5rem; border: none; border-radius: 0; cursor: pointer; font-weight: 500; }
+        /* btn-cancel and btn-primary styles managed centrally via app-theme.css */
+        .btn-danger { background: #EF4444; color: #fff; padding: 0.75rem 1.5rem; border: none; border-radius: 0.25rem; cursor: pointer; font-weight: 500; }
+        .btn-danger:hover { opacity: 0.8; }
         .modal-buttons { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
 
         /* Toast notification */
@@ -85,127 +82,7 @@
             box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
         }
 
-        /* Custom File Upload Styling */
-        .file-upload-wrapper {
-            position: relative;
-            width: 100%;
-        }
-
-        .file-upload-dropzone {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
-            border: 2px dashed #D1D5DB;
-            border-radius: 0;
-            background-color: #FAFAFA;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-height: 120px;
-        }
-
-        .file-upload-dropzone:hover {
-            border-color: var(--accent-color);
-            background-color: var(--bg-accent-light);
-        }
-
-        .file-upload-dropzone.dragover {
-            border-color: var(--accent-color);
-            background-color: var(--bg-accent-light);
-            border-style: solid;
-        }
-
-        .file-upload-dropzone.has-file {
-            border-color: var(--accent-color);
-            border-style: solid;
-            background-color: var(--bg-accent-light);
-        }
-
-        .file-upload-icon {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 0.75rem;
-            color: #9CA3AF;
-            transition: color 0.2s ease;
-        }
-
-        .file-upload-dropzone:hover .file-upload-icon,
-        .file-upload-dropzone.dragover .file-upload-icon {
-            color: var(--accent-color);
-        }
-
-        .file-upload-dropzone.has-file .file-upload-icon {
-            color: var(--accent-color);
-        }
-
-        .file-upload-text {
-            text-align: center;
-        }
-
-        .file-upload-text-main {
-            font-size: 0.95rem;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
-        }
-
-        .file-upload-text-main .browse-link {
-            color: var(--accent-color);
-            font-weight: 600;
-            text-decoration: underline;
-            cursor: pointer;
-        }
-
-        .file-upload-text-sub {
-            font-size: 0.8rem;
-            color: var(--text-mellow);
-        }
-
-        .file-upload-selected {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            background-color: white;
-            border-radius: 0;
-            border: 1px solid var(--border-accent-light);
-        }
-
-        .file-upload-selected-icon {
-            width: 20px;
-            height: 20px;
-            color: var(--accent-color);
-            flex-shrink: 0;
-        }
-
-        .file-upload-selected-name {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--primary-color);
-            word-break: break-all;
-        }
-
-        .file-upload-selected-remove {
-            width: 20px;
-            height: 20px;
-            margin-left: auto;
-            color: #9CA3AF;
-            cursor: pointer;
-            transition: color 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .file-upload-selected-remove:hover {
-            color: var(--error-color);
-        }
-
-        .file-upload-input {
-            position: absolute;
-            width: 0;
-            height: 0;
-            opacity: 0;
-            overflow: hidden;
-        }
+        /* File upload styles now managed centrally via app-theme.css */
 
         @media (max-width: 767px) {
             .upload-controls { flex-direction: column; align-items: stretch; }
@@ -1013,14 +890,14 @@
             <form id="uploadForm">
                 <div class="modal-form-field">
                     <label for="accountSelect">Select Account</label>
-                    <select id="accountSelect" name="accountId" required style="width: 100%; padding: 0.75rem; border: 2px solid #D1D5DB; border-radius: 0; font-size: 1rem;">
+                    <select id="accountSelect" name="accountId" required>
                         <option value="">-- Select an Account --</option>
                         <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"></option>
                     </select>
                 </div>
                 
                 <div class="modal-form-field">
-                    <label>PDF Statement File</label>
+                    <label for="fileInput">PDF Statement File</label>
                     <div class="file-upload-wrapper">
                         <input type="file" id="fileInput" name="file" accept="application/pdf" required class="file-upload-input">
                         <div id="fileDropzone" class="file-upload-dropzone">

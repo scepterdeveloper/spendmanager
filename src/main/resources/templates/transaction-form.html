@@ -26,6 +26,31 @@
             max-width: 400px;
         }
 
+        /* Currency input wrapper */
+        .currency-input-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 0.75rem;
+            color: var(--text-mellow);
+            font-weight: 500;
+            font-size: 0.95rem;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .currency-input-wrapper input {
+            padding-left: 1.75rem !important;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
         .btn-primary {
             max-width: 400px;
             width: 100%;
@@ -424,7 +449,10 @@
 
                 <div class="form-group">
                     <label for="amount">Amount</label>
-                    <input type="number" id="amount" th:field="*{amount}" step="0.01" required />
+                    <div class="currency-input-wrapper">
+                        <span class="currency-symbol">€</span>
+                        <input type="text" id="amount" th:field="*{amount}" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0.00" required />
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -508,6 +536,35 @@
 
     <input type="file" id="fileInputFallback" accept="image/*" capture="environment" />
     <div class="toast-notification" id="toast"></div>
+
+    <script>
+    // Format amount field with 2 decimal places
+    (function() {
+        const amountInput = document.getElementById('amount');
+        if (!amountInput) return;
+
+        function formatAmount(value) {
+            // Remove any non-numeric characters except decimal separator
+            let num = value.replace(/[^0-9.,]/g, '').replace(',', '.');
+            // Parse as float and format with 2 decimals
+            let parsed = parseFloat(num);
+            if (isNaN(parsed)) return '';
+            return parsed.toFixed(2);
+        }
+
+        // Format on page load if value exists
+        if (amountInput.value) {
+            amountInput.value = formatAmount(amountInput.value);
+        }
+
+        // Format on blur (when user leaves the field)
+        amountInput.addEventListener('blur', function() {
+            if (this.value) {
+                this.value = formatAmount(this.value);
+            }
+        });
+    })();
+    </script>
 
     <script th:if="${transaction.id == null}">
     (function () {

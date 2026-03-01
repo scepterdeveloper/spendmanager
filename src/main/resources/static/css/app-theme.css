@@ -84,7 +84,7 @@ body {
 .page-header h2 {
     color: var(--primary-color);
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 600;
 }
 
@@ -121,25 +121,29 @@ body {
 
 /* --- Forms --- */
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 .form-group label {
     display: block;
     font-weight: 500;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-mellow);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .form-group input,
 .form-group textarea,
 .form-group select {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #D1D5DB;
-    border-radius: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #10B981;
+    border-radius: 4px;
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 0.875rem;
+    line-height: 1.25;
 }
 
 .form-group input:focus,
@@ -147,7 +151,7 @@ body {
 .form-group select:focus {
     outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
+    box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.1);
 }
 
 .form-check {
@@ -174,16 +178,219 @@ body {
     margin-top: 1rem;
 }
 
+/* --- Modal Form Fields (Compact Dense Style) --- */
+.modal-form-field { margin-bottom: 0.5rem; }
+.modal-form-field label { 
+    display: block; 
+    font-size: 0.75rem; 
+    color: var(--text-mellow); 
+    text-transform: uppercase; 
+    letter-spacing: 0.03em; 
+    margin-bottom: 0.25rem; 
+    font-weight: 500; 
+    text-align: left;
+}
+.modal-form-field input, .modal-form-field select { 
+    width: 100%; 
+    padding: 0.4rem 0.6rem; 
+    border: 1px solid #10B981; 
+    border-radius: 4px;
+    font-size: 0.875rem; 
+    font-family: inherit; 
+    line-height: 1.25; 
+}
+.modal-form-field input:focus, .modal-form-field select:focus { 
+    outline: none; 
+    border-color: var(--accent-color); 
+    box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.1); 
+}
+
+/* Modal Form Grid Layouts */
+.modal-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.modal-form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+/* --- Display Options Section (Segmented Toggle, Color Select, Toggle Switch) --- */
+.options-section { 
+    background: #F9FAFB; 
+    padding: 1.25rem; 
+    margin-bottom: 1rem; 
+    border-radius: 8px; 
+}
+.options-section .section-label { 
+    display: block; 
+    font-size: 0.75rem; 
+    color: #6B7280; 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+    margin-bottom: 1rem; 
+    font-weight: 500; 
+}
+.options-grid { display: flex; align-items: center; flex-wrap: wrap; gap: 2rem; }
+.option-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.option-group-label { 
+    font-size: 0.7rem; 
+    font-weight: 600; 
+    color: #9CA3AF; 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+}
+
+/* Segmented Toggle Buttons */
+.segmented-toggle { 
+    display: inline-flex; 
+    background: #E5E7EB; 
+    border-radius: 8px; 
+    padding: 4px; 
+    gap: 4px; 
+}
+.segmented-toggle input[type="radio"] { display: none; }
+.segmented-toggle label { 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    padding: 8px 16px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-size: 0.875rem; 
+    font-weight: 500; 
+    color: #6B7280; 
+    transition: all 0.2s ease; 
+    user-select: none; 
+}
+.segmented-toggle label svg { width: 16px; height: 16px; }
+.segmented-toggle input[type="radio"]:checked + label { 
+    background: white; 
+    color: var(--accent-color); 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+}
+.segmented-toggle label:hover { color: var(--primary-color); }
+
+/* Color Select with Indicator */
+.color-select-wrapper { display: flex; align-items: center; gap: 8px; }
+.color-indicator { 
+    width: 24px; 
+    height: 24px; 
+    border-radius: 6px; 
+    flex-shrink: 0; 
+    border: 1px solid rgba(0,0,0,0.15); 
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); 
+}
+.color-select-wrapper select { 
+    padding: 8px 12px; 
+    border: 1px solid #10B981; 
+    border-radius: 6px;
+    font-size: 0.875rem; 
+    font-family: inherit; 
+    background: white; 
+    cursor: pointer; 
+    min-width: 120px; 
+}
+.color-select-wrapper select:focus { 
+    outline: none; 
+    border-color: var(--accent-color); 
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1); 
+}
+
+/* Modern Toggle Switch */
+.toggle-switch { 
+    position: relative; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 10px; 
+    cursor: pointer; 
+    user-select: none;
+}
+.toggle-switch input[type="checkbox"] { 
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider { 
+    position: relative; 
+    width: 44px; 
+    height: 24px; 
+    background: #D1D5DB; 
+    border-radius: 12px; 
+    transition: background 0.25s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.toggle-slider::before { 
+    content: ''; 
+    position: absolute; 
+    top: 2px; 
+    left: 2px; 
+    width: 20px; 
+    height: 20px; 
+    background: white; 
+    border-radius: 50%; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+    transition: transform 0.25s ease;
+    pointer-events: none;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent-color); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+.toggle-label { font-size: 0.875rem; font-weight: 500; color: var(--primary-color); cursor: pointer; }
+
+/* Simple Toggle Switch (label wrapper that works with clicks) */
+.toggle-switch-simple {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+.toggle-switch-simple input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-switch-simple .slider-track {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: #D1D5DB;
+    border-radius: 12px;
+    transition: background 0.25s ease;
+    flex-shrink: 0;
+}
+.toggle-switch-simple .slider-track::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.25s ease;
+}
+.toggle-switch-simple input:checked + .slider-track {
+    background: var(--accent-color);
+}
+.toggle-switch-simple input:checked + .slider-track::before {
+    transform: translateX(20px);
+}
+
+/* Mobile Responsive for Form Layouts */
+@media (max-width: 767px) {
+    .modal-form-row, .modal-form-row-3 { grid-template-columns: 1fr; }
+    .options-grid { flex-direction: column; align-items: flex-start; gap: 1rem; }
+}
+
 /* --- Button System --- */
 .btn-primary,
 .btn-cancel,
 .btn-delete,
 .btn-edit {
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1.25rem;
     border-radius: 0.25rem;
     cursor: pointer;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.875rem;
     text-decoration: none;
     display: inline-block;
     text-align: center;
@@ -812,25 +1019,28 @@ body {
 .filter-field {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.25rem;
 }
 
 .filter-field label {
     font-weight: 500;
-    font-size: 0.95rem;
-    color: var(--primary-color);
+    font-size: 0.75rem;
+    color: var(--text-mellow);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .filter-field select,
 .filter-field input[type="text"],
 .filter-field input[type="date"] {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #D1D5DB;
-    border-radius: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #10B981;
+    border-radius: 4px;
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 0.875rem;
     background-color: white;
+    line-height: 1.25;
 }
 
 .filter-field select:focus,
@@ -838,7 +1048,7 @@ body {
 .filter-field input[type="date"]:focus {
     outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
+    box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.1);
 }
 
 .filter-field input[readonly] {
@@ -1718,4 +1928,129 @@ body {
 /* Desktop table reviewed column header */
 .reviewed-header {
     text-align: center !important;
+}
+
+/* ================================================================= 
+   FILE UPLOAD DROPZONE STYLES
+   ================================================================= */
+
+.file-upload-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.file-upload-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    border: 2px dashed #10B981;
+    border-radius: 4px;
+    background-color: #FAFAFA;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 120px;
+}
+
+.file-upload-dropzone:hover {
+    border-color: var(--accent-color);
+    background-color: var(--bg-accent-light);
+}
+
+.file-upload-dropzone.dragover {
+    border-color: var(--accent-color);
+    background-color: var(--bg-accent-light);
+    border-style: solid;
+}
+
+.file-upload-dropzone.has-file {
+    border-color: var(--accent-color);
+    border-style: solid;
+    background-color: var(--bg-accent-light);
+}
+
+.file-upload-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0.75rem;
+    color: #9CA3AF;
+    transition: color 0.2s ease;
+}
+
+.file-upload-dropzone:hover .file-upload-icon,
+.file-upload-dropzone.dragover .file-upload-icon {
+    color: var(--accent-color);
+}
+
+.file-upload-dropzone.has-file .file-upload-icon {
+    color: var(--accent-color);
+}
+
+.file-upload-text {
+    text-align: center;
+}
+
+.file-upload-text-main {
+    font-size: 0.95rem;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.file-upload-text-main .browse-link {
+    color: var(--accent-color);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.file-upload-text-sub {
+    font-size: 0.8rem;
+    color: var(--text-mellow);
+}
+
+.file-upload-selected {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: white;
+    border-radius: 4px;
+    border: 1px solid var(--border-accent-light);
+}
+
+.file-upload-selected-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--accent-color);
+    flex-shrink: 0;
+}
+
+.file-upload-selected-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--primary-color);
+    word-break: break-all;
+}
+
+.file-upload-selected-remove {
+    width: 20px;
+    height: 20px;
+    margin-left: auto;
+    color: #9CA3AF;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.file-upload-selected-remove:hover {
+    color: var(--error-color);
+}
+
+.file-upload-input {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
 }

@@ -36,6 +36,12 @@ public class InsightExecutionResult {
     private LocalDate queryEndDate;
     private boolean drillDownEnabled;
     
+    // KPI display color (hex color code for top border)
+    private String kpiColor;
+    
+    // Default KPI color constant
+    public static final String DEFAULT_KPI_COLOR = "#10B981";
+    
     // Constructors
     public InsightExecutionResult() {}
     
@@ -130,4 +136,12 @@ public class InsightExecutionResult {
     
     public boolean isDrillDownEnabled() { return drillDownEnabled; }
     public void setDrillDownEnabled(boolean drillDownEnabled) { this.drillDownEnabled = drillDownEnabled; }
+    
+    public String getKpiColor() { return kpiColor; }
+    public void setKpiColor(String kpiColor) { this.kpiColor = kpiColor; }
+    
+    // Helper method to get color with fallback to default
+    public String getKpiColorOrDefault() {
+        return (kpiColor != null && !kpiColor.trim().isEmpty()) ? kpiColor : DEFAULT_KPI_COLOR;
+    }
 }

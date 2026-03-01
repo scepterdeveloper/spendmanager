@@ -77,7 +77,7 @@
             right: 0;
             height: 3px;
             border-radius: 0.4rem 0.4rem 0 0;
-            background: var(--income-color);
+            background: var(--kpi-border-color, var(--income-color));
         }
 
         .kpi-title {
@@ -284,7 +284,8 @@
                 </button>
 
                 <div class="kpi-container" id="kpiContainer">
-                    <div th:each="kpi : ${dashBoardKPIs}" class="kpi-card">
+                    <div th:each="kpi : ${dashBoardKPIs}" class="kpi-card"
+                         th:style="'--kpi-border-color: ' + (${kpi.kpiColorOrDefault})">
                         <div class="kpi-title" th:text="${kpi.insightName}">Insight Name</div>
                         <div class="kpi-value"
                             th:text="${kpi.aggregatedValue != null ? #numbers.formatDecimal(kpi.aggregatedValue, 1, 'POINT', 2, 'COMMA') + ' €' : '0,00 €'}">

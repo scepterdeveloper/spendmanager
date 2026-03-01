@@ -104,6 +104,11 @@ public class SavedInsightService {
         result.setInsightId(insight.getId());
         result.setInsightName(insight.getName());
         result.setInsightDescription(insight.getDescription());
+        
+        // Set KPI color from saved insight (with fallback to default)
+        result.setKpiColor(insight.getKpiColor() != null && !insight.getKpiColor().trim().isEmpty() 
+                ? insight.getKpiColor() 
+                : InsightExecutionResult.DEFAULT_KPI_COLOR);
 
         return result;
     }

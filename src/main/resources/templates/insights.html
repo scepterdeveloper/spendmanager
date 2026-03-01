@@ -7,39 +7,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
-        /* --- Page-Specific: Filter Grid --- */
-        .filter-container {
+        /* Page-specific styles for insights */
+        
+        /* Combined row: Timeframe + Interval + Function */
+        .compact-row-main {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Inline options section */
+        .compact-options {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: #F9FAFB;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.75rem;
+            min-height: 48px;
+        }
+        
+        .compact-options .option-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+        
+        .compact-options .option-group-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-mellow);
+            white-space: nowrap;
+        }
+        
+        .compact-options .color-select-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: 100%;
         }
 
-        @media (min-width: 768px) {
-            .filter-container {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px 15px;
-            }
+        /* Small select for Result Type */
+        .select-sm {
+            min-width: 90px;
+        }
+        
+        /* Compact form button sizing */
+        .compact-form .btn-primary {
+            min-width: 80px;
+            text-align: center;
+            box-sizing: border-box;
         }
 
-        /* --- Date Range Fields --- */
-        #date-range-fields {
-            display: none;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
+        /* Page-specific styles */
+        #date-range-fields { display: none; }
+        #date-range-fields.show { display: grid !important; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        
+        /* Category field wrapper */
+        .category-field-wrapper { position: relative; }
+        #category-list-dropdown label { display: inline; font-size: 0.85rem; text-transform: none; letter-spacing: normal; color: var(--primary-color); margin-left: 0.5rem; }
 
-        #date-range-fields.show {
-            display: grid;
-        }
-
-        /* --- Mobile Responsive: Page-Specific --- */
+        /* Mobile responsive - page specific */
         @media (max-width: 767px) {
-            .filter-container {
-                grid-template-columns: 1fr;
+            .page-header h2 { font-size: 0; }
+            .page-header h2::after { content: "Insights"; font-size: 1.25rem; }
+            
+            /* Mobile: 2-column layout for small fields */
+            .compact-row-main {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
             }
-
-            #date-range-fields {
-                grid-template-columns: 1fr;
+            
+            .compact-row-main .modal-form-field:first-child {
+                grid-column: 1 / -1;
+            }
+            
+            /* Mobile options: stacked layout */
+            .compact-options {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                grid-template-rows: auto auto;
+                gap: 0.75rem;
+                padding: 0.75rem;
+                align-items: center;
+            }
+            
+            /* Type selector - row 1 left aligned */
+            .compact-options .option-group:first-child {
+                grid-row: 1;
+                grid-column: 1;
+                justify-self: start;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+            
+            /* Analyze button - row 2 full width */
+            .compact-options .analyze-button-group {
+                grid-row: 2;
+                grid-column: 1 / -1;
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .compact-options .analyze-button-group .btn-primary {
+                width: 100% !important;
+            }
+            
+            /* Date range fields mobile */
+            #date-range-fields.show {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .compact-row-main {
+                grid-template-columns: 1fr 1fr 1fr;
             }
         }
     </style>
@@ -60,10 +148,12 @@
         </div>
 
         <div class="content-wrapper">
-            <form id="filter-form" th:action="@{/insights/execute}" method="post">
-                <div class="filter-container">
-                    <div class="form-group">
-                        <label for="timeframe">Timeframe</label>
+            <form id="filter-form" th:action="@{/insights/execute}" method="post" class="compact-form">
+                
+                <!-- Row 1: Timeframe + Interval + Function -->
+                <div class="compact-row-main">
+                    <div class="modal-form-field">
+                        <label for="timeframe">Timeframe *</label>
                         <select id="timeframe" name="timeframe">
                             <option value="THIS_MONTH">This Month</option>
                             <option value="LAST_MONTH">Previous Month</option>
@@ -74,71 +164,66 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="modal-form-field">
                         <label for="interval">Interval</label>
-                        <select id="interval" name="interval" disabled onchange="toggleIntervalFunction()">
+                        <select id="interval" name="interval" disabled>
                             <option value="NOT_SPECIFIED">Not Specified</option>
                             <option value="MONTHLY">Monthly</option>
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="modal-form-field">
                         <label for="intervalFunction">Function</label>
                         <select id="intervalFunction" name="intervalFunction" disabled>
                             <option value="SUM">SUM</option>
                         </select>
                     </div>
+                </div>
 
-                    <div class="form-group category-group">
-                        <label for="category-display">Categories</label>
-                        <div style="display: flex; align-items: center;">
-                            <input type="text" id="category-display" placeholder="Select categories" readonly style="cursor: pointer; flex: 1;" value="Selected: " />
-                            <span id="selected-count" style="margin-left: -35px; font-size: 0.85rem; color: var(--accent-color); font-weight: bold; z-index: 5;">All</span>
-                        </div>
+                <!-- Date Range (conditionally shown) -->
+                <div id="date-range-fields">
+                    <div class="modal-form-field">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate" name="startDate" />
+                    </div>
+                    <div class="modal-form-field">
+                        <label for="endDate">End Date</label>
+                        <input type="date" id="endDate" name="endDate" />
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="modal-form-field">
+                    <label for="category-display">Categories</label>
+                    <div class="category-field-wrapper">
+                        <input type="text" id="category-display" placeholder="Click to select categories" readonly style="cursor: pointer;" />
                         <input type="hidden" id="categoryIds" name="categoryIds" />
-                        
-                        <div id="category-list-dropdown" style="display:none;">
+                        <div id="category-list-dropdown" style="display: none;">
                             <div class="category-toggle-container">
-                                <div>
-                                    <input type="checkbox" id="select-all-categories" checked>
-                                    <label for="select-all-categories">Select All</label>
-                                </div>
-                                <div>
-                                    <input type="checkbox" id="clear-all-categories">
-                                    <label for="clear-all-categories">Clear All</label>
-                                </div>
+                                <div><input type="checkbox" id="select-all-categories" checked /><label for="select-all-categories">Select All</label></div>
+                                <div><input type="checkbox" id="clear-all-categories" /><label for="clear-all-categories">Clear All</label></div>
                             </div>
+                            <!-- Categories loaded dynamically via JS -->
                         </div>
                     </div>
+                </div>
 
-                    <div id="date-range-fields" style="grid-column: 1 / -1;">
-                        <div class="form-group">
-                            <label for="startDate">Start Date</label>
-                            <input type="date" id="startDate" name="startDate">
-                        </div>
-                        <div class="form-group">
-                            <label for="endDate">End Date</label>
-                            <input type="date" id="endDate" name="endDate">
+                <!-- Inline Options Section -->
+                <div class="compact-options">
+                    <input type="hidden" id="aggregateResults" name="aggregateResults" value="false" />
+                    
+                    <div class="option-group">
+                        <span class="option-group-label">Type</span>
+                        <div class="color-select-wrapper">
+                            <select id="resultTypeSelect" name="resultType" class="select-sm">
+                                <option value="chart">📊 Chart</option>
+                                <option value="kpi">🎯 KPI</option>
+                            </select>
                         </div>
                     </div>
-
-                    <div style="grid-column: 1 / -1; margin-top: 5px;">
-                        <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Result Type</label>
-                        <div class="radio-group" style="display: flex; gap: 1.5rem;">
-                            <div class="form-check">
-                                <input type="radio" id="resultTypeChart" name="resultType" value="chart" class="form-check-input" checked>
-                                <label for="resultTypeChart">Chart</label>
-                            </div>
-                            <div class="form-check">
-                                <input type="radio" id="resultTypeKpi" name="resultType" value="kpi" class="form-check-input">
-                                <label for="resultTypeKpi">KPI</label>
-                            </div>
-                        </div>
-                        <input type="hidden" id="aggregateResults" name="aggregateResults" value="false">
-                    </div>
-
-                    <div style="grid-column: 1 / -1;">
-                        <button type="submit" class="btn-primary">Analyze</button>
+                    
+                    <div class="option-group analyze-button-group" style="margin-left: auto;">
+                        <button type="submit" class="btn-primary" style="width: 100px;">Analyze</button>
                     </div>
                 </div>
             </form>
@@ -150,88 +235,199 @@
         document.addEventListener('DOMContentLoaded', function() {
             const timeframeSelect = document.getElementById('timeframe');
             const intervalSelect = document.getElementById('interval');
-            const intervalFn = document.getElementById('intervalFunction');
+            const intervalFunctionSelect = document.getElementById('intervalFunction');
             const categoryDisplay = document.getElementById('category-display');
             const categoryDropdown = document.getElementById('category-list-dropdown');
-            const selectedCountSpan = document.getElementById('selected-count');
+            const form = document.getElementById('filter-form');
+            const resultTypeSelect = document.getElementById('resultTypeSelect');
+            const aggregateResultsHidden = document.getElementById('aggregateResults');
+            
+            const STORAGE_KEY = 'insightsFormState';
+            
+            // --- Save form state before submission ---
+            form.addEventListener('submit', function() {
+                const state = {
+                    timeframe: timeframeSelect.value,
+                    interval: intervalSelect.value,
+                    intervalFunction: intervalFunctionSelect.value,
+                    startDate: document.getElementById('startDate').value,
+                    endDate: document.getElementById('endDate').value,
+                    categoryIds: document.getElementById('categoryIds').value,
+                    resultType: resultTypeSelect.value
+                };
+                sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            });
+            
+            // --- Restore form state from session storage ---
+            function restoreFormState() {
+                const saved = sessionStorage.getItem(STORAGE_KEY);
+                if (!saved) return null;
+                
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    return null;
+                }
+            }
+            
+            const savedState = restoreFormState();
+            if (savedState) {
+                // Restore timeframe
+                timeframeSelect.value = savedState.timeframe;
+                
+                // Restore dates
+                if (savedState.startDate) {
+                    document.getElementById('startDate').value = savedState.startDate;
+                }
+                if (savedState.endDate) {
+                    document.getElementById('endDate').value = savedState.endDate;
+                }
+                
+                // Restore result type
+                if (savedState.resultType) {
+                    resultTypeSelect.value = savedState.resultType;
+                    aggregateResultsHidden.value = (savedState.resultType === 'kpi') ? 'true' : 'false';
+                }
+            }
 
-            // Timeframe change handler
-            timeframeSelect.addEventListener('change', function() {
+            // --- Result Type Select Handler ---
+            resultTypeSelect.addEventListener('change', function() {
+                aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
+            });
+
+            // --- Timeframe Logic ---
+            function toggleDateRangeAndInterval() {
+                const selectedTimeframe = timeframeSelect.value;
                 const dateRangeFields = document.getElementById('date-range-fields');
-                if (this.value === 'DATE_RANGE') {
+
+                if (selectedTimeframe === 'DATE_RANGE') {
+                    dateRangeFields.style.display = 'grid';
                     dateRangeFields.classList.add('show');
                 } else {
+                    dateRangeFields.style.display = 'none';
                     dateRangeFields.classList.remove('show');
                 }
-                const supportsInterval = ['THIS_YEAR', 'LAST_YEAR', 'DATE_RANGE', 'ENTIRE_TIMEFRAME'].includes(this.value);
-                intervalSelect.disabled = !supportsInterval;
-                if (!supportsInterval) {
+
+                const enableInterval = ['THIS_YEAR', 'LAST_YEAR', 'DATE_RANGE', 'ENTIRE_TIMEFRAME'].includes(selectedTimeframe);
+                intervalSelect.disabled = !enableInterval;
+                if (!enableInterval) {
                     intervalSelect.value = 'NOT_SPECIFIED';
-                    intervalFn.disabled = true;
+                }
+                toggleIntervalFunction();
+            }
+            
+            function toggleIntervalFunction() {
+                intervalFunctionSelect.disabled = (intervalSelect.value === 'NOT_SPECIFIED');
+            }
+            
+            timeframeSelect.addEventListener('change', toggleDateRangeAndInterval);
+            intervalSelect.addEventListener('change', toggleIntervalFunction);
+
+            // --- Category Dropdown Toggle ---
+            function toggleCategoryDropdown(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                categoryDropdown.style.display = categoryDropdown.style.display === 'block' ? 'none' : 'block';
+            }
+            
+            categoryDisplay.addEventListener('mousedown', toggleCategoryDropdown);
+            categoryDisplay.addEventListener('touchend', toggleCategoryDropdown);
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (categoryDropdown.style.display === 'block' &&
+                    !categoryDropdown.contains(event.target) &&
+                    event.target !== categoryDisplay) {
+                    categoryDropdown.style.display = 'none';
                 }
             });
 
-            window.toggleIntervalFunction = () => {
-                intervalFn.disabled = (intervalSelect.value === 'NOT_SPECIFIED');
-            };
+            // --- Category Selection Logic ---
+            function updateCategoryDisplayCount() {
+                const categoryCheckboxes = document.querySelectorAll('#category-list-dropdown input.cat-cb');
+                const checkedCount = Array.from(categoryCheckboxes).filter(cb => cb.checked).length;
+                const totalCount = categoryCheckboxes.length;
 
-            // Category dropdown handlers
-            categoryDisplay.onclick = (e) => {
-                categoryDropdown.style.display = categoryDropdown.style.display === 'none' ? 'block' : 'none';
-                e.stopPropagation();
-            };
-            document.onclick = () => categoryDropdown.style.display = 'none';
-            categoryDropdown.onclick = (e) => e.stopPropagation();
-
-            function updateCategoryUI() {
-                const checkboxes = document.querySelectorAll('.cat-cb');
-                const checked = Array.from(checkboxes).filter(cb => cb.checked);
-                if (checked.length === 0) selectedCountSpan.textContent = "None";
-                else if (checked.length === checkboxes.length) selectedCountSpan.textContent = "All";
-                else selectedCountSpan.textContent = checked.length;
+                let text;
+                if (checkedCount === 0) {
+                    text = 'No categories selected';
+                } else if (checkedCount === totalCount) {
+                    text = 'All categories selected';
+                } else {
+                    text = checkedCount + ' of ' + totalCount + ' categories selected';
+                }
+                categoryDisplay.value = text;
                 
                 // Update hidden field with comma-separated IDs
-                const ids = Array.from(checked).map(cb => cb.value);
+                const ids = Array.from(categoryCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
                 document.getElementById('categoryIds').value = ids.join(',');
             }
 
-            document.getElementById('select-all-categories').onclick = function() {
+            // Select All / Clear All listeners
+            const selectAllCheckbox = document.getElementById('select-all-categories');
+            const clearAllCheckbox = document.getElementById('clear-all-categories');
+
+            selectAllCheckbox.addEventListener('change', function() {
                 document.querySelectorAll('.cat-cb').forEach(cb => cb.checked = this.checked);
-                document.getElementById('clear-all-categories').checked = false;
-                updateCategoryUI();
-            };
+                clearAllCheckbox.checked = false;
+                updateCategoryDisplayCount();
+            });
 
-            document.getElementById('clear-all-categories').onclick = function() {
+            clearAllCheckbox.addEventListener('change', function() {
                 document.querySelectorAll('.cat-cb').forEach(cb => cb.checked = !this.checked);
-                document.getElementById('select-all-categories').checked = false;
-                updateCategoryUI();
-            };
+                selectAllCheckbox.checked = false;
+                updateCategoryDisplayCount();
+            });
 
-            // Load categories
+            // Load categories via API
             async function loadCategories() {
-                const res = await fetch('/api/insights/categories');
-                const cats = await res.json();
-                const container = document.getElementById('category-list-dropdown');
-                cats.forEach(c => {
-                    const d = document.createElement('div');
-                    d.innerHTML = `<input type="checkbox" value="${c.id}" id="cat-${c.id}" class="cat-cb" checked> <label for="cat-${c.id}">${c.name}</label>`;
-                    container.appendChild(d);
-                    d.querySelector('input').onchange = updateCategoryUI;
-                });
-                updateCategoryUI();
+                try {
+                    const res = await fetch('/api/insights/categories');
+                    const cats = await res.json();
+                    const container = document.getElementById('category-list-dropdown');
+                    
+                    // Get saved category IDs from session storage
+                    const savedCategoryIds = savedState?.categoryIds ? savedState.categoryIds.split(',') : null;
+                    
+                    cats.forEach(c => {
+                        const d = document.createElement('div');
+                        // If we have saved state, only check categories that were previously selected
+                        // Otherwise, check all by default
+                        const isChecked = savedCategoryIds ? savedCategoryIds.includes(String(c.id)) : true;
+                        d.innerHTML = `<input type="checkbox" value="${c.id}" id="cat-${c.id}" class="cat-cb" ${isChecked ? 'checked' : ''}> <label for="cat-${c.id}">${c.name}</label>`;
+                        container.appendChild(d);
+                        d.querySelector('input').addEventListener('change', function() {
+                            selectAllCheckbox.checked = false;
+                            clearAllCheckbox.checked = false;
+                            updateCategoryDisplayCount();
+                        });
+                    });
+                    
+                    // Update select all checkbox state
+                    const allChecked = document.querySelectorAll('.cat-cb:checked').length === cats.length;
+                    selectAllCheckbox.checked = allChecked;
+                    
+                    updateCategoryDisplayCount();
+                    
+                    // After categories are loaded, restore interval values (needs to happen after timeframe is set)
+                    if (savedState) {
+                        // Trigger timeframe change to enable/disable interval
+                        toggleDateRangeAndInterval();
+                        
+                        // Now restore interval values
+                        if (savedState.interval) {
+                            intervalSelect.value = savedState.interval;
+                        }
+                        if (savedState.intervalFunction) {
+                            intervalFunctionSelect.value = savedState.intervalFunction;
+                        }
+                        toggleIntervalFunction();
+                    }
+                } catch (error) {
+                    console.error('Failed to load categories:', error);
+                }
             }
             loadCategories();
-
-            // Result Type radio button handler - sync with hidden aggregateResults field
-            const resultTypeRadios = document.querySelectorAll('input[name="resultType"]');
-            const aggregateResultsHidden = document.getElementById('aggregateResults');
-            
-            resultTypeRadios.forEach(radio => {
-                radio.addEventListener('change', function() {
-                    // KPI = aggregateResults true, Chart = aggregateResults false
-                    aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
-                });
-            });
         });
         /*]]>*/
     </script>

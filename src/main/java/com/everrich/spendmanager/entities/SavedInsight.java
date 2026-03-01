@@ -47,6 +47,9 @@ public class SavedInsight {
     private Boolean aggregateResults;
     private Boolean showOnDashboard;
     
+    // KPI color for top border display (hex color code, e.g., #10B981)
+    private String kpiColor;
+    
     public SavedInsight(String name, String description, String timeframe) {
         this.name = name;
         this.description = description;
