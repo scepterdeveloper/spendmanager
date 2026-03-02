@@ -42,6 +42,9 @@ public class SavedInsightService {
 
     /**
      * Saves a new or updated insight. For new insights, assigns the next display sequence value.
+     * Also ensures aggregateResults is never NULL:
+     * - CHART type (intervalType = MONTHLY): aggregateResults = false
+     * - KPI type (intervalType = NOT_SPECIFIED or null): aggregateResults = true
      */
     public SavedInsight save(SavedInsight savedInsight) {
         // For new insights (no ID), assign the next display sequence
@@ -49,6 +52,17 @@ public class SavedInsightService {
             Integer maxSeq = savedInsightRepository.findMaxDisplaySequence().orElse(0);
             savedInsight.setDisplaySequence(maxSeq + 1);
         }
+        
+        // Ensure aggregateResults is never NULL
+        // CHART type (has MONTHLY interval) should have aggregateResults = false
+        // KPI type (NOT_SPECIFIED interval) should have aggregateResults = true
+        if (savedInsight.getAggregateResults() == null) {
+            String intervalType = savedInsight.getIntervalType();
+            // CHART if intervalType is MONTHLY, otherwise it's a KPI
+            boolean isChart = "MONTHLY".equalsIgnoreCase(intervalType);
+            savedInsight.setAggregateResults(!isChart);
+        }
+        
         return savedInsightRepository.save(savedInsight);
     }
 
