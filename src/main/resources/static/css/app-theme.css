@@ -8,6 +8,7 @@
     --primary-color: #1F2937;
     --text-mellow: #6B7280;
     --border-color: #E5E7EB;
+    --input-border-color: #E5E7EB;
     --success-color: #10B981;
     --error-color: #EF4444;
     --info-color: #3B82F6;
@@ -139,7 +140,7 @@ body {
 .form-group select {
     width: 100%;
     padding: 0.4rem 0.6rem;
-    border: 1px solid #10B981;
+    border: 1px solid var(--input-border-color);
     border-radius: 4px;
     font-family: inherit;
     font-size: 0.875rem;
@@ -193,7 +194,7 @@ body {
 .modal-form-field input, .modal-form-field select { 
     width: 100%; 
     padding: 0.4rem 0.6rem; 
-    border: 1px solid #10B981; 
+    border: 1px solid var(--input-border-color); 
     border-radius: 4px;
     font-size: 0.875rem; 
     font-family: inherit; 
@@ -277,7 +278,7 @@ body {
 }
 .color-select-wrapper select { 
     padding: 8px 12px; 
-    border: 1px solid #10B981; 
+    border: 1px solid var(--input-border-color); 
     border-radius: 6px;
     font-size: 0.875rem; 
     font-family: inherit; 
@@ -1035,7 +1036,7 @@ body {
 .filter-field input[type="date"] {
     width: 100%;
     padding: 0.4rem 0.6rem;
-    border: 1px solid #10B981;
+    border: 1px solid var(--input-border-color);
     border-radius: 4px;
     font-family: inherit;
     font-size: 0.875rem;
@@ -1945,7 +1946,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
-    border: 2px dashed #10B981;
+    border: 2px dashed var(--input-border-color);
     border-radius: 4px;
     background-color: #FAFAFA;
     cursor: pointer;
