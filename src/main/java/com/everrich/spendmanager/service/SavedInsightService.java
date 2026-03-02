@@ -5,6 +5,7 @@ import com.everrich.spendmanager.entities.SavedInsight;
 import com.everrich.spendmanager.repository.SavedInsightRepository;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,8 +25,11 @@ public class SavedInsightService {
         this.insightsService = insightsService;
     }
 
+    /**
+     * Returns all insights ordered by display sequence (nulls treated as 0).
+     */
     public List<SavedInsight> findAll() {
-        return savedInsightRepository.findAllByOrderByNameAsc();
+        return savedInsightRepository.findAllOrderByDisplaySequence();
     }
 
     public List<SavedInsight> findInsightsForDashboard() {
@@ -36,7 +40,15 @@ public class SavedInsightService {
         return savedInsightRepository.findById(id);
     }
 
+    /**
+     * Saves a new or updated insight. For new insights, assigns the next display sequence value.
+     */
     public SavedInsight save(SavedInsight savedInsight) {
+        // For new insights (no ID), assign the next display sequence
+        if (savedInsight.getId() == null && savedInsight.getDisplaySequence() == null) {
+            Integer maxSeq = savedInsightRepository.findMaxDisplaySequence().orElse(0);
+            savedInsight.setDisplaySequence(maxSeq + 1);
+        }
         return savedInsightRepository.save(savedInsight);
     }
 
@@ -48,22 +60,47 @@ public class SavedInsightService {
         return savedInsightRepository.findByNameIgnoreCase(name);
     }
 
+    /**
+     * Returns dashboard KPIs ordered by display sequence.
+     */
     public List<InsightExecutionResult> getDashBoardKPIs() {
         List<InsightExecutionResult> results = new ArrayList<>();
-        List<SavedInsight> dashBoardKPIInsights = savedInsightRepository.findByShowOnDashboardTrueAndAggregateResultsTrue();
+        List<SavedInsight> dashBoardKPIInsights = savedInsightRepository.findDashboardKPIsOrderByDisplaySequence();
         for(SavedInsight dashBoardKPIInsight: dashBoardKPIInsights) {
             results.add(this.execute(dashBoardKPIInsight.getId()));
         }
         return results;
     }
 
+    /**
+     * Returns dashboard charts ordered by display sequence.
+     */
     public List<InsightExecutionResult> getDashBoardCharts() {
         List<InsightExecutionResult> results = new ArrayList<>();
-        List<SavedInsight> dashBoardChartInsights = savedInsightRepository.findByShowOnDashboardTrueAndAggregateResultsFalse();
+        List<SavedInsight> dashBoardChartInsights = savedInsightRepository.findDashboardChartsOrderByDisplaySequence();
         for(SavedInsight dashboardChartInsight: dashBoardChartInsights) {
             results.add(this.execute(dashboardChartInsight.getId()));
         }
         return results;
+    }
+
+    /**
+     * Reorders insights based on the provided list of IDs.
+     * Assigns sequential display sequence values (1, 2, 3, ...) based on the order of IDs.
+     * 
+     * @param orderedIds List of insight IDs in the desired order
+     */
+    @Transactional
+    public void reorderInsights(List<Long> orderedIds) {
+        for (int i = 0; i < orderedIds.size(); i++) {
+            Long id = orderedIds.get(i);
+            Optional<SavedInsight> insightOpt = savedInsightRepository.findById(id);
+            if (insightOpt.isPresent()) {
+                SavedInsight insight = insightOpt.get();
+                insight.setDisplaySequence(i + 1);
+                savedInsightRepository.save(insight);
+            }
+        }
     }
 
     /**

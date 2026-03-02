@@ -11,6 +11,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Controller
@@ -125,6 +127,31 @@ public class SavedInsightController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * REST endpoint to reorder insights based on drag-and-drop.
+     * Accepts a JSON body with a list of insight IDs in the desired order.
+     * POST /insights/manage/reorder
+     * Body: { "orderedIds": [3, 1, 5, 2, 4] }
+     */
+    @PostMapping("/reorder")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> reorderInsights(@RequestBody Map<String, List<Long>> payload) {
+        try {
+            List<Long> orderedIds = payload.get("orderedIds");
+            if (orderedIds == null || orderedIds.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "orderedIds is required"));
+            }
+            
+            savedInsightService.reorderInsights(orderedIds);
+            
+            return ResponseEntity.ok(Map.of("success", true, "message", "Order updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("success", false, "message", "Failed to reorder: " + e.getMessage()));
         }
     }
 }

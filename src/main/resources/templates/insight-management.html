@@ -3,7 +3,12 @@
 <head>
     <title th:text="${appName} + ' - Manage Insights'">EverRich - Manage Insights</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- CSRF token meta tags for AJAX requests -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
+    <!-- SortableJS for drag-and-drop reordering -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         /* Page-specific styles for insight-management */
         
@@ -199,6 +204,113 @@
                 grid-column: 1 / -1;
             }
         }
+
+        /* Drag-and-drop styles - ENTIRE ROW IS DRAGGABLE */
+        /* Row hover effect with left border indicator */
+        #insights-table-body tr[data-insight-id] {
+            cursor: grab;
+            transition: all 0.15s ease;
+        }
+        
+        #insights-table-body tr[data-insight-id]:hover {
+            background-color: #f0fdf4 !important;
+            box-shadow: inset 3px 0 0 0 var(--accent-color);
+        }
+        
+        #insights-table-body tr[data-insight-id]:active {
+            cursor: grabbing;
+        }
+        
+        /* Inline drag icon that appears before name on hover */
+        .name-cell {
+            white-space: nowrap;
+        }
+        
+        .name-cell-content {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .name-cell .drag-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            color: #9CA3AF;
+            flex-shrink: 0;
+        }
+        
+        #insights-table-body tr[data-insight-id]:hover .drag-icon {
+            opacity: 1;
+            color: var(--accent-color);
+        }
+        
+        /* Sortable ghost (dragged item placeholder) */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #dbeafe !important;
+        }
+        
+        /* Sortable chosen (item being dragged) */
+        .sortable-chosen {
+            background: #ecfdf5 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Mobile card - entire card is draggable */
+        .mobile-card {
+            position: relative;
+            cursor: grab;
+            transition: all 0.15s ease;
+        }
+        
+        .mobile-card:hover {
+            background-color: #f0fdf4;
+            box-shadow: inset 3px 0 0 0 var(--accent-color), var(--shadow-sm);
+        }
+        
+        .mobile-card:active {
+            cursor: grabbing;
+        }
+        
+        /* Mobile card drag icon - visible on hover */
+        .mobile-card .mobile-drag-icon {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #D1D5DB;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        
+        .mobile-card:hover .mobile-drag-icon {
+            opacity: 1;
+            color: var(--accent-color);
+        }
+        
+        /* Sequence badge */
+        .sequence-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-mellow);
+        }
     </style>
 </head>
 <body>
@@ -375,7 +487,6 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Name</th>
                         <th>Description</th>
                         <th>Timeframe</th>
@@ -383,10 +494,16 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr th:each="insight : ${savedInsights}">
-                        <td th:text="${insight.id}">1</td>
-                        <td>
+                <tbody id="insights-table-body">
+                    <tr th:each="insight : ${savedInsights}" th:attr="data-insight-id=${insight.id}">
+                        <td class="name-cell">
+                            <span class="drag-icon" title="Drag to reorder">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="8" y1="6" x2="16" y2="6"></line>
+                                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                                    <line x1="8" y1="18" x2="16" y2="18"></line>
+                                </svg>
+                            </span>
                             <a th:href="@{/insights/manage/{id}/execute(id=${insight.id})}" 
                                style="color: var(--accent-color); text-decoration: none; font-weight: 500;"
                                th:text="${insight.name}">Monthly Groceries</a>
@@ -410,20 +527,27 @@
                             </form>
                         </td>
                     </tr>
-                    <tr th:if="${savedInsights.empty}">
-                        <td colspan="6">No saved insights defined yet. Please add a new one above.</td>
+                    <tr th:if="${savedInsights.empty}" class="empty-row">
+                        <td colspan="5">No saved insights defined yet. Please add a new one above.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="mobile-list">
-            <div th:each="insight : ${savedInsights}" class="mobile-card">
+        <div class="mobile-list" id="insights-mobile-list">
+            <div th:each="insight : ${savedInsights}" class="mobile-card" th:attr="data-insight-id=${insight.id}">
+                <div class="mobile-drag-icon" title="Drag to reorder">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="8" y1="6" x2="16" y2="6"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                        <line x1="8" y1="18" x2="16" y2="18"></line>
+                    </svg>
+                </div>
                 <div class="mobile-card-header">
                     <div class="mobile-card-title">
                         <a th:href="@{/insights/manage/{id}/execute(id=${insight.id})}" 
                            style="color: var(--accent-color); text-decoration: none;"
-                           th:text="${insight.id} + ' - ' + ${insight.name}">1 - Monthly Groceries</a>
+                           th:text="${insight.name}">Monthly Groceries</a>
                     </div>
                 </div>
                 
@@ -707,6 +831,120 @@
             const ids = Array.from(checkboxes).map(cb => cb.value);
             document.getElementById('categoryIds').value = ids.join(',');
         }
+
+        // --- SortableJS Drag-and-Drop Reordering ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableBody = document.getElementById('insights-table-body');
+            const mobileList = document.getElementById('insights-mobile-list');
+            const toastContainer = document.getElementById('toast-container');
+
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    toast.addEventListener('transitionend', () => toast.remove());
+                }, 3000);
+            }
+
+            // Collect ordered IDs from table rows
+            function getOrderedIdsFromTable() {
+                const rows = tableBody.querySelectorAll('tr[data-insight-id]');
+                return Array.from(rows).map(row => parseInt(row.getAttribute('data-insight-id')));
+            }
+
+            // Collect ordered IDs from mobile cards
+            function getOrderedIdsFromMobile() {
+                const cards = mobileList.querySelectorAll('.mobile-card[data-insight-id]');
+                return Array.from(cards).map(card => parseInt(card.getAttribute('data-insight-id')));
+            }
+
+            // Get CSRF token from meta tags
+            const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+            // Send reorder request to server
+            async function saveNewOrder(orderedIds) {
+                try {
+                    const headers = {
+                        'Content-Type': 'application/json',
+                    };
+                    // Add CSRF token header
+                    headers[csrfHeader] = csrfToken;
+                    
+                    const response = await fetch('/insights/manage/reorder', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ orderedIds: orderedIds })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast('Order updated successfully', 'success');
+                    } else {
+                        showToast('Failed to update order: ' + (result.message || 'Unknown error'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Error saving order:', error);
+                    showToast('Failed to update order', 'error');
+                }
+            }
+
+            // Sync mobile list order to match table order
+            function syncMobileToTable() {
+                const orderedIds = getOrderedIdsFromTable();
+                orderedIds.forEach((id, index) => {
+                    const card = mobileList.querySelector(`.mobile-card[data-insight-id="${id}"]`);
+                    if (card) {
+                        mobileList.appendChild(card);
+                    }
+                });
+            }
+
+            // Sync table order to match mobile list order
+            function syncTableToMobile() {
+                const orderedIds = getOrderedIdsFromMobile();
+                orderedIds.forEach((id, index) => {
+                    const row = tableBody.querySelector(`tr[data-insight-id="${id}"]`);
+                    if (row) {
+                        tableBody.appendChild(row);
+                    }
+                });
+            }
+
+            // Initialize Sortable for desktop table - entire row is draggable
+            if (tableBody && tableBody.querySelectorAll('tr[data-insight-id]').length > 0) {
+                new Sortable(tableBody, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    filter: '.empty-row',
+                    onEnd: function(evt) {
+                        const orderedIds = getOrderedIdsFromTable();
+                        syncMobileToTable();
+                        saveNewOrder(orderedIds);
+                    }
+                });
+            }
+
+            // Initialize Sortable for mobile list - entire card is draggable
+            if (mobileList && mobileList.querySelectorAll('.mobile-card[data-insight-id]').length > 0) {
+                new Sortable(mobileList, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function(evt) {
+                        const orderedIds = getOrderedIdsFromMobile();
+                        syncTableToMobile();
+                        saveNewOrder(orderedIds);
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

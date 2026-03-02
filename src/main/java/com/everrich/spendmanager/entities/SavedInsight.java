@@ -50,6 +50,9 @@ public class SavedInsight {
     // KPI color for top border display (hex color code, e.g., #10B981)
     private String kpiColor;
     
+    // Display sequence for ordering insights on dashboard and management page (nullable for backwards compatibility)
+    private Integer displaySequence;
+    
     public SavedInsight(String name, String description, String timeframe) {
         this.name = name;
         this.description = description;
