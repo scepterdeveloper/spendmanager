@@ -261,40 +261,53 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
-        /* Mobile card - entire card is draggable */
+        /* Mobile card - not draggable by default, only via handle */
         .mobile-card {
             position: relative;
-            cursor: grab;
             transition: all 0.15s ease;
         }
         
         .mobile-card:hover {
             background-color: #f0fdf4;
-            box-shadow: inset 3px 0 0 0 var(--accent-color), var(--shadow-sm);
+            box-shadow: var(--shadow-sm);
         }
         
-        .mobile-card:active {
-            cursor: grabbing;
-        }
-        
-        /* Mobile card drag icon - visible on hover */
-        .mobile-card .mobile-drag-icon {
+        /* Mobile card drag handle - always visible, larger touch target */
+        .mobile-card .mobile-drag-handle {
             position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            width: 18px;
-            height: 18px;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #D1D5DB;
-            opacity: 0;
-            transition: opacity 0.15s ease;
+            background: linear-gradient(to right, #f3f4f6, transparent);
+            border-radius: 0.5rem 0 0 0.5rem;
+            cursor: grab;
+            touch-action: none;
+            color: #9CA3AF;
+            transition: all 0.15s ease;
         }
         
-        .mobile-card:hover .mobile-drag-icon {
-            opacity: 1;
+        .mobile-card .mobile-drag-handle:hover,
+        .mobile-card .mobile-drag-handle:active {
+            background: linear-gradient(to right, #e5e7eb, transparent);
             color: var(--accent-color);
+        }
+        
+        .mobile-card .mobile-drag-handle:active {
+            cursor: grabbing;
+        }
+        
+        .mobile-card .mobile-drag-handle svg {
+            width: 16px;
+            height: 16px;
+        }
+        
+        /* Adjust mobile card content to accommodate drag handle */
+        .mobile-card-content {
+            margin-left: 32px;
         }
         
         /* Sequence badge */
@@ -536,24 +549,27 @@
 
         <div class="mobile-list" id="insights-mobile-list">
             <div th:each="insight : ${savedInsights}" class="mobile-card" th:attr="data-insight-id=${insight.id}">
-                <div class="mobile-drag-icon" title="Drag to reorder">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Drag handle on left side - only this area initiates drag on mobile -->
+                <div class="mobile-drag-handle" title="Drag to reorder">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="8" y1="6" x2="16" y2="6"></line>
                         <line x1="8" y1="12" x2="16" y2="12"></line>
                         <line x1="8" y1="18" x2="16" y2="18"></line>
                     </svg>
                 </div>
-                <div class="mobile-card-header">
-                    <div class="mobile-card-title">
-                        <a th:href="@{/insights/manage/{id}/execute(id=${insight.id})}" 
-                           style="color: var(--accent-color); text-decoration: none;"
-                           th:text="${insight.name}">Monthly Groceries</a>
+                <!-- Card content - scrollable area, not draggable -->
+                <div class="mobile-card-content">
+                    <div class="mobile-card-header">
+                        <div class="mobile-card-title">
+                            <a th:href="@{/insights/manage/{id}/execute(id=${insight.id})}" 
+                               style="color: var(--accent-color); text-decoration: none;"
+                               th:text="${insight.name}">Monthly Groceries</a>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="mobile-card-description" th:text="${insight.description}">Track monthly grocery spending</div>
+                    
+                    <div class="mobile-card-description" th:text="${insight.description}">Track monthly grocery spending</div>
 
-                <div style="font-size: 0.75rem; color: var(--text-mellow); margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                    <div style="font-size: 0.75rem; color: var(--text-mellow); margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                     <strong>Timeframe:</strong> <span th:text="${insight.timeframe == 'THIS_MONTH' ? 'This Month' : 
                                                                   insight.timeframe == 'LAST_MONTH' ? 'Previous Month' : 
                                                                   insight.timeframe == 'THIS_YEAR' ? 'This Year' : 
@@ -564,8 +580,8 @@
                     <strong>Type:</strong> <span th:text="${insight.aggregateResults == true ? 'KPI' : 'Chart'}">Chart</span>
                 </div>
 
-                <div class="mobile-card-actions">
-                    <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="action-icon edit" title="Edit">
+                    <div class="mobile-card-actions">
+                        <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="action-icon edit" title="Edit">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                         </svg>
@@ -581,6 +597,7 @@
                             </svg>
                         </button>
                     </form>
+                    </div>
                 </div>
             </div>
 
@@ -931,12 +948,13 @@
                 });
             }
 
-            // Initialize Sortable for mobile list - entire card is draggable
+            // Initialize Sortable for mobile list - only drag handle initiates drag
             if (mobileList && mobileList.querySelectorAll('.mobile-card[data-insight-id]').length > 0) {
                 new Sortable(mobileList, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
+                    handle: '.mobile-drag-handle',  // Only drag via handle - allows normal scrolling
                     onEnd: function(evt) {
                         const orderedIds = getOrderedIdsFromMobile();
                         syncTableToMobile();
