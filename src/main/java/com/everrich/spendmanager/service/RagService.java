@@ -62,8 +62,14 @@ public class RagService {
 
 
     public String findBestCategory(Transaction transaction) {
-
+        long methodStart = System.currentTimeMillis();
+        
+        long similaritySearchStart = System.currentTimeMillis();
         String context = vectorStoreService.similaritySearch(transaction);
+        long similaritySearchDuration = System.currentTimeMillis() - similaritySearchStart;
+        log.info("LLM_TIMING: similaritySearch took {} ms for transaction: {}", 
+                similaritySearchDuration, transaction.getDescription());
+        
         String availableCategories = categoryService.findAll().stream()
                 .map(c -> c.getName())
                 .collect(Collectors.joining(", "));
@@ -82,9 +88,18 @@ public class RagService {
                 "categories", availableCategories);
 
         Prompt prompt = promptTemplate.create(promptParameters);
+        
+        long llmCallStart = System.currentTimeMillis();
         String response = chatClient.prompt(prompt)
                 .call()
                 .content();
+        long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+        log.info("LLM_TIMING: Category LLM call took {} ms for transaction: {}", 
+                llmCallDuration, transaction.getDescription());
+        
+        long totalDuration = System.currentTimeMillis() - methodStart;
+        log.info("LLM_TIMING: findBestCategory total took {} ms for transaction: {}", 
+                totalDuration, transaction.getDescription());
 
         return response.trim();
     }
@@ -101,7 +116,8 @@ public class RagService {
             return new HashMap<>();
         }
         
-        log.info("Starting batch categorization for {} transactions", transactions.size());
+        long methodStart = System.currentTimeMillis();
+        log.info("LLM_TIMING: Starting batch categorization for {} transactions", transactions.size());
         
         // Get available categories once (shared across all chunks)
         String availableCategories = categoryService.findAll().stream()
@@ -109,7 +125,12 @@ public class RagService {
                 .collect(Collectors.joining(", "));
         
         // Get aggregated context from vector store
+        long batchSearchStart = System.currentTimeMillis();
         String context = vectorStoreService.batchSimilaritySearch(transactions);
+        long batchSearchDuration = System.currentTimeMillis() - batchSearchStart;
+        log.info("LLM_TIMING: batchSimilaritySearch took {} ms for {} transactions", 
+                batchSearchDuration, transactions.size());
+        
         if (context.isBlank()) {
             context = "No historical context found.";
         }
@@ -172,6 +193,9 @@ public class RagService {
             globalIndex += chunk.size();
         }
         
+        long totalDuration = System.currentTimeMillis() - methodStart;
+        log.info("LLM_TIMING: findBestCategoriesBatch total took {} ms for {} transactions", 
+                totalDuration, transactions.size());
         log.info("Batch categorization completed. Categorized {} transactions.", results.size());
         return results;
     }
@@ -187,6 +211,8 @@ public class RagService {
     private Map<Integer, String> processBatchChunk(List<Transaction> chunk, 
                                                     String availableCategories, 
                                                     String context) {
+        long chunkStart = System.currentTimeMillis();
+        
         // Build transactions list for prompt
         StringBuilder transactionsBuilder = new StringBuilder();
         for (int i = 0; i < chunk.size(); i++) {
@@ -208,16 +234,31 @@ public class RagService {
         Prompt prompt = promptTemplate.create(promptParameters);
         
         log.debug("Batch prompt content length: {} characters", prompt.getContents().length());
+        log.info("LLM_TIMING: Batch prompt prepared, content length: {} characters, {} transactions", 
+                prompt.getContents().length(), chunk.size());
         
         // Call LLM
+        long llmCallStart = System.currentTimeMillis();
         String response = chatClient.prompt(prompt)
                 .call()
                 .content();
+        long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+        log.info("LLM_TIMING: Batch LLM call took {} ms for {} transactions", 
+                llmCallDuration, chunk.size());
         
         log.debug("LLM batch response: {}", response);
         
         // Parse response
-        return parseBatchResponse(response, chunk.size());
+        long parseStart = System.currentTimeMillis();
+        Map<Integer, String> result = parseBatchResponse(response, chunk.size());
+        long parseDuration = System.currentTimeMillis() - parseStart;
+        log.info("LLM_TIMING: Batch response parsing took {} ms", parseDuration);
+        
+        long chunkDuration = System.currentTimeMillis() - chunkStart;
+        log.info("LLM_TIMING: processBatchChunk total took {} ms for {} transactions", 
+                chunkDuration, chunk.size());
+        
+        return result;
     }
     
     /**

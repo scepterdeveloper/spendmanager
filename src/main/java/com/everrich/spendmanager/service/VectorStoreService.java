@@ -114,14 +114,22 @@ public class VectorStoreService {
             return "";
         }
         
-        log.info("Starting batch similarity search for {} transactions", transactions.size());
+        long methodStart = System.currentTimeMillis();
+        log.info("LLM_TIMING: Starting batch similarity search for {} transactions", transactions.size());
         
         // Collect unique normalized descriptions to avoid duplicate searches
         Set<String> processedDescriptions = new HashSet<>();
         List<RedisDocument> allResults = new ArrayList<>();
         
+        long totalNormalizationTime = 0;
+        int normalizationCount = 0;
+        
         for (Transaction transaction : transactions) {
+            long normalizeStart = System.currentTimeMillis();
             String normalizedDescription = normalizeDescription(transaction.getDescription());
+            long normalizeDuration = System.currentTimeMillis() - normalizeStart;
+            totalNormalizationTime += normalizeDuration;
+            normalizationCount++;
             
             // Skip if we've already searched for this normalized description
             if (processedDescriptions.contains(normalizedDescription)) {
@@ -140,6 +148,10 @@ public class VectorStoreService {
                 allResults.addAll(searchResults);
             }
         }
+        
+        log.info("LLM_TIMING: normalizeDescription called {} times, total time: {} ms, avg: {} ms", 
+                normalizationCount, totalNormalizationTime, 
+                normalizationCount > 0 ? totalNormalizationTime / normalizationCount : 0);
         
         // Handle null or empty results gracefully
         if (allResults.isEmpty()) {
@@ -170,6 +182,9 @@ public class VectorStoreService {
         }
         
         String context = contextBuilder.toString();
+        long totalDuration = System.currentTimeMillis() - methodStart;
+        log.info("LLM_TIMING: batchSimilaritySearch total took {} ms for {} transactions ({} unique descriptions)", 
+                totalDuration, transactions.size(), processedDescriptions.size());
         log.info("Batch similarity search completed. Found {} unique context entries from {} searches", 
                 seenContexts.size(), processedDescriptions.size());
         
@@ -178,16 +193,23 @@ public class VectorStoreService {
 
     // LLM based
     private String normalizeDescription(String transactionDescription) {
-
+        long start = System.currentTimeMillis();
+        
         PromptTemplate promptTemplate = new PromptTemplate(normalizeDescriptionPromptResource);
         Map<String, Object> model = Map.of(
                 "transactionDescription", transactionDescription // Corrected key and value
         );
 
         // 3. Create, call, and return the response content
-        return chatClient.prompt(promptTemplate.create(model))
+        String result = chatClient.prompt(promptTemplate.create(model))
                 .call()
                 .content()
                 .trim(); // Always good practice to trim the output
+        
+        long duration = System.currentTimeMillis() - start;
+        log.debug("LLM_TIMING: normalizeDescription LLM call took {} ms for: {}", 
+                duration, transactionDescription);
+        
+        return result;
     }
 }
