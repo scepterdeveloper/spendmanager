@@ -56,7 +56,7 @@ public class InsightsController {
             @RequestParam(required = false) String categoryIds,
             @RequestParam(required = false) String interval,
             @RequestParam(required = false) String intervalFunction,
-            @RequestParam(defaultValue = "false") boolean aggregateResults,
+            @RequestParam(defaultValue = "CHART") String insightType,
             HttpSession session) {
         
         try {
@@ -72,6 +72,9 @@ public class InsightsController {
 
             // Normalize interval parameter
             String normalizedInterval = "NOT_SPECIFIED".equals(interval) ? null : interval;
+
+            // Convert insightType to boolean for service (KPI = aggregate results, CHART = detailed results)
+            boolean aggregateResults = "KPI".equalsIgnoreCase(insightType);
 
             // Execute the analysis
             InsightExecutionResult result = insightsService.executeAdHocInsight(
@@ -136,9 +139,12 @@ public class InsightsController {
             @RequestParam List<Long> categoryIds,
             @RequestParam(required = false) String interval,
             @RequestParam(required = false) String intervalFunction,
-            @RequestParam(defaultValue = "false") boolean aggregateResults) {
+            @RequestParam(defaultValue = "CHART") String insightType) {
 
         try {
+            // Convert insightType to boolean for service (KPI = aggregate results, CHART = detailed results)
+            boolean aggregateResults = "KPI".equalsIgnoreCase(insightType);
+            
             List<AggregatedInsight> insights = insightsService.getCategoryInsights(
                 timeframe, startDate, endDate, categoryIds, interval, intervalFunction, aggregateResults);
                 

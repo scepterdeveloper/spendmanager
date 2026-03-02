@@ -210,14 +210,12 @@
 
                 <!-- Inline Options Section -->
                 <div class="compact-options">
-                    <input type="hidden" id="aggregateResults" name="aggregateResults" value="false" />
-                    
                     <div class="option-group">
                         <span class="option-group-label">Type</span>
                         <div class="color-select-wrapper">
-                            <select id="resultTypeSelect" name="resultType" class="select-sm">
-                                <option value="chart">📊 Chart</option>
-                                <option value="kpi">🎯 KPI</option>
+                            <select id="insightType" name="insightType" class="select-sm">
+                                <option value="CHART">📊 Chart</option>
+                                <option value="KPI">🎯 KPI</option>
                             </select>
                         </div>
                     </div>
@@ -239,8 +237,7 @@
             const categoryDisplay = document.getElementById('category-display');
             const categoryDropdown = document.getElementById('category-list-dropdown');
             const form = document.getElementById('filter-form');
-            const resultTypeSelect = document.getElementById('resultTypeSelect');
-            const aggregateResultsHidden = document.getElementById('aggregateResults');
+            const insightTypeSelect = document.getElementById('insightType');
             
             const STORAGE_KEY = 'insightsFormState';
             
@@ -253,7 +250,7 @@
                     startDate: document.getElementById('startDate').value,
                     endDate: document.getElementById('endDate').value,
                     categoryIds: document.getElementById('categoryIds').value,
-                    resultType: resultTypeSelect.value
+                    insightType: insightTypeSelect.value
                 };
                 sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             });
@@ -283,17 +280,13 @@
                     document.getElementById('endDate').value = savedState.endDate;
                 }
                 
-                // Restore result type
-                if (savedState.resultType) {
-                    resultTypeSelect.value = savedState.resultType;
-                    aggregateResultsHidden.value = (savedState.resultType === 'kpi') ? 'true' : 'false';
+                // Restore insight type
+                if (savedState.insightType) {
+                    insightTypeSelect.value = savedState.insightType;
                 }
             }
 
-            // --- Result Type Select Handler ---
-            resultTypeSelect.addEventListener('change', function() {
-                aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
-            });
+            // --- Insight Type Select (no JavaScript handler needed - value is sent directly) ---
 
             // --- Timeframe Logic ---
             function toggleDateRangeAndInterval() {

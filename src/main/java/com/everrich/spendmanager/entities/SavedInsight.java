@@ -19,6 +19,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class SavedInsight {
 
+    // Insight type constants
+    public static final String TYPE_KPI = "KPI";
+    public static final String TYPE_CHART = "CHART";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -44,7 +48,10 @@ public class SavedInsight {
     @Column(length = 1000)
     private String categoryIds; // Comma-separated category IDs
     
-    private Boolean aggregateResults;
+    // Insight type: KPI or CHART (replaces aggregateResults Boolean)
+    @Column(name = "insight_type", nullable = false)
+    private String insightType = TYPE_CHART;
+    
     private Boolean showOnDashboard;
     
     // KPI color for top border display (hex color code, e.g., #10B981)
@@ -59,6 +66,20 @@ public class SavedInsight {
         this.timeframe = timeframe;
         this.intervalType = "NOT_SPECIFIED";
         this.intervalFunction = "SUM";
-        this.aggregateResults = false;
+        this.insightType = TYPE_CHART;
+    }
+    
+    /**
+     * Helper method to check if this insight is a KPI type.
+     */
+    public boolean isKpi() {
+        return TYPE_KPI.equals(insightType);
+    }
+    
+    /**
+     * Helper method to check if this insight is a Chart type.
+     */
+    public boolean isChart() {
+        return TYPE_CHART.equals(insightType) || insightType == null;
     }
 }

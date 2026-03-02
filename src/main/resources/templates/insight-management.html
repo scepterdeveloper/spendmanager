@@ -438,14 +438,12 @@
 
                 <!-- Inline Options Section -->
                 <div class="compact-options">
-                    <input type="hidden" id="aggregateResults" th:field="*{aggregateResults}" />
-                    
                     <div class="option-group">
                         <span class="option-group-label">Type</span>
                         <div class="color-select-wrapper">
-                            <select id="resultTypeSelect" name="resultType" class="select-sm">
-                                <option value="chart" th:selected="${newInsight.aggregateResults == null or newInsight.aggregateResults == false}">📊 Chart</option>
-                                <option value="kpi" th:selected="${newInsight.aggregateResults == true}">🎯 KPI</option>
+                            <select id="insightType" th:field="*{insightType}" class="select-sm">
+                                <option value="CHART">📊 Chart</option>
+                                <option value="KPI">🎯 KPI</option>
                             </select>
                         </div>
                     </div>
@@ -529,7 +527,7 @@
                                        insight.timeframe == 'ENTIRE_TIMEFRAME' ? 'Entire Timeframe' : 
                                        insight.timeframe == 'DATE_RANGE' ? 'Date Range' : 
                                        insight.timeframe}">This Month</td>
-                        <td th:text="${insight.aggregateResults == true ? 'KPI' : 'Chart'}">Chart</td>
+                        <td th:text="${insight.insightType == 'KPI' ? 'KPI' : 'Chart'}">Chart</td>
                         <td>
                             <a th:href="@{/insights/manage/edit/{id}(id=${insight.id})}" class="btn-edit">
                                 Edit
@@ -577,7 +575,7 @@
                                                                   insight.timeframe == 'ENTIRE_TIMEFRAME' ? 'Entire Timeframe' : 
                                                                   insight.timeframe == 'DATE_RANGE' ? 'Date Range' : 
                                                                   insight.timeframe}">This Month</span> | 
-                    <strong>Type:</strong> <span th:text="${insight.aggregateResults == true ? 'KPI' : 'Chart'}">Chart</span>
+                    <strong>Type:</strong> <span th:text="${insight.insightType == 'KPI' ? 'KPI' : 'Chart'}">Chart</span>
                 </div>
 
                     <div class="mobile-card-actions">
@@ -823,14 +821,7 @@
                  }
             });
 
-            // --- Result Type Select Handler ---
-            const resultTypeSelect = document.getElementById('resultTypeSelect');
-            const aggregateResultsHidden = document.getElementById('aggregateResults');
-            
-            resultTypeSelect.addEventListener('change', function() {
-                // KPI = aggregateResults true, Chart = aggregateResults false
-                aggregateResultsHidden.value = (this.value === 'kpi') ? 'true' : 'false';
-            });
+            // --- Insight Type Select Handler (no JavaScript needed - direct binding to entity field) ---
 
             // --- KPI Color Dropdown Logic ---
             const kpiColorSelect = document.getElementById('kpiColor');

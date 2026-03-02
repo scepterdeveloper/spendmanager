@@ -42,9 +42,7 @@ public class SavedInsightService {
 
     /**
      * Saves a new or updated insight. For new insights, assigns the next display sequence value.
-     * Also ensures aggregateResults is never NULL:
-     * - CHART type (intervalType = MONTHLY): aggregateResults = false
-     * - KPI type (intervalType = NOT_SPECIFIED or null): aggregateResults = true
+     * Ensures insightType is never null - defaults to CHART if not set.
      */
     public SavedInsight save(SavedInsight savedInsight) {
         // For new insights (no ID), assign the next display sequence
@@ -53,14 +51,9 @@ public class SavedInsightService {
             savedInsight.setDisplaySequence(maxSeq + 1);
         }
         
-        // Ensure aggregateResults is never NULL
-        // CHART type (has MONTHLY interval) should have aggregateResults = false
-        // KPI type (NOT_SPECIFIED interval) should have aggregateResults = true
-        if (savedInsight.getAggregateResults() == null) {
-            String intervalType = savedInsight.getIntervalType();
-            // CHART if intervalType is MONTHLY, otherwise it's a KPI
-            boolean isChart = "MONTHLY".equalsIgnoreCase(intervalType);
-            savedInsight.setAggregateResults(!isChart);
+        // Ensure insightType is never null - default to CHART
+        if (savedInsight.getInsightType() == null || savedInsight.getInsightType().isBlank()) {
+            savedInsight.setInsightType(SavedInsight.TYPE_CHART);
         }
         
         return savedInsightRepository.save(savedInsight);
@@ -140,6 +133,9 @@ public class SavedInsightService {
         String interval = "NOT_SPECIFIED".equals(insight.getIntervalType()) ? null : insight.getIntervalType();
         String intervalFunction = insight.getIntervalFunction();
 
+        // Determine if this is an aggregated result (KPI) or not (Chart)
+        boolean aggregateResults = insight.isKpi();
+
         // Use the harmonized execution method from InsightsService
         InsightExecutionResult result = insightsService.executeAdHocInsight(
                 insight.getTimeframe(),
@@ -148,7 +144,7 @@ public class SavedInsightService {
                 categoryIds,
                 interval,
                 intervalFunction,
-                Boolean.TRUE.equals(insight.getAggregateResults())
+                aggregateResults
         );
 
         // Override the auto-generated name and description with the saved insight's metadata
