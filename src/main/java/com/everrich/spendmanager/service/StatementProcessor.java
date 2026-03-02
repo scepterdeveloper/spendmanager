@@ -266,10 +266,18 @@ public class StatementProcessor {
         
         log.info("Extracted {} transactions from statement {}", transactions.size(), statement.getId());
         
-        // Process each transaction with synchronous balance updates (within same transaction)
-        for (Transaction uncategorizedTransaction : transactions) {
-            uncategorizedTransaction.setAccount(statement.getAccount());
-            Transaction categorizedTransaction = transactionService.categorizeTransaction(uncategorizedTransaction);
+        // Set account for all transactions before batch categorization
+        for (Transaction transaction : transactions) {
+            transaction.setAccount(statement.getAccount());
+        }
+        
+        // Batch categorize all transactions in a single LLM call (or chunked calls if needed)
+        log.info("Starting batch categorization for {} transactions", transactions.size());
+        List<Transaction> categorizedTransactions = transactionService.categorizeTransactionsBatch(transactions);
+        log.info("Batch categorization completed for {} transactions", categorizedTransactions.size());
+        
+        // Save each categorized transaction with synchronous balance updates
+        for (Transaction categorizedTransaction : categorizedTransactions) {
             categorizedTransaction.setStatementId(statement.getId());
             categorizedTransaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
             // Use synchronous balance update (asyncBalanceUpdate = false)

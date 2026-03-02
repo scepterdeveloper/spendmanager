@@ -93,6 +93,49 @@ public class TransactionService {
         // to ensure account balances are properly updated.
         return transaction;
     }
+    
+    /**
+     * Batch categorizes multiple transactions using RAG-LLM in a single LLM call.
+     * This is more efficient than categorizing transactions one at a time.
+     * If the batch is too large for the token limit, it will be split into chunks.
+     * 
+     * @param transactions List of transactions to categorize (will be modified in place)
+     * @return The same list with categories assigned to each transaction
+     */
+    public List<Transaction> categorizeTransactionsBatch(List<Transaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return transactions;
+        }
+        
+        log.info("==============================================================================");
+        log.info("Batch Categorization (with RAG-LLM): START - {} transactions", transactions.size());
+        
+        // Call batch categorization
+        Map<Integer, String> categoryMap = ragService.findBestCategoriesBatch(transactions);
+        
+        // Apply categories to transactions
+        for (int i = 0; i < transactions.size(); i++) {
+            Transaction transaction = transactions.get(i);
+            String categoryName = categoryMap.get(i);
+            
+            if (categoryName == null) {
+                log.warn("No category found for transaction at index {}. Using 'Other' as fallback.", i);
+                categoryName = "Other";
+            }
+            
+            transaction.setCategory(categoryName);
+            transaction.setCategoryEntity(categoryService.findByName(categoryName));
+            transaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
+            
+            log.debug("Transaction {}: '{}' -> Category: '{}'", 
+                    i + 1, transaction.getDescription(), categoryName);
+        }
+        
+        log.info("Batch Categorization (with RAG-LLM): DONE - Categorized {} transactions", transactions.size());
+        log.info("==============================================================================");
+        
+        return transactions;
+    }
 
     /*
      * public List<Transaction> processTransactions(List<Transaction> transactions)

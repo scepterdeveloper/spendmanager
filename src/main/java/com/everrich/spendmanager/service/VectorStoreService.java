@@ -11,8 +11,11 @@ import org.springframework.stereotype.Service;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionOperation;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class VectorStoreService {
@@ -95,6 +98,81 @@ public class VectorStoreService {
                     + redisDocument.getFields().get("category") + "\n";
         }
 
+        return context;
+    }
+    
+    /**
+     * Performs batch similarity search for multiple transactions.
+     * This aggregates unique descriptions and performs searches, then combines
+     * all results into a single context string to share across all transactions.
+     * 
+     * @param transactions List of transactions to search context for
+     * @return Aggregated context string with historical categorization decisions
+     */
+    public String batchSimilaritySearch(List<Transaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return "";
+        }
+        
+        log.info("Starting batch similarity search for {} transactions", transactions.size());
+        
+        // Collect unique normalized descriptions to avoid duplicate searches
+        Set<String> processedDescriptions = new HashSet<>();
+        List<RedisDocument> allResults = new ArrayList<>();
+        
+        for (Transaction transaction : transactions) {
+            String normalizedDescription = normalizeDescription(transaction.getDescription());
+            
+            // Skip if we've already searched for this normalized description
+            if (processedDescriptions.contains(normalizedDescription)) {
+                continue;
+            }
+            processedDescriptions.add(normalizedDescription);
+            
+            // Perform similarity search
+            String accountName = transaction.getAccount() != null ? transaction.getAccount().getName() : "Unknown";
+            List<RedisDocument> searchResults = redisAdapter.searchDocuments(
+                    normalizedDescription, 
+                    transaction.getOperation().name(),
+                    accountName);
+            
+            if (searchResults != null && !searchResults.isEmpty()) {
+                allResults.addAll(searchResults);
+            }
+        }
+        
+        // Handle null or empty results gracefully
+        if (allResults.isEmpty()) {
+            log.info("No similar documents found in vector store for batch of {} transactions", transactions.size());
+            return "";
+        }
+        
+        // Deduplicate results based on description_op to avoid repetitive context
+        Set<String> seenContexts = new HashSet<>();
+        StringBuilder contextBuilder = new StringBuilder();
+        
+        for (RedisDocument redisDocument : allResults) {
+            String descriptionOp = (String) redisDocument.getFields().get("description_op");
+            String category = (String) redisDocument.getFields().get("category");
+            
+            // Create a unique key for deduplication
+            String contextKey = descriptionOp + "|" + category;
+            if (seenContexts.contains(contextKey)) {
+                continue;
+            }
+            seenContexts.add(contextKey);
+            
+            contextBuilder.append("Description: ")
+                    .append(descriptionOp)
+                    .append(", Corrected Category: ")
+                    .append(category)
+                    .append("\n");
+        }
+        
+        String context = contextBuilder.toString();
+        log.info("Batch similarity search completed. Found {} unique context entries from {} searches", 
+                seenContexts.size(), processedDescriptions.size());
+        
         return context;
     }
 
