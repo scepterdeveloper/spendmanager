@@ -2,11 +2,10 @@ package com.everrich.spendmanager.multitenancy;
 
 import com.everrich.spendmanager.entities.Registration;
 import com.everrich.spendmanager.entities.TenantCreationStatus;
-import com.everrich.spendmanager.entities.Transaction;
+import com.everrich.spendmanager.entities.VectorStoreTask;
 import com.everrich.spendmanager.repository.RegistrationRepository;
-import com.everrich.spendmanager.repository.TransactionRepository;
+import com.everrich.spendmanager.repository.VectorStoreTaskRepository;
 import com.everrich.spendmanager.service.RedisAdapter;
-import com.everrich.spendmanager.service.RedisAdapter.DocumentBatchItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,10 @@ import java.util.List;
 
 /**
  * Service responsible for creating and managing tenant schemas.
- * Handles the asynchronous creation of schema and copying of default data.
+ * Handles the creation of schema and copying of default data.
+ * 
+ * Vector store initialization is now deferred to a background task processor
+ * (VectorStoreTaskProcessor) to avoid blocking the registration process.
  */
 @Service
 public class TenantSchemaService {
@@ -30,31 +32,31 @@ public class TenantSchemaService {
     private final MultiTenancyProperties multiTenancyProperties;
     private final RegistrationRepository registrationRepository;
     private final RedisAdapter redisAdapter;
-    private final TransactionRepository transactionRepository;
+    private final VectorStoreTaskRepository vectorStoreTaskRepository;
 
     public TenantSchemaService(DataSource dataSource,
                                MultiTenancyProperties multiTenancyProperties,
                                RegistrationRepository registrationRepository,
                                RedisAdapter redisAdapter,
-                               TransactionRepository transactionRepository) {
+                               VectorStoreTaskRepository vectorStoreTaskRepository) {
         this.dataSource = dataSource;
         this.multiTenancyProperties = multiTenancyProperties;
         this.registrationRepository = registrationRepository;
         this.redisAdapter = redisAdapter;
-        this.transactionRepository = transactionRepository;
+        this.vectorStoreTaskRepository = vectorStoreTaskRepository;
     }
 
     /**
-     * Synchronously creates a tenant schema for the given registration.
+     * Creates a tenant schema for the given registration.
      * This method:
      * 1. Creates a new schema with the tenant prefix + registration ID
      * 2. Copies table structures (excluding configured tables)
      * 3. Copies default data for configured tables (e.g., categories)
-     * 4. Initializes RAG configuration including vector store documents
-     * 5. Updates the registration's tenant creation status
+     * 4. Parks a vector store initialization task for background processing
+     * 5. Updates the registration's tenant creation status to COMPLETED
      * 
-     * This synchronous version is used to avoid GCP Request Based billing issues
-     * where async processing takes extremely long time.
+     * The vector store initialization is deferred to a background scheduler
+     * (VectorStoreTaskProcessor) to avoid blocking the registration process.
      *
      * @param registration The registration for which to create the tenant schema
      */
@@ -79,10 +81,10 @@ public class TenantSchemaService {
             copyDefaultData(schemaName);
             logger.info("Step 3/5: Default data copied successfully to {}", schemaName);
             
-            // Step 4: Initialize RAG configuration (ensure index exists)
-            logger.info("Step 4/5: Initializing RAG configuration for tenant {}", registrationId);
-            initializeRagConfiguration(registrationId);
-            logger.info("Step 4/5: RAG configuration initialized for tenant {}", registrationId);
+            // Step 4: Park vector store initialization task for background processing
+            logger.info("Step 4/5: Parking vector store initialization task for tenant {}", registrationId);
+            parkVectorStoreTask(registrationId);
+            logger.info("Step 4/5: Vector store task parked for tenant {} (will be processed by scheduler)", registrationId);
             
             // Update status to COMPLETED - fetch fresh entity within transaction
             logger.info("Step 5/5: Updating tenant creation status to COMPLETED for registration ID: {}", registration.getId());
@@ -299,79 +301,37 @@ public class TenantSchemaService {
     }
 
     /**
-     * Initializes the RAG configuration for a new tenant.
-     * This ensures the Redis vector index exists and creates RAG training documents
-     * for any transactions that were copied from the default schema.
+     * Parks a vector store initialization task for background processing.
+     * This creates a task entry in the VECTOR_STORE_TASK table which will be
+     * picked up by the VectorStoreTaskProcessor scheduler.
      * 
-     * The RAG system uses a shared index with tenant-specific document prefixes.
-     * This method:
-     * 1. Ensures the shared transaction index exists in Redis
-     * 2. Sets the TenantContext to the new tenant
-     * 3. Queries the copied transactions from the tenant's schema
-     * 4. Creates RAG documents in batch for improved performance
+     * This approach decouples the expensive embedding generation from the
+     * registration flow, allowing the user to complete registration immediately
+     * while the RAG training data is created in the background.
      *
      * @param tenantId The tenant/registration ID
      */
-    private void initializeRagConfiguration(String tenantId) {
-        String previousTenantId = null;
+    private void parkVectorStoreTask(String tenantId) {
         try {
-            // Ensure the shared Redis index exists
-            // This is idempotent - if the index already exists, it will be skipped
+            // Ensure the shared Redis index exists (this is fast and idempotent)
             redisAdapter.createTransactionIndex();
             
             logger.info("RAG index ensured for tenant '{}'. Index: '{}', Document prefix: 'doc:{}:'",
                     tenantId, redisAdapter.getIndexName(), tenantId);
             
-            // Set tenant context to the new tenant to query their transactions
-            previousTenantId = TenantContext.getTenantId();
-            TenantContext.setTenantId(tenantId);
+            // Create a task entry for background processing
+            VectorStoreTask task = VectorStoreTask.createForTenant(tenantId);
+            vectorStoreTaskRepository.save(task);
             
-            // Query all transactions that were copied to the new tenant's schema
-            java.util.List<Transaction> transactions = transactionRepository.findAll();
-            logger.info("Found {} transactions to process for RAG training in tenant '{}'", 
-                    transactions.size(), tenantId);
-            
-            // Build batch items for all valid transactions
-            List<DocumentBatchItem> batchItems = new ArrayList<>();
-            int skippedCount = 0;
-            
-            for (Transaction transaction : transactions) {
-                // Only process transactions that have a category and account assigned
-                if (transaction.getCategoryEntity() != null && transaction.getAccount() != null) {
-                    String categoryName = transaction.getCategoryEntity().getName();
-                    String description = transaction.getDescription();
-                    String operationName = transaction.getOperation().name(); // "PLUS" or "MINUS"
-                    String accountName = transaction.getAccount().getName();
-                    
-                    batchItems.add(new DocumentBatchItem(categoryName, description, operationName, accountName));
-                } else {
-                    skippedCount++;
-                }
-            }
-            
-            // Create all documents in batch for significantly improved performance
-            if (!batchItems.isEmpty()) {
-                logger.info("Creating {} RAG documents in batch for tenant '{}'...", batchItems.size(), tenantId);
-                int processedCount = redisAdapter.createDocumentsBatch(batchItems, tenantId);
-                logger.info("RAG training data created for tenant '{}'. Processed: {}, Skipped: {}", 
-                        tenantId, processedCount, skippedCount);
-            } else {
-                logger.info("No valid transactions found for RAG training in tenant '{}'. Skipped: {}", 
-                        tenantId, skippedCount);
-            }
+            logger.info("Created vector store initialization task (ID: {}) for tenant '{}'. " +
+                    "Task will be processed by VectorStoreTaskProcessor scheduler.",
+                    task.getId(), tenantId);
             
         } catch (Exception e) {
             // Log warning but don't fail tenant creation - RAG can be initialized later
-            logger.warn("Warning: Could not fully initialize RAG configuration for tenant '{}': {}. " +
+            logger.warn("Warning: Could not park vector store task for tenant '{}': {}. " +
                     "The tenant can still function, and RAG can be recreated via the RAG Config page.",
                     tenantId, e.getMessage());
-        } finally {
-            // Restore the previous tenant context
-            if (previousTenantId != null) {
-                TenantContext.setTenantId(previousTenantId);
-            } else {
-                TenantContext.clear();
-            }
         }
     }
 }
