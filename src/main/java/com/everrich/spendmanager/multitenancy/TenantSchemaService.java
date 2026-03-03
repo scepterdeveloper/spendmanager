@@ -6,6 +6,7 @@ import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.repository.RegistrationRepository;
 import com.everrich.spendmanager.repository.TransactionRepository;
 import com.everrich.spendmanager.service.RedisAdapter;
+import com.everrich.spendmanager.service.RedisAdapter.DocumentBatchItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -305,7 +306,7 @@ public class TenantSchemaService {
      * 1. Ensures the shared transaction index exists in Redis
      * 2. Sets the TenantContext to the new tenant
      * 3. Queries the copied transactions from the tenant's schema
-     * 4. Creates RAG documents for each categorized transaction
+     * 4. Creates RAG documents in batch for improved performance
      *
      * @param tenantId The tenant/registration ID
      */
@@ -328,7 +329,8 @@ public class TenantSchemaService {
             logger.info("Found {} transactions to process for RAG training in tenant '{}'", 
                     transactions.size(), tenantId);
             
-            int processedCount = 0;
+            // Build batch items for all valid transactions
+            List<DocumentBatchItem> batchItems = new ArrayList<>();
             int skippedCount = 0;
             
             for (Transaction transaction : transactions) {
@@ -339,16 +341,22 @@ public class TenantSchemaService {
                     String operationName = transaction.getOperation().name(); // "PLUS" or "MINUS"
                     String accountName = transaction.getAccount().getName();
                     
-                    // Create document in Redis with explicit tenant ID
-                    redisAdapter.createDocument(categoryName, description, operationName, accountName, tenantId);
-                    processedCount++;
+                    batchItems.add(new DocumentBatchItem(categoryName, description, operationName, accountName));
                 } else {
                     skippedCount++;
                 }
             }
             
-            logger.info("RAG training data created for tenant '{}'. Processed: {}, Skipped: {}", 
-                    tenantId, processedCount, skippedCount);
+            // Create all documents in batch for significantly improved performance
+            if (!batchItems.isEmpty()) {
+                logger.info("Creating {} RAG documents in batch for tenant '{}'...", batchItems.size(), tenantId);
+                int processedCount = redisAdapter.createDocumentsBatch(batchItems, tenantId);
+                logger.info("RAG training data created for tenant '{}'. Processed: {}, Skipped: {}", 
+                        tenantId, processedCount, skippedCount);
+            } else {
+                logger.info("No valid transactions found for RAG training in tenant '{}'. Skipped: {}", 
+                        tenantId, skippedCount);
+            }
             
         } catch (Exception e) {
             // Log warning but don't fail tenant creation - RAG can be initialized later

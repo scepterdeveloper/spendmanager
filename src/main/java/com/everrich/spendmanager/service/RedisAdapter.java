@@ -1,7 +1,9 @@
 package com.everrich.spendmanager.service;
 
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.output.ArrayOutput;
@@ -17,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -531,6 +534,182 @@ public class RedisAdapter {
             if (connection != null) {
                 connection.close();
             }
+        }
+    }
+
+    /**
+     * Data class to hold document creation parameters for batch operations.
+     */
+    public static class DocumentBatchItem {
+        private final String categoryName;
+        private final String description;
+        private final String operation;
+        private final String accountName;
+
+        public DocumentBatchItem(String categoryName, String description, String operation, String accountName) {
+            this.categoryName = categoryName;
+            this.description = description;
+            this.operation = operation;
+            this.accountName = accountName;
+        }
+
+        public String getCategoryName() { return categoryName; }
+        public String getDescription() { return description; }
+        public String getOperation() { return operation; }
+        public String getAccountName() { return accountName; }
+        
+        public String getContentPayload() {
+            return accountName + " " + operation + " " + description;
+        }
+    }
+
+    /**
+     * Creates multiple documents in Redis in batch for significantly improved performance.
+     * This method optimizes the document creation process by:
+     * 1. Generating all embeddings in a batch (reusing the GCP client connection)
+     * 2. Using a single Redis connection with async pipelining for all document insertions
+     * 
+     * Use this method for bulk operations like tenant initialization where many documents
+     * need to be created at once.
+     * 
+     * @param items List of DocumentBatchItem containing document data
+     * @param tenantId The tenant ID for multi-tenancy filtering
+     * @return The number of documents successfully created
+     */
+    public int createDocumentsBatch(List<DocumentBatchItem> items, String tenantId) {
+        if (items == null || items.isEmpty()) {
+            log.info("No items provided for batch document creation");
+            return 0;
+        }
+
+        StatefulRedisConnection<String, String> connection = null;
+        
+        // Normalize tenant ID - use "default" if null or empty
+        String effectiveTenantId = (tenantId != null && !tenantId.isEmpty()) ? tenantId : "default";
+        
+        try {
+            log.info("🚀 Starting batch document creation for tenant '{}'. Total items: {}", 
+                    effectiveTenantId, items.size());
+            long startTime = System.currentTimeMillis();
+            
+            // Step 1: Generate all embeddings in batch
+            log.info("Step 1/3: Generating embeddings for {} items...", items.size());
+            List<String> contentPayloads = items.stream()
+                    .map(DocumentBatchItem::getContentPayload)
+                    .toList();
+            
+            List<float[]> embeddings = generateEmbeddingVectorsBatch(contentPayloads);
+            log.info("Step 1/3: Generated {} embeddings in {} ms", 
+                    embeddings.size(), System.currentTimeMillis() - startTime);
+            
+            // Step 2: Open a single Redis connection
+            log.info("Step 2/3: Opening Redis connection...");
+            connection = redisClient.connect();
+            RedisAsyncCommands<String, String> asyncCommands = connection.async();
+            
+            // Disable auto-flush for pipelining - we'll flush manually at the end
+            asyncCommands.setAutoFlushCommands(false);
+            
+            // Step 3: Queue all HSET commands asynchronously
+            log.info("Step 3/3: Queuing {} Redis HSET commands...", items.size());
+            List<RedisFuture<Long>> futures = new ArrayList<>();
+            
+            for (int i = 0; i < items.size(); i++) {
+                DocumentBatchItem item = items.get(i);
+                String searchKey = "doc:" + effectiveTenantId + ":" + UUID.randomUUID().toString();
+                byte[] vectorByteArray = floatArrayToByteArray(embeddings.get(i));
+                
+                CommandArgs<String, String> hsetArgs = new CommandArgs<>(StringCodec.UTF8)
+                        .add(searchKey)
+                        .add("category").add(item.getCategoryName())
+                        .add("operation").add(item.getOperation())
+                        .add("account").add(item.getAccountName())
+                        .add("tenant").add(effectiveTenantId)
+                        .add("content_payload").add(item.getContentPayload());
+                hsetArgs.add("vector").add(vectorByteArray);
+                
+                CommandOutput<String, String, Long> output = new IntegerOutput<>(StringCodec.UTF8);
+                RedisFuture<Long> future = asyncCommands.dispatch(HSET_COMMAND, output, hsetArgs);
+                futures.add(future);
+            }
+            
+            // Flush all commands at once (pipelining)
+            asyncCommands.flushCommands();
+            
+            // Wait for all commands to complete
+            int successCount = 0;
+            for (RedisFuture<Long> future : futures) {
+                try {
+                    future.get(30, TimeUnit.SECONDS);
+                    successCount++;
+                } catch (Exception e) {
+                    log.warn("Failed to create one document: {}", e.getMessage());
+                }
+            }
+            
+            long totalTime = System.currentTimeMillis() - startTime;
+            log.info("✅ Batch document creation completed for tenant '{}'. " +
+                    "Created: {}/{} documents in {} ms ({} ms/doc avg)", 
+                    effectiveTenantId, successCount, items.size(), totalTime,
+                    items.size() > 0 ? totalTime / items.size() : 0);
+            
+            return successCount;
+            
+        } catch (Exception e) {
+            log.error("Error in batch document creation for tenant '{}': {}", 
+                    effectiveTenantId, e.getMessage(), e);
+            throw new RuntimeException("Failed to create documents in batch: " + e.getMessage(), e);
+        } finally {
+            if (connection != null) {
+                // Re-enable auto-flush before closing
+                connection.async().setAutoFlushCommands(true);
+                connection.close();
+            }
+        }
+    }
+
+    /**
+     * Generates embedding vectors for multiple content strings in batch.
+     * This is more efficient than generating embeddings one at a time because:
+     * 1. It reuses the same GCP PredictionServiceClient for all requests
+     * 2. Reduces network overhead from connection setup/teardown
+     * 
+     * @param contents List of content strings to generate embeddings for
+     * @return List of float arrays representing the embedding vectors
+     */
+    private List<float[]> generateEmbeddingVectorsBatch(List<String> contents) throws Exception {
+        String taskType = "RETRIEVAL_DOCUMENT";
+        
+        try {
+            // The EmbeddingsCreator already handles batching internally by keeping
+            // the client connection open for all texts
+            List<List<Float>> embeddingList = EmbeddingsCreator.predictTextEmbeddings(
+                    this.GCP_ENDPOINT,
+                    this.GCP_PROJECT_ID,
+                    this.EMBEDDING_MODEL_NAME,
+                    contents,
+                    taskType,
+                    OptionalInt.of(TARGET_VECTOR_DIMENSION));
+            
+            List<float[]> result = new ArrayList<>();
+            for (List<Float> floatList : embeddingList) {
+                if (floatList.size() != TARGET_VECTOR_DIMENSION) {
+                    throw new Exception("Model returned dimension (" + floatList.size()
+                            + ") which does not match expected dimension (" + TARGET_VECTOR_DIMENSION + ").");
+                }
+                
+                float[] vectorFloats = new float[TARGET_VECTOR_DIMENSION];
+                for (int i = 0; i < TARGET_VECTOR_DIMENSION; i++) {
+                    vectorFloats[i] = floatList.get(i);
+                }
+                result.add(vectorFloats);
+            }
+            
+            return result;
+            
+        } catch (Exception e) {
+            log.error("Error generating batch embeddings: {}", e.getMessage());
+            throw e;
         }
     }
 
