@@ -3,10 +3,8 @@ package com.everrich.spendmanager.service;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
-import com.everrich.spendmanager.dto.BatchCategorizationResult;
 import com.everrich.spendmanager.dto.BatchCategorizationResult.CategoryAssignment;
 import com.everrich.spendmanager.entities.Transaction;
-import com.everrich.spendmanager.entities.TransactionOperation;
 
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -20,7 +18,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,13 +32,6 @@ public class RagService {
     private final Gson gson;
 
     private static final Logger log = LoggerFactory.getLogger(RagService.class);
-    
-    // Token estimation constants
-    private static final int CHARS_PER_TOKEN = 4;  // Conservative estimate for English text
-    private static final int MAX_INPUT_TOKENS = 800000;  // Leave buffer from 1M limit
-    private static final int MAX_OUTPUT_TOKENS = 6000;   // Leave buffer from 8K limit
-    private static final int SAFETY_BUFFER = 50000;      // Additional safety margin
-    private static final int ESTIMATED_OUTPUT_TOKENS_PER_TRANSACTION = 15; // {"index": N, "category": "Name"},
     
     private static final String JSON_CODE_FENCE = "```";
     private static final String JSON_MARKER = "json";
@@ -105,11 +95,16 @@ public class RagService {
     }
     
     /**
-     * Batch categorize multiple transactions in a single LLM call.
-     * If the batch is too large for the token limit, it will be split into chunks.
+     * Batch categorize multiple transactions in a single synchronous LLM call.
+     * This method makes ONE HTTP call to the LLM with all transactions.
+     * No batching or chunking is performed to optimize for GCP Request Based billing.
+     * 
+     * If the LLM call fails (e.g., token limit exceeded, timeout, etc.), 
+     * this method throws a RuntimeException to signal the caller to abort processing.
      * 
      * @param transactions List of transactions to categorize
      * @return Map of transaction index (0-based) to category name
+     * @throws RuntimeException if the LLM call fails for any reason
      */
     public Map<Integer, String> findBestCategoriesBatch(List<Transaction> transactions) {
         if (transactions == null || transactions.isEmpty()) {
@@ -117,9 +112,9 @@ public class RagService {
         }
         
         long methodStart = System.currentTimeMillis();
-        log.info("LLM_TIMING: Starting batch categorization for {} transactions", transactions.size());
+        log.info("LLM_TIMING: Starting single-call batch categorization for {} transactions", transactions.size());
         
-        // Get available categories once (shared across all chunks)
+        // Get available categories
         String availableCategories = categoryService.findAll().stream()
                 .map(c -> c.getName())
                 .collect(Collectors.joining(", "));
@@ -135,88 +130,48 @@ public class RagService {
             context = "No historical context found.";
         }
         
-        // Calculate fixed token costs
-        int fixedTokenCost = estimateTokens(availableCategories) + estimateTokens(context);
-        
-        // Estimate prompt template overhead (approximately 500 tokens for the template text)
-        int templateOverhead = 500;
-        
-        // Calculate available tokens for transactions
-        int availableInputTokens = MAX_INPUT_TOKENS - fixedTokenCost - templateOverhead - SAFETY_BUFFER;
-        
-        // Calculate max transactions per chunk based on output token limit
-        int maxTransactionsForOutput = MAX_OUTPUT_TOKENS / ESTIMATED_OUTPUT_TOKENS_PER_TRANSACTION;
-        
-        log.info("Token budget - Fixed cost: {}, Available for transactions: {}, Max for output: {}", 
-                fixedTokenCost, availableInputTokens, maxTransactionsForOutput);
-        
-        // Chunk transactions if needed
-        List<List<Transaction>> chunks = chunkTransactions(transactions, availableInputTokens, maxTransactionsForOutput);
-        
-        log.info("Split {} transactions into {} chunk(s)", transactions.size(), chunks.size());
-        
-        // Process each chunk and collect results
-        Map<Integer, String> results = new HashMap<>();
-        int globalIndex = 0;
-        
-        for (int chunkIdx = 0; chunkIdx < chunks.size(); chunkIdx++) {
-            List<Transaction> chunk = chunks.get(chunkIdx);
-            log.info("Processing chunk {}/{} with {} transactions", chunkIdx + 1, chunks.size(), chunk.size());
+        // Process all transactions in a single LLM call (no chunking)
+        try {
+            Map<Integer, String> results = processSingleBatchCall(transactions, availableCategories, context);
             
-            try {
-                Map<Integer, String> chunkResults = processBatchChunk(chunk, availableCategories, context);
-                
-                // Map chunk-local indices to global indices
-                for (int localIdx = 0; localIdx < chunk.size(); localIdx++) {
-                    String category = chunkResults.get(localIdx + 1); // Chunk uses 1-based indexing
-                    if (category != null) {
-                        results.put(globalIndex + localIdx, category);
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Batch chunk {} failed, falling back to individual categorization: {}", 
-                        chunkIdx + 1, e.getMessage());
-                
-                // Fallback: categorize each transaction individually
-                for (int localIdx = 0; localIdx < chunk.size(); localIdx++) {
-                    try {
-                        String category = findBestCategory(chunk.get(localIdx));
-                        results.put(globalIndex + localIdx, category);
-                    } catch (Exception ex) {
-                        log.error("Individual categorization failed for transaction at index {}: {}", 
-                                globalIndex + localIdx, ex.getMessage());
-                        results.put(globalIndex + localIdx, "Other"); // Default fallback
-                    }
-                }
+            // Convert from 1-based to 0-based indexing
+            Map<Integer, String> zeroBasedResults = new HashMap<>();
+            for (Map.Entry<Integer, String> entry : results.entrySet()) {
+                zeroBasedResults.put(entry.getKey() - 1, entry.getValue());
             }
             
-            globalIndex += chunk.size();
+            long totalDuration = System.currentTimeMillis() - methodStart;
+            log.info("LLM_TIMING: findBestCategoriesBatch total took {} ms for {} transactions", 
+                    totalDuration, transactions.size());
+            log.info("Batch categorization completed. Categorized {} transactions.", zeroBasedResults.size());
+            
+            return zeroBasedResults;
+            
+        } catch (Exception e) {
+            log.error("LLM batch categorization failed for {} transactions: {}", 
+                    transactions.size(), e.getMessage(), e);
+            throw new RuntimeException("LLM categorization failed: " + e.getMessage(), e);
         }
-        
-        long totalDuration = System.currentTimeMillis() - methodStart;
-        log.info("LLM_TIMING: findBestCategoriesBatch total took {} ms for {} transactions", 
-                totalDuration, transactions.size());
-        log.info("Batch categorization completed. Categorized {} transactions.", results.size());
-        return results;
     }
     
     /**
-     * Process a single batch chunk of transactions.
+     * Process all transactions in a single LLM call.
      * 
-     * @param chunk List of transactions in this chunk
+     * @param transactions List of transactions to categorize
      * @param availableCategories Comma-separated list of available categories
      * @param context Aggregated context from vector store
      * @return Map of 1-based index to category name
+     * @throws RuntimeException if the LLM call fails
      */
-    private Map<Integer, String> processBatchChunk(List<Transaction> chunk, 
-                                                    String availableCategories, 
-                                                    String context) {
-        long chunkStart = System.currentTimeMillis();
+    private Map<Integer, String> processSingleBatchCall(List<Transaction> transactions, 
+                                                         String availableCategories, 
+                                                         String context) {
+        long callStart = System.currentTimeMillis();
         
         // Build transactions list for prompt
         StringBuilder transactionsBuilder = new StringBuilder();
-        for (int i = 0; i < chunk.size(); i++) {
-            Transaction t = chunk.get(i);
+        for (int i = 0; i < transactions.size(); i++) {
+            Transaction t = transactions.get(i);
             String operationType = t.getOperation() != null ? t.getOperation().name() : "UNKNOWN";
             transactionsBuilder.append(String.format("%d. Description: \"%s\" (Operation: %s)%n", 
                     i + 1, t.getDescription(), operationType));
@@ -229,34 +184,40 @@ public class RagService {
                 "context", context,
                 "transactions", transactionsList,
                 "categories", availableCategories,
-                "transactionCount", chunk.size());
+                "transactionCount", transactions.size());
         
         Prompt prompt = promptTemplate.create(promptParameters);
         
-        log.debug("Batch prompt content length: {} characters", prompt.getContents().length());
-        log.info("LLM_TIMING: Batch prompt prepared, content length: {} characters, {} transactions", 
-                prompt.getContents().length(), chunk.size());
+        log.info("LLM_TIMING: Single batch prompt prepared, content length: {} characters, {} transactions", 
+                prompt.getContents().length(), transactions.size());
         
-        // Call LLM
+        // Call LLM - this is the single synchronous HTTP call
         long llmCallStart = System.currentTimeMillis();
-        String response = chatClient.prompt(prompt)
-                .call()
-                .content();
+        String response;
+        try {
+            response = chatClient.prompt(prompt)
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+            log.error("LLM call failed after {} ms: {}", llmCallDuration, e.getMessage());
+            throw new RuntimeException("LLM call failed: " + e.getMessage(), e);
+        }
         long llmCallDuration = System.currentTimeMillis() - llmCallStart;
-        log.info("LLM_TIMING: Batch LLM call took {} ms for {} transactions", 
-                llmCallDuration, chunk.size());
+        log.info("LLM_TIMING: Single batch LLM call took {} ms for {} transactions", 
+                llmCallDuration, transactions.size());
         
         log.debug("LLM batch response: {}", response);
         
         // Parse response
         long parseStart = System.currentTimeMillis();
-        Map<Integer, String> result = parseBatchResponse(response, chunk.size());
+        Map<Integer, String> result = parseBatchResponse(response, transactions.size());
         long parseDuration = System.currentTimeMillis() - parseStart;
         log.info("LLM_TIMING: Batch response parsing took {} ms", parseDuration);
         
-        long chunkDuration = System.currentTimeMillis() - chunkStart;
-        log.info("LLM_TIMING: processBatchChunk total took {} ms for {} transactions", 
-                chunkDuration, chunk.size());
+        long totalDuration = System.currentTimeMillis() - callStart;
+        log.info("LLM_TIMING: processSingleBatchCall total took {} ms for {} transactions", 
+                totalDuration, transactions.size());
         
         return result;
     }
@@ -319,64 +280,4 @@ public class RagService {
         return cleaned;
     }
     
-    /**
-     * Chunk transactions based on token limits.
-     * 
-     * @param transactions All transactions to process
-     * @param availableInputTokens Available input tokens for transactions
-     * @param maxTransactionsForOutput Max transactions based on output token limit
-     * @return List of transaction chunks
-     */
-    private List<List<Transaction>> chunkTransactions(List<Transaction> transactions, 
-                                                       int availableInputTokens,
-                                                       int maxTransactionsForOutput) {
-        List<List<Transaction>> chunks = new ArrayList<>();
-        List<Transaction> currentChunk = new ArrayList<>();
-        int currentTokens = 0;
-        
-        for (Transaction txn : transactions) {
-            int txnTokenCost = estimateTransactionTokenCost(txn);
-            
-            // Check if adding this transaction would exceed limits
-            boolean exceedsInputLimit = currentTokens + txnTokenCost > availableInputTokens;
-            boolean exceedsOutputLimit = currentChunk.size() >= maxTransactionsForOutput;
-            
-            if ((exceedsInputLimit || exceedsOutputLimit) && !currentChunk.isEmpty()) {
-                // Start a new chunk
-                chunks.add(currentChunk);
-                currentChunk = new ArrayList<>();
-                currentTokens = 0;
-            }
-            
-            currentChunk.add(txn);
-            currentTokens += txnTokenCost;
-        }
-        
-        // Add the last chunk if not empty
-        if (!currentChunk.isEmpty()) {
-            chunks.add(currentChunk);
-        }
-        
-        return chunks;
-    }
-    
-    /**
-     * Estimate token count for a string using character count heuristic.
-     */
-    private int estimateTokens(String text) {
-        if (text == null || text.isEmpty()) {
-            return 0;
-        }
-        return text.length() / CHARS_PER_TOKEN;
-    }
-    
-    /**
-     * Estimate token cost for a single transaction in the prompt.
-     */
-    private int estimateTransactionTokenCost(Transaction txn) {
-        // Format: "N. Description: "description" (Operation: TYPE)\n"
-        // Estimate: index(5) + template(30) + description + operation(10)
-        int descriptionTokens = estimateTokens(txn.getDescription());
-        return 45 + descriptionTokens;
-    }
 }

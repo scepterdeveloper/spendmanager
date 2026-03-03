@@ -67,9 +67,10 @@ public class RegistrationService {
         
         logger.info("Registration initiated for email: {}, Registration ID: {}", email, registration.getRegistrationId());
         
-        // Trigger async tenant schema creation
-        // This runs in the background while the user receives their email
-        tenantSchemaService.createTenantSchemaAsync(registration);
+        // Trigger synchronous tenant schema creation
+        // This includes RAG data creation in the Redis VectorStore
+        // Using synchronous processing to avoid GCP Request Based billing issues
+        tenantSchemaService.createTenantSchema(registration);
         
         // Send registration email
         emailService.sendRegistrationEmail(registration, user);

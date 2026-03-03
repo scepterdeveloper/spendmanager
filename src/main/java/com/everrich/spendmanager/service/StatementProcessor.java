@@ -271,9 +271,19 @@ public class StatementProcessor {
             transaction.setAccount(statement.getAccount());
         }
         
-        // Batch categorize all transactions in a single LLM call (or chunked calls if needed)
-        log.info("Starting batch categorization for {} transactions", transactions.size());
-        List<Transaction> categorizedTransactions = transactionService.categorizeTransactionsBatch(transactions);
+        // Batch categorize all transactions in a single synchronous LLM call
+        // If the LLM call fails (e.g., token limit exceeded), abort processing and set statement to FAILED
+        log.info("Starting batch categorization for {} transactions (single LLM call)", transactions.size());
+        List<Transaction> categorizedTransactions;
+        try {
+            categorizedTransactions = transactionService.categorizeTransactionsBatch(transactions);
+        } catch (RuntimeException e) {
+            log.error("LLM categorization failed for statement {}: {}. Aborting processing.", 
+                    statement.getId(), e.getMessage());
+            statement.setStatus(StatementStatus.FAILED);
+            statementService.saveStatement(statement);
+            return;
+        }
         log.info("Batch categorization completed for {} transactions", categorizedTransactions.size());
         
         // Save each categorized transaction with synchronous balance updates

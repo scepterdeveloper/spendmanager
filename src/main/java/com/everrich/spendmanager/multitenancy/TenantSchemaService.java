@@ -9,7 +9,6 @@ import com.everrich.spendmanager.service.RedisAdapter;
 import com.everrich.spendmanager.service.RedisAdapter.DocumentBatchItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,18 +45,21 @@ public class TenantSchemaService {
     }
 
     /**
-     * Asynchronously creates a tenant schema for the given registration.
+     * Synchronously creates a tenant schema for the given registration.
      * This method:
      * 1. Creates a new schema with the tenant prefix + registration ID
      * 2. Copies table structures (excluding configured tables)
      * 3. Copies default data for configured tables (e.g., categories)
-     * 4. Updates the registration's tenant creation status
+     * 4. Initializes RAG configuration including vector store documents
+     * 5. Updates the registration's tenant creation status
+     * 
+     * This synchronous version is used to avoid GCP Request Based billing issues
+     * where async processing takes extremely long time.
      *
      * @param registration The registration for which to create the tenant schema
      */
-    @Async
     @Transactional
-    public void createTenantSchemaAsync(Registration registration) {
+    public void createTenantSchema(Registration registration) {
         String registrationId = registration.getRegistrationId();
         String schemaName = multiTenancyProperties.getSchemaName(registrationId);
         
