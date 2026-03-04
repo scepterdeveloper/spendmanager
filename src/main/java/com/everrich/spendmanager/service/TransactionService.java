@@ -137,49 +137,6 @@ public class TransactionService {
         return transactions;
     }
 
-    /*
-     * public List<Transaction> processTransactions(List<Transaction> transactions)
-     * {
-     * 
-     * if (transactions != null)
-     * log.info(LocalDateTime.now() + ": No. of trasactions parsed - " +
-     * transactions.size());
-     * 
-     * log.info(
-     * "=============================================================================="
-     * );
-     * List<Category> categories = categoryService.findAll();
-     * 
-     * for (Transaction transaction : transactions) {
-     * 
-     * log.info(
-     * "------------------------------------------------------------------------------"
-     * );
-     * log.info("Resolve Category (with RAG-LLM) START");
-     * String categoryName =
-     * ragService.findBestCategory(transaction.getDescription(),
-     * transaction.getOperation());
-     * log.info("Transaction: " + transaction.getDescription());
-     * log.info("Resolved Category: " + categoryName);
-     * transaction.setCategory(categoryName);
-     * log.info("Resolve Category (with RAG-LLM) END");
-     * log.info(
-     * "------------------------------------------------------------------------------"
-     * );
-     * }
-     * 
-     * log.info("Resolve Category (with RAG-LLM): Done - " + transactions.size() +
-     * " transaction(s)");
-     * List<Transaction> processedTransactions = resolveCategories(transactions,
-     * categories);
-     * log.info(
-     * "=============================================================================="
-     * );
-     * 
-     * return processedTransactions;
-     * }
-     */
-
     /**
      * Handles the manual category correction, triggering the RAG learning loop.
      * This method receives all necessary data directly to avoid race conditions

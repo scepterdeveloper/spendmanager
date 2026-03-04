@@ -8,8 +8,10 @@ import com.everrich.spendmanager.entities.Transaction;
 
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.core.task.TaskExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,9 +20,14 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +36,7 @@ public class RagService {
     private final ChatClient chatClient;
     private final CategoryService categoryService;
     private final VectorStoreService vectorStoreService;
+    private final TaskExecutor taskExecutor;
     private final Gson gson;
 
     private static final Logger log = LoggerFactory.getLogger(RagService.class);
@@ -41,15 +49,20 @@ public class RagService {
     
     @Value("classpath:/prompts/category-rag-prompt-batch.st")
     private Resource categoryBatchPromptResource;
+    
+    @Value("${spendmanager.categorization.batch-size:5}")
+    private int batchSize;
 
-    public RagService(VectorStoreService vectorStoreService, CategoryService categoryService,
-            ChatClient.Builder chatClientBuilder) {
+    public RagService(VectorStoreService vectorStoreService, 
+                      CategoryService categoryService,
+                      ChatClient.Builder chatClientBuilder,
+                      @Qualifier("transactionProcessingExecutor") TaskExecutor taskExecutor) {
         this.vectorStoreService = vectorStoreService;
         this.chatClient = chatClientBuilder.build();
         this.categoryService = categoryService;
+        this.taskExecutor = taskExecutor;
         this.gson = new GsonBuilder().create();
     }
-
 
     public String findBestCategory(Transaction transaction) {
         long methodStart = System.currentTimeMillis();
@@ -95,16 +108,19 @@ public class RagService {
     }
     
     /**
-     * Batch categorize multiple transactions in a single synchronous LLM call.
-     * This method makes ONE HTTP call to the LLM with all transactions.
-     * No batching or chunking is performed to optimize for GCP Request Based billing.
+     * Batch categorize multiple transactions using parallel LLM calls.
+     * Transactions are split into chunks of configurable size (default: 5) and 
+     * processed in parallel. The method blocks until ALL parallel calls complete,
+     * maintaining synchronous behavior from the caller's perspective.
      * 
-     * If the LLM call fails (e.g., token limit exceeded, timeout, etc.), 
-     * this method throws a RuntimeException to signal the caller to abort processing.
+     * This approach optimizes for GCP Request-Based billing by keeping the request
+     * thread alive while executing multiple concurrent LLM calls.
+     * 
+     * If ANY chunk fails, the entire operation fails (fail-fast behavior).
      * 
      * @param transactions List of transactions to categorize
      * @return Map of transaction index (0-based) to category name
-     * @throws RuntimeException if the LLM call fails for any reason
+     * @throws RuntimeException if any LLM call fails
      */
     public Map<Integer, String> findBestCategoriesBatch(List<Transaction> transactions) {
         if (transactions == null || transactions.isEmpty()) {
@@ -112,66 +128,129 @@ public class RagService {
         }
         
         long methodStart = System.currentTimeMillis();
-        log.info("LLM_TIMING: Starting single-call batch categorization for {} transactions", transactions.size());
+        int totalTransactions = transactions.size();
         
-        // Get available categories
+        // Calculate number of chunks
+        int numChunks = (int) Math.ceil((double) totalTransactions / batchSize);
+        log.info("LLM_TIMING: Starting PARALLEL batch categorization for {} transactions in {} chunks (batch size: {})", 
+                totalTransactions, numChunks, batchSize);
+        
+        // STEP 1: Get available categories (synchronous, thread-safe read)
         String availableCategories = categoryService.findAll().stream()
                 .map(c -> c.getName())
                 .collect(Collectors.joining(", "));
         
-        // Get aggregated context from vector store
+        // STEP 2: Get aggregated context from vector store for ALL transactions (synchronous)
+        // This is done ONCE before parallel execution to avoid redundant LLM calls for normalization
         long batchSearchStart = System.currentTimeMillis();
         String context = vectorStoreService.batchSimilaritySearch(transactions);
         long batchSearchDuration = System.currentTimeMillis() - batchSearchStart;
         log.info("LLM_TIMING: batchSimilaritySearch took {} ms for {} transactions", 
-                batchSearchDuration, transactions.size());
+                batchSearchDuration, totalTransactions);
         
         if (context.isBlank()) {
             context = "No historical context found.";
         }
+        final String sharedContext = context; // Make effectively final for lambda
         
-        // Process all transactions in a single LLM call (no chunking)
-        try {
-            Map<Integer, String> results = processSingleBatchCall(transactions, availableCategories, context);
+        // STEP 3: Partition transactions into chunks
+        List<List<Transaction>> chunks = partitionList(transactions, batchSize);
+        log.info("LLM_TIMING: Split {} transactions into {} chunks", totalTransactions, chunks.size());
+        
+        // STEP 4: Execute LLM calls in PARALLEL but BLOCKING
+        // Using ConcurrentHashMap for thread-safe result aggregation
+        ConcurrentHashMap<Integer, String> results = new ConcurrentHashMap<>();
+        
+        // Track first error for fail-fast behavior
+        AtomicReference<Throwable> firstError = new AtomicReference<>(null);
+        
+        // Create CompletableFutures for each chunk
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        
+        for (int chunkIndex = 0; chunkIndex < chunks.size(); chunkIndex++) {
+            final int currentChunkIndex = chunkIndex;
+            final List<Transaction> chunk = chunks.get(chunkIndex);
+            final int globalOffset = chunkIndex * batchSize; // Offset for global indexing
             
-            // Convert from 1-based to 0-based indexing
-            Map<Integer, String> zeroBasedResults = new HashMap<>();
-            for (Map.Entry<Integer, String> entry : results.entrySet()) {
-                zeroBasedResults.put(entry.getKey() - 1, entry.getValue());
-            }
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                // Check if another chunk already failed (fail-fast)
+                if (firstError.get() != null) {
+                    log.debug("Skipping chunk {} because another chunk already failed", currentChunkIndex);
+                    return;
+                }
+                
+                try {
+                    log.info("LLM_TIMING: Processing chunk {} with {} transactions (global offset: {})", 
+                            currentChunkIndex, chunk.size(), globalOffset);
+                    
+                    // Process this chunk with the shared context
+                    Map<Integer, String> chunkResults = processChunkWithGlobalIndexing(
+                            chunk, availableCategories, sharedContext, globalOffset);
+                    
+                    // Add results to the concurrent map (thread-safe)
+                    results.putAll(chunkResults);
+                    
+                    log.info("LLM_TIMING: Chunk {} completed, categorized {} transactions", 
+                            currentChunkIndex, chunkResults.size());
+                    
+                } catch (Exception e) {
+                    log.error("LLM_TIMING: Chunk {} failed: {}", currentChunkIndex, e.getMessage());
+                    // Set the first error (only the first one wins due to compareAndSet)
+                    firstError.compareAndSet(null, e);
+                }
+            }, taskExecutor);
             
-            long totalDuration = System.currentTimeMillis() - methodStart;
-            log.info("LLM_TIMING: findBestCategoriesBatch total took {} ms for {} transactions", 
-                    totalDuration, transactions.size());
-            log.info("Batch categorization completed. Categorized {} transactions.", zeroBasedResults.size());
-            
-            return zeroBasedResults;
-            
-        } catch (Exception e) {
-            log.error("LLM batch categorization failed for {} transactions: {}", 
-                    transactions.size(), e.getMessage(), e);
-            throw new RuntimeException("LLM categorization failed: " + e.getMessage(), e);
+            futures.add(future);
         }
+        
+        // BLOCKING JOIN - Wait for ALL futures to complete
+        long parallelStart = System.currentTimeMillis();
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        } catch (Exception e) {
+            log.error("LLM_TIMING: Parallel execution failed: {}", e.getMessage());
+            throw new RuntimeException("Parallel LLM categorization failed", e);
+        }
+        long parallelDuration = System.currentTimeMillis() - parallelStart;
+        log.info("LLM_TIMING: All {} parallel chunks completed in {} ms", chunks.size(), parallelDuration);
+        
+        // Check if any chunk failed
+        Throwable error = firstError.get();
+        if (error != null) {
+            log.error("LLM batch categorization failed (fail-fast): {}", error.getMessage());
+            throw new RuntimeException("LLM categorization failed: " + error.getMessage(), error);
+        }
+        
+        // STEP 5: Return aggregated results (already in 0-based indexing)
+        long totalDuration = System.currentTimeMillis() - methodStart;
+        log.info("LLM_TIMING: findBestCategoriesBatch PARALLEL total took {} ms for {} transactions ({} chunks)", 
+                totalDuration, totalTransactions, chunks.size());
+        log.info("Parallel batch categorization completed. Categorized {} transactions in {} chunks.", 
+                results.size(), chunks.size());
+        
+        return new HashMap<>(results); // Return a regular HashMap copy
     }
     
     /**
-     * Process all transactions in a single LLM call.
+     * Process a chunk of transactions with global indexing.
+     * The returned map uses 0-based global indices (considering the chunk's offset in the original list).
      * 
-     * @param transactions List of transactions to categorize
+     * @param chunk List of transactions in this chunk
      * @param availableCategories Comma-separated list of available categories
-     * @param context Aggregated context from vector store
-     * @return Map of 1-based index to category name
-     * @throws RuntimeException if the LLM call fails
+     * @param context Shared context from vector store
+     * @param globalOffset The starting index of this chunk in the original transaction list
+     * @return Map of 0-based global index to category name
      */
-    private Map<Integer, String> processSingleBatchCall(List<Transaction> transactions, 
-                                                         String availableCategories, 
-                                                         String context) {
+    private Map<Integer, String> processChunkWithGlobalIndexing(List<Transaction> chunk, 
+                                                                  String availableCategories, 
+                                                                  String context,
+                                                                  int globalOffset) {
         long callStart = System.currentTimeMillis();
         
-        // Build transactions list for prompt
+        // Build transactions list for prompt (using 1-based local indexing for the LLM)
         StringBuilder transactionsBuilder = new StringBuilder();
-        for (int i = 0; i < transactions.size(); i++) {
-            Transaction t = transactions.get(i);
+        for (int i = 0; i < chunk.size(); i++) {
+            Transaction t = chunk.get(i);
             String operationType = t.getOperation() != null ? t.getOperation().name() : "UNKNOWN";
             transactionsBuilder.append(String.format("%d. Description: \"%s\" (Operation: %s)%n", 
                     i + 1, t.getDescription(), operationType));
@@ -184,14 +263,14 @@ public class RagService {
                 "context", context,
                 "transactions", transactionsList,
                 "categories", availableCategories,
-                "transactionCount", transactions.size());
+                "transactionCount", chunk.size());
         
         Prompt prompt = promptTemplate.create(promptParameters);
         
-        log.info("LLM_TIMING: Single batch prompt prepared, content length: {} characters, {} transactions", 
-                prompt.getContents().length(), transactions.size());
+        log.debug("LLM_TIMING: Chunk prompt prepared, content length: {} characters, {} transactions", 
+                prompt.getContents().length(), chunk.size());
         
-        // Call LLM - this is the single synchronous HTTP call
+        // Call LLM
         long llmCallStart = System.currentTimeMillis();
         String response;
         try {
@@ -200,26 +279,47 @@ public class RagService {
                     .content();
         } catch (Exception e) {
             long llmCallDuration = System.currentTimeMillis() - llmCallStart;
-            log.error("LLM call failed after {} ms: {}", llmCallDuration, e.getMessage());
+            log.error("LLM call failed after {} ms for chunk with offset {}: {}", 
+                    llmCallDuration, globalOffset, e.getMessage());
             throw new RuntimeException("LLM call failed: " + e.getMessage(), e);
         }
         long llmCallDuration = System.currentTimeMillis() - llmCallStart;
-        log.info("LLM_TIMING: Single batch LLM call took {} ms for {} transactions", 
-                llmCallDuration, transactions.size());
+        log.info("LLM_TIMING: Chunk LLM call (offset {}) took {} ms for {} transactions", 
+                globalOffset, llmCallDuration, chunk.size());
         
-        log.debug("LLM batch response: {}", response);
+        log.debug("LLM chunk response (offset {}): {}", globalOffset, response);
         
-        // Parse response
-        long parseStart = System.currentTimeMillis();
-        Map<Integer, String> result = parseBatchResponse(response, transactions.size());
-        long parseDuration = System.currentTimeMillis() - parseStart;
-        log.info("LLM_TIMING: Batch response parsing took {} ms", parseDuration);
+        // Parse response (returns 1-based local indices)
+        Map<Integer, String> localResults = parseBatchResponse(response, chunk.size());
+        
+        // Convert from 1-based local to 0-based global indexing
+        Map<Integer, String> globalResults = new HashMap<>();
+        for (Map.Entry<Integer, String> entry : localResults.entrySet()) {
+            int localIndex = entry.getKey(); // 1-based
+            int globalIndex = globalOffset + (localIndex - 1); // Convert to 0-based global
+            globalResults.put(globalIndex, entry.getValue());
+        }
         
         long totalDuration = System.currentTimeMillis() - callStart;
-        log.info("LLM_TIMING: processSingleBatchCall total took {} ms for {} transactions", 
-                totalDuration, transactions.size());
+        log.debug("LLM_TIMING: processChunkWithGlobalIndexing total took {} ms for chunk at offset {}", 
+                totalDuration, globalOffset);
         
-        return result;
+        return globalResults;
+    }
+    
+    /**
+     * Partitions a list into smaller sublists of the specified size.
+     * 
+     * @param list The list to partition
+     * @param size The maximum size of each partition
+     * @return List of partitions
+     */
+    private <T> List<List<T>> partitionList(List<T> list, int size) {
+        List<List<T>> partitions = new ArrayList<>();
+        for (int i = 0; i < list.size(); i += size) {
+            partitions.add(list.subList(i, Math.min(i + size, list.size())));
+        }
+        return partitions;
     }
     
     /**
@@ -246,10 +346,10 @@ public class RagService {
                 }
             }
             
-            log.info("Successfully parsed {} category assignments from LLM response", results.size());
+            log.debug("Successfully parsed {} category assignments from LLM response", results.size());
             
             if (results.size() != expectedCount) {
-                log.warn("Expected {} categorizations but got {}. Some transactions may need individual processing.", 
+                log.warn("Expected {} categorizations but got {}. Some transactions may use fallback.", 
                         expectedCount, results.size());
             }
         } catch (Exception e) {
