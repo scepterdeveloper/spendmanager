@@ -1,9 +1,12 @@
 package com.everrich.spendmanager.repository;
 
 import com.everrich.spendmanager.entities.Transaction;
+import com.everrich.spendmanager.entities.TransactionCategorizationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -70,4 +73,28 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      * Sticking to the shorter version based on standard conventions.
      */
     List<Transaction> findByCategoryEntityIsNotNull();
+    
+    // ==================== CATEGORIZATION PROCESSOR METHODS ====================
+    
+    /**
+     * Find all transactions with a specific categorization status.
+     * Used by CategorizationProcessor to pick up transactions awaiting categorization.
+     */
+    List<Transaction> findByCategorizationStatus(TransactionCategorizationStatus status);
+    
+    /**
+     * Count transactions for a given statement ID with a specific categorization status.
+     * Used to determine if all transactions for a statement have been categorized.
+     */
+    long countByStatementIdAndCategorizationStatus(Long statementId, TransactionCategorizationStatus status);
+    
+    /**
+     * Bulk update categorization status for transactions with a specific status.
+     * Used for crash recovery to reset LLM_CATEGORIZING back to TO_BE_LLM_CATEGORIZED.
+     */
+    @Transactional
+    @Modifying
+    @Query("UPDATE Transaction t SET t.categorizationStatus = :newStatus WHERE t.categorizationStatus = :oldStatus")
+    int updateCategorizationStatusBulk(@Param("oldStatus") TransactionCategorizationStatus oldStatus, 
+                                       @Param("newStatus") TransactionCategorizationStatus newStatus);
 }

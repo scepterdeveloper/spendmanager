@@ -228,7 +228,11 @@ public class StatementProcessor {
         
         for (Statement statement : openStatements) {
             try {
-                // Process each statement in a separate transaction
+                // First, mark the statement as PROCESSING in a separate transaction
+                // This prevents other scheduler instances from picking up the same statement
+                markStatementProcessing(statement);
+                
+                // Then process the statement (transaction extraction, etc.)
                 processStatementTransactionally(statement);
             } catch (Exception e) {
                 log.error("Error processing statement {}: {}", statement.getId(), e.getMessage(), e);
@@ -239,9 +243,31 @@ public class StatementProcessor {
     }
     
     /**
+     * Marks a statement as PROCESSING. This is done in a separate transaction
+     * to ensure the status change is committed immediately, preventing other
+     * scheduler instances from picking up the same statement.
+     */
+    @Transactional
+    public void markStatementProcessing(Statement statement) {
+        Statement currentStatement = statementService.getStatementById(statement.getId());
+        if (currentStatement != null && currentStatement.getStatus() == StatementStatus.OPEN) {
+            currentStatement.setStatus(StatementStatus.PROCESSING);
+            statementService.saveStatement(currentStatement);
+            log.info("Statement {} status set to PROCESSING", statement.getId());
+        } else {
+            throw new IllegalStateException("Statement " + statement.getId() + 
+                    " is no longer OPEN (current status: " + 
+                    (currentStatement != null ? currentStatement.getStatus() : "NOT FOUND") + ")");
+        }
+    }
+    
+    /**
      * Processes a single statement within a transaction.
-     * Creates all transactions and balance entries atomically.
+     * Extracts transactions from PDF and saves them with TO_BE_LLM_CATEGORIZED status.
+     * Categorization is handled separately by CategorizationProcessor.
      * If anything fails, the entire operation is rolled back.
+     * 
+     * Note: The statement should already be in PROCESSING status (set by markStatementProcessing).
      * 
      * @param statement The statement to process
      */
@@ -249,57 +275,44 @@ public class StatementProcessor {
     public void processStatementTransactionally(Statement statement) {
         log.info("Starting transactional processing for statement {}", statement.getId());
         
-        // Set status to PROCESSING immediately to indicate work has begun
-        statement.setStatus(StatementStatus.PROCESSING);
-        statementService.saveStatement(statement);
-        log.info("Statement {} status set to PROCESSING", statement.getId());
+        // Reload the statement to get current state (should already be PROCESSING)
+        Statement currentStatement = statementService.getStatementById(statement.getId());
+        if (currentStatement == null || currentStatement.getStatus() != StatementStatus.PROCESSING) {
+            log.warn("Statement {} is not in PROCESSING status, skipping", statement.getId());
+            return;
+        }
         
-        // Extract transactions from PDF (this calls LLM, so it's outside the main transaction work)
-        List<Transaction> transactions = extractTransactionsFromPdf(statement);
+        // Extract transactions from PDF (this calls LLM for parsing, not categorization)
+        List<Transaction> transactions = extractTransactionsFromPdf(currentStatement);
 
         if (transactions == null || transactions.isEmpty()) {
-            log.warn("No transactions extracted from statement {}", statement.getId());
-            statement.setStatus(StatementStatus.FAILED);
-            statementService.saveStatement(statement);
+            log.warn("No transactions extracted from statement {}", currentStatement.getId());
+            currentStatement.setStatus(StatementStatus.FAILED);
+            statementService.saveStatement(currentStatement);
             return;
         }
         
-        log.info("Extracted {} transactions from statement {}", transactions.size(), statement.getId());
+        log.info("Extracted {} transactions from statement {}", transactions.size(), currentStatement.getId());
         
-        // Set account for all transactions before batch categorization
+        // Save each transaction with TO_BE_LLM_CATEGORIZED status
+        // Categorization will be done asynchronously by CategorizationProcessor
         for (Transaction transaction : transactions) {
-            transaction.setAccount(statement.getAccount());
+            transaction.setAccount(currentStatement.getAccount());
+            transaction.setStatementId(currentStatement.getId());
+            transaction.setCategorizationStatus(TransactionCategorizationStatus.TO_BE_LLM_CATEGORIZED);
+            // Use synchronous balance update (asyncBalanceUpdate = false) for consistency
+            transactionService.saveTransaction(transaction, false);
         }
         
-        // Batch categorize all transactions in a single synchronous LLM call
-        // If the LLM call fails (e.g., token limit exceeded), abort processing and set statement to FAILED
-        log.info("Starting batch categorization for {} transactions (single LLM call)", transactions.size());
-        List<Transaction> categorizedTransactions;
-        try {
-            categorizedTransactions = transactionService.categorizeTransactionsBatch(transactions);
-        } catch (RuntimeException e) {
-            log.error("LLM categorization failed for statement {}: {}. Aborting processing.", 
-                    statement.getId(), e.getMessage());
-            statement.setStatus(StatementStatus.FAILED);
-            statementService.saveStatement(statement);
-            return;
-        }
-        log.info("Batch categorization completed for {} transactions", categorizedTransactions.size());
+        log.info("Saved {} transactions with TO_BE_LLM_CATEGORIZED status for statement {}", 
+                transactions.size(), currentStatement.getId());
         
-        // Save each categorized transaction with synchronous balance updates
-        for (Transaction categorizedTransaction : categorizedTransactions) {
-            categorizedTransaction.setStatementId(statement.getId());
-            categorizedTransaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
-            // Use synchronous balance update (asyncBalanceUpdate = false)
-            transactionService.saveTransaction(categorizedTransaction, false);
-        }
+        // Set statement to CATEGORIZING - transactions will be categorized by CategorizationProcessor
+        currentStatement.setStatus(StatementStatus.CATEGORIZING);
+        statementService.saveStatement(currentStatement);
         
-        // Mark statement as completed only after all transactions and balances are saved
-        statement.setStatus(StatementStatus.COMPLETED);
-        statementService.saveStatement(statement);
-        
-        log.info("Successfully completed processing statement {} with {} transactions", 
-                statement.getId(), transactions.size());
+        log.info("Statement {} set to CATEGORIZING with {} transactions pending categorization", 
+                currentStatement.getId(), transactions.size());
     }
     
     /**

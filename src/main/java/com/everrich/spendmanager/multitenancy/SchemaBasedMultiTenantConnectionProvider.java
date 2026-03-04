@@ -51,7 +51,6 @@ public class SchemaBasedMultiTenantConnectionProvider implements MultiTenantConn
             }
             
             connection.createStatement().execute("SET search_path TO " + searchPath);
-            logger.debug("Switched to tenant schema: {} (search_path: {})", tenantIdentifier, searchPath);
         } catch (SQLException e) {
             logger.error("Failed to switch to tenant schema: {}", tenantIdentifier, e);
             throw new SQLException("Could not switch to schema: " + tenantIdentifier, e);

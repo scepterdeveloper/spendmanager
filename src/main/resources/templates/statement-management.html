@@ -762,6 +762,28 @@
             .catch(() => showToast('Network error', 'error'));
         }
 
+        // Auto-refresh for processing statements
+        function checkForProcessingStatements() {
+            const processingStatuses = ['OPEN', 'PROCESSING', 'CATEGORIZING'];
+            const rows = document.querySelectorAll('[data-status-name]');
+            let hasProcessing = false;
+            rows.forEach(row => {
+                if (processingStatuses.includes(row.dataset.statusName)) {
+                    hasProcessing = true;
+                }
+            });
+            
+            // If there are statements being processed, auto-refresh every 10 seconds
+            if (hasProcessing) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 10000);
+            }
+        }
+        
+        // Check on page load
+        checkForProcessingStatements();
+
         // Upload Modal Functions
         function openUploadModal() {
             // Reset form state
