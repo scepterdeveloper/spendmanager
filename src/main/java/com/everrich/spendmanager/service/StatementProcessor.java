@@ -253,7 +253,7 @@ public class StatementProcessor {
         if (currentStatement != null && currentStatement.getStatus() == StatementStatus.OPEN) {
             currentStatement.setStatus(StatementStatus.PROCESSING);
             statementService.saveStatement(currentStatement);
-            log.info("Statement {} status set to PROCESSING", statement.getId());
+            log.info("Processing statement {} - {}", statement.getId(), statement.getOriginalFileName());
         } else {
             throw new IllegalStateException("Statement " + statement.getId() + 
                     " is no longer OPEN (current status: " + 
@@ -273,7 +273,7 @@ public class StatementProcessor {
      */
     @Transactional
     public void processStatementTransactionally(Statement statement) {
-        log.info("Starting transactional processing for statement {}", statement.getId());
+        log.debug("Starting transactional processing for statement {}", statement.getId());
         
         // Reload the statement to get current state (should already be PROCESSING)
         Statement currentStatement = statementService.getStatementById(statement.getId());
@@ -292,7 +292,7 @@ public class StatementProcessor {
             return;
         }
         
-        log.info("Extracted {} transactions from statement {}", transactions.size(), currentStatement.getId());
+        log.info("Statement {} parsed - {} transactions extracted", currentStatement.getId(), transactions.size());
         
         // Save each transaction with TO_BE_LLM_CATEGORIZED status
         // Categorization will be done asynchronously by CategorizationProcessor
@@ -304,14 +304,15 @@ public class StatementProcessor {
             transactionService.saveTransaction(transaction, false);
         }
         
-        log.info("Saved {} transactions with TO_BE_LLM_CATEGORIZED status for statement {}", 
+        log.debug("Saved {} transactions with TO_BE_LLM_CATEGORIZED status for statement {}", 
                 transactions.size(), currentStatement.getId());
         
-        // Set statement to CATEGORIZING - transactions will be categorized by CategorizationProcessor
+        // Set statement to CATEGORIZING and record LLM categorization start time
         currentStatement.setStatus(StatementStatus.CATEGORIZING);
+        currentStatement.setLlmCategorizationStart(LocalDateTime.now());
         statementService.saveStatement(currentStatement);
         
-        log.info("Statement {} set to CATEGORIZING with {} transactions pending categorization", 
+        log.debug("Statement {} set to CATEGORIZING with {} transactions pending categorization", 
                 currentStatement.getId(), transactions.size());
     }
     
@@ -345,12 +346,10 @@ public class StatementProcessor {
         try {
 
             String extractedText = pdfProcessor.extractTextFromPdf(statement.getContent());
-            log.info("Extract Text from PDF: DONE");
+            log.debug("Extract Text from PDF: DONE");
             String parsedJson = parseTransactionsWithGemini(extractedText);
             String cleanJson = cleanLLMResponse(parsedJson);
-            log.info("--------------------Parsed JSON from PDF->LLM------------------------");
-            log.info(cleanJson);
-            log.info("---------------------------------------------------------------------");
+            log.debug("LLM parsing completed for statement {}", statement.getId());
             
             // Deserialize to ParsedStatementDTO which contains both metadata and transactions
             ParsedStatementDTO parsedStatement = deserializeParsedStatement(cleanJson);
@@ -368,7 +367,7 @@ public class StatementProcessor {
                 transactions = Collections.emptyList();
             }
             
-            log.info("Parse-clean (LLM Based) and deserialized: {} transaction(s), metadata applied: periodStart={}, periodEnd={}, openingBal={}, closingBal={}",
+            log.debug("Parse-clean (LLM Based) and deserialized: {} transaction(s), metadata applied: periodStart={}, periodEnd={}, openingBal={}, closingBal={}",
                     transactions.size(),
                     statement.getPeriodStartDate(),
                     statement.getPeriodEndDate(),
@@ -421,11 +420,9 @@ public class StatementProcessor {
 
         PromptTemplate promptTemplate = new PromptTemplate(parseTransactionsPromptResource);
         Map<String, Object> model = Map.of("transactions", transactionText);
-        log.info("Going to call LLM for parsing");
+        log.debug("Going to call LLM for parsing");
         Prompt prompt = promptTemplate.create(model);
-        log.info("-------------------Prompt to PARSE----------------");
-        log.info(prompt.getContents());
-        log.info("--------------------------------------------------");
+        log.debug("Prompt created for LLM parsing");
         String LLMOutput = chatClient.prompt(prompt)
                 .call()
                 .content();

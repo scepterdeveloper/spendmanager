@@ -30,6 +30,10 @@ public class Statement {
     private BigDecimal closingBalance;
     @Column(length = 500)
     private String description;
+    
+    // LLM Categorization timing fields
+    private LocalDateTime llmCategorizationStart;
+    private LocalDateTime llmCategorizationEnd;
 
     public byte[] getContent() {
         return content;
@@ -113,5 +117,21 @@ public class Statement {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public LocalDateTime getLlmCategorizationStart() {
+        return llmCategorizationStart;
+    }
+
+    public void setLlmCategorizationStart(LocalDateTime llmCategorizationStart) {
+        this.llmCategorizationStart = llmCategorizationStart;
+    }
+
+    public LocalDateTime getLlmCategorizationEnd() {
+        return llmCategorizationEnd;
+    }
+
+    public void setLlmCategorizationEnd(LocalDateTime llmCategorizationEnd) {
+        this.llmCategorizationEnd = llmCategorizationEnd;
     }
 }

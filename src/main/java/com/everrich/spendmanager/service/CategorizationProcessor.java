@@ -1,5 +1,7 @@
 package com.everrich.spendmanager.service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -173,7 +175,7 @@ public class CategorizationProcessor {
         int batchSize = ragService.getBatchSize();
         int numBatches = (int) Math.ceil((double) totalPending / batchSize);
         
-        log.info("Found {} transactions pending categorization for tenant {}. Processing in {} batches (batch size: {})", 
+        log.debug("Found {} transactions pending categorization for tenant {}. Processing in {} batches (batch size: {})", 
                 totalPending, TenantContext.getTenantId(), numBatches, batchSize);
         
         // Process batches sequentially
@@ -181,9 +183,6 @@ public class CategorizationProcessor {
             int startIdx = batchIndex * batchSize;
             int endIdx = Math.min(startIdx + batchSize, totalPending);
             List<Transaction> batch = pendingTransactions.subList(startIdx, endIdx);
-            
-            log.info("Processing batch {}/{} with {} transactions for tenant {}", 
-                    batchIndex + 1, numBatches, batch.size(), TenantContext.getTenantId());
             
             try {
                 processBatch(batch, batchIndex + 1, numBatches);
@@ -216,7 +215,7 @@ public class CategorizationProcessor {
         }
         
         long batchStart = System.currentTimeMillis();
-        log.debug("Starting batch {}/{} processing for {} transactions", batchNumber, totalBatches, batch.size());
+        log.info("LLM Categorization for Batch {} of {} started", batchNumber, totalBatches);
         
         // Step 1: Mark all transactions in the batch as LLM_CATEGORIZING
         for (Transaction transaction : batch) {
@@ -227,7 +226,7 @@ public class CategorizationProcessor {
         
         // Step 2: Call RAG service to categorize the batch (returns Map<TransactionId, CategoryName>)
         Map<Long, String> categoryResults = ragService.categorizeBatchSequential(batch);
-        log.info("Batch {}: LLM returned {} category assignments", batchNumber, categoryResults.size());
+        log.debug("Batch {}: LLM returned {} category assignments", batchNumber, categoryResults.size());
         
         // Step 3 & 4: Update each transaction and check statement completion
         // Collect unique statement IDs to check completion later
@@ -274,9 +273,9 @@ public class CategorizationProcessor {
             checkAndCompleteStatement(statementId);
         }
         
-        long batchDuration = System.currentTimeMillis() - batchStart;
-        log.info("Batch {}/{} completed in {} ms. Categorized {} transactions across {} statements.", 
-                batchNumber, totalBatches, batchDuration, batch.size(), statementIdsToCheck.size());
+        double batchDurationSeconds = (System.currentTimeMillis() - batchStart) / 1000.0;
+        log.info("LLM Categorization for Batch {} of {} completed. Time taken - {} seconds", 
+                batchNumber, totalBatches, String.format("%.2f", batchDurationSeconds));
     }
     
     /**
@@ -352,7 +351,8 @@ public class CategorizationProcessor {
 
     /**
      * Checks if all transactions for a statement have been categorized.
-     * If no transactions remain with TO_BE_LLM_CATEGORIZED status, marks the statement as COMPLETED.
+     * If no transactions remain with TO_BE_LLM_CATEGORIZED status, marks the statement as COMPLETED
+     * and records the LLM categorization end time.
      * 
      * @param statementId The statement ID to check
      */
@@ -370,9 +370,21 @@ public class CategorizationProcessor {
         if (pendingCount == 0 && categorizingCount == 0) {
             Statement statement = statementService.getStatementById(statementId);
             if (statement != null && statement.getStatus() == StatementStatus.CATEGORIZING) {
+                // Record LLM categorization end time
+                LocalDateTime endTime = LocalDateTime.now();
+                statement.setLlmCategorizationEnd(endTime);
                 statement.setStatus(StatementStatus.COMPLETED);
                 statementService.saveStatement(statement);
-                log.info("Statement {} marked as COMPLETED - all transactions categorized", statementId);
+                
+                // Calculate and log processing duration
+                LocalDateTime startTime = statement.getLlmCategorizationStart();
+                if (startTime != null) {
+                    long durationSeconds = Duration.between(startTime, endTime).getSeconds();
+                    log.info("Processing of statement {} completed. Duration - {} second(s)", 
+                            statementId, durationSeconds);
+                } else {
+                    log.info("Processing of statement {} completed", statementId);
+                }
             }
         } else {
             log.debug("Statement {} still has {} pending and {} categorizing transactions", 
