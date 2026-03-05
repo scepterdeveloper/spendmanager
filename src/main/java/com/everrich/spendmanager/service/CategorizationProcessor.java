@@ -1,6 +1,9 @@
 package com.everrich.spendmanager.service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +28,17 @@ import com.everrich.spendmanager.repository.TransactionRepository;
  * Processes transaction categorization using LLM with RAG (similarity search).
  * 
  * This processor picks up transactions with TO_BE_LLM_CATEGORIZED status and
- * categorizes them one by one using the RagService. This design ensures:
+ * categorizes them in batches using the RagService. This design ensures:
  * - Crash resilience: Each transaction's categorization is tracked individually
  * - Progress visibility: Users can see categorization progress in real-time
  * - Consistency: Statement is marked COMPLETED only when all transactions are done
+ * - Efficiency: Batching reduces the number of LLM calls
+ * 
+ * Batch Processing:
+ * - Transactions are batched together (can be from different statements)
+ * - Batches are processed sequentially (not in parallel)
+ * - After each batch completes, statement completion is checked at transaction level
+ * - Batch size is configurable via spendmanager.categorization.batch-size property
  * 
  * Error Handling:
  * - If categorization fails for any transaction, the entire statement is marked FAILED
@@ -142,8 +152,12 @@ public class CategorizationProcessor {
     }
 
     /**
-     * Categorizes all pending transactions for the current tenant.
-     * Each transaction is processed individually in its own transaction.
+     * Categorizes all pending transactions for the current tenant using batch processing.
+     * Transactions are batched together (can be from different statements) and processed
+     * sequentially (one batch after another, not in parallel).
+     * 
+     * After each batch's LLM call completes, each transaction in the batch is updated
+     * and its statement completion is checked individually.
      */
     private void categorizeTransactionsForCurrentTenant() {
         // Find all transactions awaiting categorization
@@ -155,19 +169,135 @@ public class CategorizationProcessor {
             return;
         }
         
-        log.info("Found {} transactions pending categorization for tenant {}", 
-                pendingTransactions.size(), TenantContext.getTenantId());
+        int totalPending = pendingTransactions.size();
+        int batchSize = ragService.getBatchSize();
+        int numBatches = (int) Math.ceil((double) totalPending / batchSize);
         
-        for (Transaction transaction : pendingTransactions) {
+        log.info("Found {} transactions pending categorization for tenant {}. Processing in {} batches (batch size: {})", 
+                totalPending, TenantContext.getTenantId(), numBatches, batchSize);
+        
+        // Process batches sequentially
+        for (int batchIndex = 0; batchIndex < numBatches; batchIndex++) {
+            int startIdx = batchIndex * batchSize;
+            int endIdx = Math.min(startIdx + batchSize, totalPending);
+            List<Transaction> batch = pendingTransactions.subList(startIdx, endIdx);
+            
+            log.info("Processing batch {}/{} with {} transactions for tenant {}", 
+                    batchIndex + 1, numBatches, batch.size(), TenantContext.getTenantId());
+            
             try {
-                categorizeTransactionWithRag(transaction);
+                processBatch(batch, batchIndex + 1, numBatches);
             } catch (Exception e) {
-                log.error("Error categorizing transaction {}: {}", transaction.getId(), e.getMessage(), e);
-                // Per requirement: If categorization fails, mark the entire statement as FAILED
-                markStatementFailed(transaction.getStatementId());
-                // Skip remaining transactions for this statement (they will be left as TO_BE_LLM_CATEGORIZED)
+                log.error("Error processing batch {}/{}: {}", batchIndex + 1, numBatches, e.getMessage(), e);
+                // Mark all statements in this batch as FAILED
+                markStatementsFailedForBatch(batch);
+                // Continue with next batch (other batches may have different statements)
             }
         }
+    }
+    
+    /**
+     * Process a single batch of transactions.
+     * 
+     * Steps:
+     * 1. Mark all transactions in the batch as LLM_CATEGORIZING
+     * 2. Call RagService to categorize the batch (single LLM call)
+     * 3. Update each transaction with its category and mark as LLM_CATEGORIZED
+     * 4. Check statement completion for each transaction (handles cross-statement batches)
+     * 
+     * @param batch List of transactions to process
+     * @param batchNumber Current batch number (1-based, for logging)
+     * @param totalBatches Total number of batches (for logging)
+     */
+    @Transactional
+    public void processBatch(List<Transaction> batch, int batchNumber, int totalBatches) {
+        if (batch == null || batch.isEmpty()) {
+            return;
+        }
+        
+        long batchStart = System.currentTimeMillis();
+        log.debug("Starting batch {}/{} processing for {} transactions", batchNumber, totalBatches, batch.size());
+        
+        // Step 1: Mark all transactions in the batch as LLM_CATEGORIZING
+        for (Transaction transaction : batch) {
+            transaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZING);
+            transactionRepository.save(transaction);
+        }
+        log.debug("Batch {}: All {} transactions marked as LLM_CATEGORIZING", batchNumber, batch.size());
+        
+        // Step 2: Call RAG service to categorize the batch (returns Map<TransactionId, CategoryName>)
+        Map<Long, String> categoryResults = ragService.categorizeBatchSequential(batch);
+        log.info("Batch {}: LLM returned {} category assignments", batchNumber, categoryResults.size());
+        
+        // Step 3 & 4: Update each transaction and check statement completion
+        // Collect unique statement IDs to check completion later
+        Set<Long> statementIdsToCheck = new HashSet<>();
+        
+        for (Transaction transaction : batch) {
+            Long transactionId = transaction.getId();
+            Long statementId = transaction.getStatementId();
+            
+            // Get category from LLM result (or use fallback)
+            String categoryName = categoryResults.get(transactionId);
+            if (categoryName == null) {
+                log.warn("Batch {}: No category returned for transaction {}, using 'Other' as fallback", 
+                        batchNumber, transactionId);
+                categoryName = "Other";
+            }
+            
+            // Resolve category entity
+            Category categoryEntity = categoryService.findByName(categoryName);
+            if (categoryEntity == null) {
+                log.warn("Batch {}: Category '{}' not found, using 'Other' as fallback for transaction {}", 
+                        batchNumber, categoryName, transactionId);
+                categoryEntity = categoryService.findByName("Other");
+                categoryName = "Other";
+            }
+            
+            // Update transaction
+            transaction.setCategory(categoryName);
+            transaction.setCategoryEntity(categoryEntity);
+            transaction.setCategorizationStatus(TransactionCategorizationStatus.LLM_CATEGORIZED);
+            transactionRepository.save(transaction);
+            
+            log.debug("Batch {}: Transaction {} categorized as '{}'", batchNumber, transactionId, categoryName);
+            
+            // Collect statement ID for completion check
+            if (statementId != null) {
+                statementIdsToCheck.add(statementId);
+            }
+        }
+        
+        // Step 4: Check statement completion for all affected statements
+        // This handles the case where a batch contains transactions from multiple statements
+        for (Long statementId : statementIdsToCheck) {
+            checkAndCompleteStatement(statementId);
+        }
+        
+        long batchDuration = System.currentTimeMillis() - batchStart;
+        log.info("Batch {}/{} completed in {} ms. Categorized {} transactions across {} statements.", 
+                batchNumber, totalBatches, batchDuration, batch.size(), statementIdsToCheck.size());
+    }
+    
+    /**
+     * Mark all statements associated with transactions in the batch as FAILED.
+     * Used when batch processing fails.
+     * 
+     * @param batch List of transactions in the failed batch
+     */
+    private void markStatementsFailedForBatch(List<Transaction> batch) {
+        Set<Long> failedStatementIds = new HashSet<>();
+        for (Transaction transaction : batch) {
+            if (transaction.getStatementId() != null) {
+                failedStatementIds.add(transaction.getStatementId());
+            }
+        }
+        
+        for (Long statementId : failedStatementIds) {
+            markStatementFailed(statementId);
+        }
+        
+        log.warn("Marked {} statements as FAILED due to batch processing error", failedStatementIds.size());
     }
 
     /**
@@ -252,6 +382,7 @@ public class CategorizationProcessor {
 
     /**
      * Marks a statement as FAILED when categorization fails.
+     * Also deletes all transactions associated with the failed statement to clean up.
      * 
      * @param statementId The statement ID to mark as failed
      */
@@ -263,6 +394,11 @@ public class CategorizationProcessor {
         }
         
         try {
+            // First, delete all transactions associated with this statement
+            transactionRepository.deleteByStatementId(statementId);
+            log.info("Deleted all transactions for failed statement {}", statementId);
+            
+            // Then mark the statement as FAILED
             Statement statement = statementService.getStatementById(statementId);
             if (statement != null) {
                 statement.setStatus(StatementStatus.FAILED);

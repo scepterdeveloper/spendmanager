@@ -97,4 +97,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("UPDATE Transaction t SET t.categorizationStatus = :newStatus WHERE t.categorizationStatus = :oldStatus")
     int updateCategorizationStatusBulk(@Param("oldStatus") TransactionCategorizationStatus oldStatus, 
                                        @Param("newStatus") TransactionCategorizationStatus newStatus);
+    
+    /**
+     * Delete all transactions for a given statement ID.
+     * Used when a statement fails categorization to clean up associated transactions.
+     */
+    @Transactional
+    @Modifying
+    void deleteByStatementId(Long statementId);
 }

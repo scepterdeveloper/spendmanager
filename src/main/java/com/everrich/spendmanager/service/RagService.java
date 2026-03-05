@@ -108,6 +108,118 @@ public class RagService {
     }
     
     /**
+     * Get the configured batch size for categorization.
+     * 
+     * @return The batch size
+     */
+    public int getBatchSize() {
+        return batchSize;
+    }
+    
+    /**
+     * Categorize a single batch of transactions sequentially (not parallel).
+     * This method processes one batch at a time and returns results immediately.
+     * 
+     * The caller is responsible for:
+     * 1. Creating batches of transactions
+     * 2. Calling this method for each batch sequentially
+     * 3. Processing results and checking statement completion after each batch
+     * 
+     * @param transactions List of transactions in this batch (should not exceed batch size)
+     * @return Map of transaction ID to category name
+     * @throws RuntimeException if the LLM call fails
+     */
+    public Map<Long, String> categorizeBatchSequential(List<Transaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        long methodStart = System.currentTimeMillis();
+        int batchCount = transactions.size();
+        
+        log.info("LLM_TIMING: Starting SEQUENTIAL batch categorization for {} transactions", batchCount);
+        
+        // STEP 1: Get available categories
+        String availableCategories = categoryService.findAll().stream()
+                .map(c -> c.getName())
+                .collect(Collectors.joining(", "));
+        
+        // STEP 2: Get aggregated context from vector store for all transactions in this batch
+        long batchSearchStart = System.currentTimeMillis();
+        String context = vectorStoreService.batchSimilaritySearch(transactions);
+        long batchSearchDuration = System.currentTimeMillis() - batchSearchStart;
+        log.info("LLM_TIMING: batchSimilaritySearch took {} ms for {} transactions", 
+                batchSearchDuration, batchCount);
+        
+        if (context.isBlank()) {
+            context = "No historical context found.";
+        }
+        
+        // STEP 3: Build transactions list for prompt (using 1-based indexing for the LLM)
+        // Also create a mapping from 1-based index to transaction ID
+        Map<Integer, Long> indexToTransactionId = new HashMap<>();
+        StringBuilder transactionsBuilder = new StringBuilder();
+        for (int i = 0; i < transactions.size(); i++) {
+            Transaction t = transactions.get(i);
+            String operationType = t.getOperation() != null ? t.getOperation().name() : "UNKNOWN";
+            transactionsBuilder.append(String.format("%d. Description: \"%s\" (Operation: %s)%n", 
+                    i + 1, t.getDescription(), operationType));
+            indexToTransactionId.put(i + 1, t.getId()); // 1-based index to transaction ID
+        }
+        String transactionsList = transactionsBuilder.toString();
+        
+        // STEP 4: Create prompt and call LLM
+        PromptTemplate promptTemplate = new PromptTemplate(categoryBatchPromptResource);
+        Map<String, Object> promptParameters = Map.of(
+                "context", context,
+                "transactions", transactionsList,
+                "categories", availableCategories,
+                "transactionCount", batchCount);
+        
+        Prompt prompt = promptTemplate.create(promptParameters);
+        
+        log.debug("LLM_TIMING: Batch prompt prepared, content length: {} characters, {} transactions", 
+                prompt.getContents().length(), batchCount);
+        
+        long llmCallStart = System.currentTimeMillis();
+        String response;
+        try {
+            response = chatClient.prompt(prompt)
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+            log.error("LLM batch call failed after {} ms for {} transactions: {}", 
+                    llmCallDuration, batchCount, e.getMessage());
+            throw new RuntimeException("LLM batch call failed: " + e.getMessage(), e);
+        }
+        long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+        log.info("LLM_TIMING: Batch LLM call took {} ms for {} transactions", llmCallDuration, batchCount);
+        
+        log.debug("LLM batch response: {}", response);
+        
+        // STEP 5: Parse response (returns 1-based indices)
+        Map<Integer, String> indexResults = parseBatchResponse(response, batchCount);
+        
+        // STEP 6: Convert from 1-based index to transaction ID
+        Map<Long, String> results = new HashMap<>();
+        for (Map.Entry<Integer, String> entry : indexResults.entrySet()) {
+            Long transactionId = indexToTransactionId.get(entry.getKey());
+            if (transactionId != null) {
+                results.put(transactionId, entry.getValue());
+            } else {
+                log.warn("Could not find transaction ID for index {}", entry.getKey());
+            }
+        }
+        
+        long totalDuration = System.currentTimeMillis() - methodStart;
+        log.info("LLM_TIMING: categorizeBatchSequential total took {} ms for {} transactions", 
+                totalDuration, batchCount);
+        
+        return results;
+    }
+    
+    /**
      * Batch categorize multiple transactions using parallel LLM calls.
      * Transactions are split into chunks of configurable size (default: 5) and 
      * processed in parallel. The method blocks until ALL parallel calls complete,
@@ -118,10 +230,12 @@ public class RagService {
      * 
      * If ANY chunk fails, the entire operation fails (fail-fast behavior).
      * 
+     * @deprecated Use {@link #categorizeBatchSequential(List)} for sequential batch processing
      * @param transactions List of transactions to categorize
      * @return Map of transaction index (0-based) to category name
      * @throws RuntimeException if any LLM call fails
      */
+    @Deprecated
     public Map<Integer, String> findBestCategoriesBatch(List<Transaction> transactions) {
         if (transactions == null || transactions.isEmpty()) {
             return new HashMap<>();
