@@ -124,27 +124,32 @@
                 grid-column: 1 / -1;
             }
             
-            /* Mobile options: stacked layout per user specification */
+            /* Mobile options: stacked layout - prevent overflow */
             .compact-options {
                 display: grid;
-                grid-template-columns: auto auto 1fr;
+                grid-template-columns: 1fr 1fr;
                 grid-template-rows: auto auto auto auto;
                 gap: 0.75rem;
                 padding: 0.75rem;
                 align-items: center;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                overflow-x: hidden;
             }
             
-            /* Type (2nd child after hidden input) - row 1 col 1, vertical layout */
-            .compact-options .option-group:nth-child(2) {
+            /* Type - row 1 col 1, vertical layout (1st child) */
+            .compact-options > .option-group:first-child {
                 grid-row: 1;
                 grid-column: 1;
                 justify-self: start;
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 0.25rem;
+                min-width: 0;
             }
             
-            /* Color - row 1 col 2, vertical layout */
+            /* Color - row 1 col 2, vertical layout (2nd child with ID) */
             .compact-options #kpi-color-section {
                 grid-row: 1;
                 grid-column: 2;
@@ -152,39 +157,63 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 0.25rem;
+                min-width: 0;
             }
             
-            /* Dashboard - row 2, left aligned */
-            .compact-options .option-group:nth-child(4) {
+            /* Dashboard - row 2 full width (3rd child - not save/cancel button groups) */
+            .compact-options > .option-group:nth-child(3) {
                 grid-row: 2;
                 grid-column: 1 / -1;
                 justify-self: start;
+                flex-direction: row;
+                align-items: center;
+                gap: 0.5rem;
+                width: 100%;
+                max-width: 100%;
             }
             
-            /* Save button - row 3 full width, no bottom gap */
+            /* Ensure dashboard label doesn't overflow */
+            .compact-options > .option-group:nth-child(3) .option-group-label {
+                flex-shrink: 0;
+            }
+            
+            /* Save/Update button - row 3 full width (below Dashboard) */
             .compact-options .save-button-group {
                 grid-row: 3;
                 grid-column: 1 / -1;
                 margin-left: 0;
                 margin-bottom: 0;
                 width: 100%;
+                max-width: 100%;
             }
             
             .compact-options .save-button-group .btn-primary {
                 width: 100% !important;
+                max-width: 100%;
+                box-sizing: border-box;
             }
             
-            /* Cancel button - row 4 full width, minimal gap */
+            /* Cancel button - row 4 full width (below Update button in edit mode) */
             .compact-options .cancel-button-group {
                 grid-row: 4;
                 grid-column: 1 / -1;
                 width: 100%;
-                margin-top: -0.65rem;
+                max-width: 100%;
+                margin-top: -0.5rem;
             }
             
             .compact-options .cancel-button-group .btn-cancel {
                 width: 100% !important;
+                max-width: 100%;
                 display: block;
+                box-sizing: border-box;
+                text-align: center;
+            }
+            
+            /* Ensure select elements don't overflow */
+            .compact-options .select-sm {
+                max-width: 100%;
+                min-width: 0;
             }
             
             /* Date range fields mobile */
@@ -206,7 +235,7 @@
         }
 
         /* Drag-and-drop styles - ENTIRE ROW IS DRAGGABLE */
-        /* Row hover effect with left border indicator */
+        
         #insights-table-body tr[data-insight-id] {
             cursor: grab;
             transition: all 0.15s ease;

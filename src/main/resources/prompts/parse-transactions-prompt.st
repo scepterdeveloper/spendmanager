@@ -19,6 +19,18 @@ The operation field is determined based on the following rules:
 2. If the bank statement has a column to indicate whether the transaction is a Credit or Debit, set the operation as MINUS for credits and PLUS otherwise. In this case, leave the sign of the amount as it is in the statement.
 3. Do NOT include opening balance and closing balance or such aggregated fields as transactions - these should only appear in the statement metadata if present.
 
+CRITICAL - TRANSACTION DESCRIPTION RULES:
+The description field is EXTREMELY IMPORTANT for categorization. You MUST preserve the COMPLETE transaction description verbatim, including ALL of the following if present:
+- Payee/merchant name (e.g., "Gemeinde Dielheim", "Amazon", "REWE")
+- Purpose/reference text (e.g., "Abwasser Wasser/Abwasser Rechnung")
+- End-to-End reference (End-to-End-Ref.)
+- Mandate reference (Mandatsref)
+- Creditor ID (Gläubiger-ID)
+- Payment type (e.g., SEPA-BASISLASTSCHRIFT, SEPA-ÜBERWEISUNG, Kartenzahlung)
+- Any multi-line continuation text that belongs to the transaction
+
+DO NOT summarize, truncate, or simplify the description. Combine all related lines into a single description string, using " / " as a separator between different parts if needed. The full description is critical for accurate auto-categorization.
+
 OUTPUT FORMAT:
 Your output MUST be ONLY a valid JSON object. Use null for missing values. All dates must be formatted as dd.MM.yyyy. The JSON structure is:
 
@@ -29,10 +41,10 @@ closingBalance - numeric value or null
 description - text or null
 transactions - array containing objects with: date, description, amount, operation (PLUS/MINUS), category (UNCATEGORIZED)
 
-Example transaction object fields:
-- date: "02.12.2025"
-- description: "Payment to store"
-- amount: 123.45
+Example transaction object with COMPLETE description (note: preserve ALL details):
+- date: "30.01.2025"
+- description: "Gemeinde Dielheim / 588880043460/Abwasser Wasser/Abwasser Rechnung/Wasser Wasser/Abwasser Rechnung / End-to-End-Ref.: 140500028161 / Mandatsref: 588880043460001 / Gläubiger-ID: DE50ZZZ00000094129 / SEPA-BASISLASTSCHRIFT wiederholend"
+- amount: 327.77
 - operation: "MINUS"
 - category: "UNCATEGORIZED"
 
