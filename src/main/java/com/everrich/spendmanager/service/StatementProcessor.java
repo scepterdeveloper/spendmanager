@@ -236,8 +236,8 @@ public class StatementProcessor {
                 processStatementTransactionally(statement);
             } catch (Exception e) {
                 log.error("Error processing statement {}: {}", statement.getId(), e.getMessage(), e);
-                // Mark as failed in a separate transaction
-                markStatementFailed(statement);
+                // Mark as failed in a separate transaction with error message
+                markStatementFailed(statement, createHumanReadableError(e));
             }
         }
     }
@@ -317,21 +317,70 @@ public class StatementProcessor {
     }
     
     /**
-     * Marks a statement as failed. Called when processing fails outside the transaction.
+     * Marks a statement as failed with an error message. Called when processing fails outside the transaction.
+     * 
+     * @param statement The statement to mark as failed
+     * @param errorMessage A human-readable error message describing what went wrong
      */
     @Transactional
-    public void markStatementFailed(Statement statement) {
+    public void markStatementFailed(Statement statement, String errorMessage) {
         try {
             // Reload the statement to get current state
             Statement currentStatement = statementService.getStatementById(statement.getId());
             if (currentStatement != null) {
                 currentStatement.setStatus(StatementStatus.FAILED);
+                currentStatement.setErrorMessage(errorMessage);
                 statementService.saveStatement(currentStatement);
-                log.warn("Marked statement {} as FAILED", statement.getId());
+                log.warn("Marked statement {} as FAILED: {}", statement.getId(), errorMessage);
             }
         } catch (Exception e) {
             log.error("Failed to mark statement {} as FAILED: {}", statement.getId(), e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Creates a human-readable error message from an exception.
+     * Translates technical exceptions into user-friendly messages.
+     * 
+     * @param e The exception to translate
+     * @return A human-readable error message
+     */
+    private String createHumanReadableError(Exception e) {
+        String message = e.getMessage();
+        
+        // Handle DateTimeParseException specifically
+        if (e instanceof DateTimeParseException || 
+            (e.getCause() != null && e.getCause() instanceof DateTimeParseException)) {
+            DateTimeParseException dtpe = (e instanceof DateTimeParseException) 
+                    ? (DateTimeParseException) e 
+                    : (DateTimeParseException) e.getCause();
+            return "Date parsing error: The system couldn't recognize a date in the statement. " +
+                   "The problematic value was: '" + dtpe.getParsedString() + "'. " +
+                   "Please ensure dates in the statement are in a standard format (e.g., 03.12.2025).";
+        }
+        
+        // Handle JSON parsing errors
+        if (message != null && (message.contains("JsonSyntax") || message.contains("JSON"))) {
+            return "Data extraction error: The AI model returned data in an unexpected format. " +
+                   "This may be due to an unusual statement layout. Please try uploading again.";
+        }
+        
+        // Handle IOException (PDF processing)
+        if (e instanceof java.io.IOException) {
+            return "PDF processing error: Unable to read the uploaded file. " +
+                   "Please ensure the file is a valid PDF document.";
+        }
+        
+        // Generic fallback with original message if available
+        if (message != null && !message.isBlank()) {
+            // Truncate very long messages
+            if (message.length() > 500) {
+                message = message.substring(0, 497) + "...";
+            }
+            return "Processing error: " + message;
+        }
+        
+        return "An unexpected error occurred while processing the statement. Please try again or contact support.";
     }
 
     /**

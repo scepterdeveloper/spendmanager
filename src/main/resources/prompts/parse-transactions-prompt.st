@@ -49,7 +49,12 @@ Example transaction object with COMPLETE description (note: preserve ALL details
 - category: "UNCATEGORIZED"
 
 DO NOT include any other text or explanation. Please only use the dot as the decimal separator for amounts.
-IMPORTANT: All date fields MUST be in the format dd.MM.yyyy (e.g., 02.12.2025 for December 2, 2025).
+
+CRITICAL DATE FORMAT REQUIREMENT:
+All date fields MUST include the FULL YEAR. The required format is dd.MM.yyyy (e.g., 02.12.2025 for December 2, 2025).
+- CORRECT: "30.01.2025", "03.12.2025", "15.06.2024"
+- WRONG: "30.01.", "03.12.", "15.06" (missing year - these will cause parsing errors!)
+If the statement only shows partial dates (e.g., "03.12."), you MUST infer the year from context (statement period, document date, or surrounding transactions) and output the complete date with year.
 
 Statement Text:
 {transactions}

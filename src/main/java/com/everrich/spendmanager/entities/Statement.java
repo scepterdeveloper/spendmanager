@@ -34,6 +34,10 @@ public class Statement {
     // LLM Categorization timing fields
     private LocalDateTime llmCategorizationStart;
     private LocalDateTime llmCategorizationEnd;
+    
+    // Error information for failed statements
+    @Column(length = 2000)
+    private String errorMessage;
 
     public byte[] getContent() {
         return content;
@@ -133,5 +137,13 @@ public class Statement {
 
     public void setLlmCategorizationEnd(LocalDateTime llmCategorizationEnd) {
         this.llmCategorizationEnd = llmCategorizationEnd;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
     }
 }

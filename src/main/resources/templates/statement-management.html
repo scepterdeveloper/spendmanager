@@ -24,6 +24,18 @@
         .status-CATEGORIZING { color: #F59E0B; font-weight: 600; }
         .status-OPEN { color: #3B82F6; font-weight: 600; }
         .status-ROLLED_BACK { color: #8B5CF6; font-weight: 600; }
+        
+        /* Error info link */
+        .error-info-link {
+            font-size: 0.75rem;
+            color: #6B7280;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-left: 0.5rem;
+        }
+        .error-info-link:hover {
+            color: var(--error-color);
+        }
 
         /* Action icons styling */
         .stmt-actions { display: inline-flex; gap: 0.5rem; margin-left: auto; vertical-align: middle; float: right; }
@@ -273,6 +285,10 @@
                             <td th:text="${stmt.periodEndDate != null ? #temporals.format(stmt.periodEndDate, 'dd MMM yyyy') : '-'}">End Date</td>
                             <td>
                                 <span th:text="${stmt.status}" th:classappend="'status-' + ${stmt.status.name()}">STATUS</span>
+                                <a th:if="${stmt.status.name() == 'FAILED' and stmt.errorMessage != null}" 
+                                   class="error-info-link" 
+                                   th:data-error="${stmt.errorMessage}"
+                                   onclick="openErrorInfoModal(this.dataset.error); event.stopPropagation();">(More Info)</a>
                             </td>
                             <td>
                                 <span class="stmt-actions" style="float: none;">
@@ -762,27 +778,15 @@
             .catch(() => showToast('Network error', 'error'));
         }
 
-        // Auto-refresh for processing statements
-        function checkForProcessingStatements() {
-            const processingStatuses = ['OPEN', 'PROCESSING', 'CATEGORIZING'];
-            const rows = document.querySelectorAll('[data-status-name]');
-            let hasProcessing = false;
-            rows.forEach(row => {
-                if (processingStatuses.includes(row.dataset.statusName)) {
-                    hasProcessing = true;
-                }
-            });
-            
-            // If there are statements being processed, auto-refresh every 10 seconds
-            if (hasProcessing) {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 10000);
-            }
+        // Error Info Modal Functions
+        function openErrorInfoModal(errorMessage) {
+            document.getElementById('error-info-message').textContent = errorMessage || 'No error details available.';
+            document.getElementById('errorInfoModal').classList.add('show');
         }
-        
-        // Check on page load
-        checkForProcessingStatements();
+
+        function closeErrorInfoModal() {
+            document.getElementById('errorInfoModal').classList.remove('show');
+        }
 
         // Upload Modal Functions
         function openUploadModal() {
@@ -897,6 +901,22 @@
             <div class="modal-buttons">
                 <button type="button" class="btn-cancel" onclick="closeDeleteModal();">Cancel</button>
                 <button type="button" class="btn-danger" onclick="confirmDelete();">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Info Modal -->
+    <div id="errorInfoModal" class="modal-overlay" onclick="if(event.target===this) closeErrorInfoModal();">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Error Details</h3>
+                <button type="button" class="close-modal" onclick="closeErrorInfoModal();">&times;</button>
+            </div>
+            <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 0.25rem; padding: 1rem; margin-bottom: 1rem;">
+                <p id="error-info-message" style="margin: 0; color: #991B1B; word-wrap: break-word; white-space: pre-wrap;">No error details available.</p>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-primary" onclick="closeErrorInfoModal();">Close</button>
             </div>
         </div>
     </div>
