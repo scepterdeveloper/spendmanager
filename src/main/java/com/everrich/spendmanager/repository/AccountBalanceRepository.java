@@ -16,6 +16,8 @@ import com.everrich.spendmanager.entities.AccountBalance;
 import com.everrich.spendmanager.entities.Account;
 import com.everrich.spendmanager.entities.Transaction;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.LockModeType;
 
 @Repository
@@ -52,9 +54,67 @@ public interface AccountBalanceRepository extends JpaRepository<AccountBalance, 
     /**
      * Find the balance entry at or immediately before a given timestamp for a specific account.
      * Used to get the balance at a specific point in time (e.g., for starting/closing balance).
+     * 
+     * @deprecated Use the balance type-specific methods: {@link #findFirstBalanceOfDay}, 
+     *             {@link #findLastBalanceOfDay}, or {@link #findBalanceStrictlyBefore} instead.
      */
+    @Deprecated
     @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId AND ab.timestamp <= :timestamp ORDER BY ab.timestamp DESC LIMIT 1")
     Optional<AccountBalance> findBalanceAtOrBefore(@Param("accountId") Long accountId, @Param("timestamp") LocalDateTime timestamp);
+
+    // ========== Balance Type-Specific Query Methods ==========
+
+    /**
+     * Find the first (earliest) balance entry of a specific day for an account.
+     * Used for DAY_BEGIN_BALANCE lookups.
+     * 
+     * @param accountId The account ID
+     * @param date The date to find the first balance for
+     * @return The first balance entry of that day, or empty if no balance exists for that day
+     */
+    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId " +
+           "AND CAST(ab.timestamp AS LocalDate) = :date " +
+           "ORDER BY ab.timestamp ASC LIMIT 1")
+    Optional<AccountBalance> findFirstBalanceOfDay(@Param("accountId") Long accountId, @Param("date") LocalDate date);
+
+    /**
+     * Find the last (latest) balance entry of a specific day for an account.
+     * Used for DAY_END_BALANCE lookups.
+     * 
+     * @param accountId The account ID
+     * @param date The date to find the last balance for
+     * @return The last balance entry of that day, or empty if no balance exists for that day
+     */
+    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId " +
+           "AND CAST(ab.timestamp AS LocalDate) = :date " +
+           "ORDER BY ab.timestamp DESC LIMIT 1")
+    Optional<AccountBalance> findLastBalanceOfDay(@Param("accountId") Long accountId, @Param("date") LocalDate date);
+
+    /**
+     * Find the balance entry strictly before a given timestamp for a specific account.
+     * Used for INTRA_DAY_BALANCE lookups (balance immediately before the specified time).
+     * 
+     * @param accountId The account ID
+     * @param timestamp The timestamp to find the balance before
+     * @return The most recent balance entry before the given timestamp, or empty if none exists
+     */
+    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId " +
+           "AND ab.timestamp < :timestamp " +
+           "ORDER BY ab.timestamp DESC LIMIT 1")
+    Optional<AccountBalance> findBalanceStrictlyBefore(@Param("accountId") Long accountId, @Param("timestamp") LocalDateTime timestamp);
+
+    /**
+     * Find the most recent balance entry before a given date (exclusive) for an account.
+     * Used as a fallback when no balance exists for a specific day.
+     * 
+     * @param accountId The account ID
+     * @param date The date to find balances before (exclusive)
+     * @return The most recent balance entry before that date, or empty if none exists
+     */
+    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId " +
+           "AND CAST(ab.timestamp AS LocalDate) < :date " +
+           "ORDER BY ab.timestamp DESC LIMIT 1")
+    Optional<AccountBalance> findMostRecentBalanceBeforeDate(@Param("accountId") Long accountId, @Param("date") LocalDate date);
 
     /**
      * Find all balance entries after a given timestamp for a specific account.

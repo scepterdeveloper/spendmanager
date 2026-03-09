@@ -1,7 +1,9 @@
 package com.everrich.spendmanager.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,6 +17,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.everrich.spendmanager.entities.Account;
 import com.everrich.spendmanager.entities.AccountBalance;
+import com.everrich.spendmanager.entities.BalanceType;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionOperation;
 import com.everrich.spendmanager.multitenancy.TenantContext;
@@ -521,11 +524,118 @@ public class AccountBalanceService {
     /**
      * Get the balance at or before a specific point in time for an account.
      * Returns 0.00 if no balance entry exists before the given time.
+     * 
+     * @deprecated Use {@link #getBalance(Long, LocalDateTime, BalanceType)} instead with the appropriate BalanceType.
      */
+    @Deprecated
     public BigDecimal getBalanceAtOrBefore(Long accountId, LocalDateTime dateTime) {
         return accountBalanceRepository.findBalanceAtOrBefore(accountId, dateTime)
                 .map(AccountBalance::getBalance)
                 .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Get the balance for an account based on the specified balance type and date/time.
+     * 
+     * <p>Balance type behavior:</p>
+     * <ul>
+     *   <li>{@link BalanceType#DAY_BEGIN_BALANCE}: Returns the first balance record of the specified day.
+     *       If no balance exists for that day, returns the most recent balance before that day.</li>
+     *   <li>{@link BalanceType#DAY_END_BALANCE}: Returns the last balance record of the specified day.
+     *       If no balance exists for that day, returns the most recent balance before that day.</li>
+     *   <li>{@link BalanceType#INTRA_DAY_BALANCE}: Returns the balance immediately before the specified timestamp.
+     *       If time is zero (00:00:00), returns the most recent balance before that date.</li>
+     * </ul>
+     * 
+     * @param accountId The account ID to get the balance for
+     * @param dateTime The date/time reference point for the balance lookup
+     * @param balanceType The type of balance to retrieve
+     * @return The balance amount, or BigDecimal.ZERO if no balance exists
+     * @throws IllegalArgumentException if balanceType is null
+     */
+    public BigDecimal getBalance(Long accountId, LocalDateTime dateTime, BalanceType balanceType) {
+        if (balanceType == null) {
+            throw new IllegalArgumentException("Balance type must not be null");
+        }
+        if (dateTime == null) {
+            throw new IllegalArgumentException("DateTime must not be null");
+        }
+
+        LocalDate date = dateTime.toLocalDate();
+        LocalTime time = dateTime.toLocalTime();
+
+        return switch (balanceType) {
+            case DAY_BEGIN_BALANCE -> getDayBeginBalance(accountId, date);
+            case DAY_END_BALANCE -> getDayEndBalance(accountId, date);
+            case INTRA_DAY_BALANCE -> getIntraDayBalance(accountId, dateTime, time);
+        };
+    }
+
+    /**
+     * Get the balance BEFORE any transaction of the day (i.e., the previous day's closing balance).
+     * This represents the "opening balance" at the start of the day.
+     * 
+     * The logic is: find the most recent balance from any day BEFORE the specified date.
+     * This gives us the balance as it was at the end of the previous day (before any
+     * transactions on the specified date were applied).
+     */
+    private BigDecimal getDayBeginBalance(Long accountId, LocalDate date) {
+        // Find the most recent balance before this date (i.e., the previous day's closing balance)
+        Optional<AccountBalance> previousDayBalance = accountBalanceRepository.findMostRecentBalanceBeforeDate(accountId, date);
+        if (previousDayBalance.isPresent()) {
+            log.debug("Found day begin balance (previous day's closing) for account {} on {}: {}", 
+                    accountId, date, previousDayBalance.get().getBalance());
+            return previousDayBalance.get().getBalance();
+        }
+
+        // No balance exists before this date - return zero
+        log.debug("No balance found for account {} before {}", accountId, date);
+        return BigDecimal.ZERO;
+    }
+
+    /**
+     * Get the last balance of the day, or fall back to the most recent balance before that day.
+     */
+    private BigDecimal getDayEndBalance(Long accountId, LocalDate date) {
+        // First, try to find the last balance entry of the specified day
+        Optional<AccountBalance> dayLastBalance = accountBalanceRepository.findLastBalanceOfDay(accountId, date);
+        if (dayLastBalance.isPresent()) {
+            log.debug("Found day end balance for account {} on {}: {}", accountId, date, dayLastBalance.get().getBalance());
+            return dayLastBalance.get().getBalance();
+        }
+
+        // No balance for this day - fall back to the most recent balance before this date
+        log.debug("No balance found for account {} on {}, falling back to most recent balance before that date", accountId, date);
+        return accountBalanceRepository.findMostRecentBalanceBeforeDate(accountId, date)
+                .map(AccountBalance::getBalance)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Get the balance immediately before the specified timestamp.
+     * If time is zero (midnight), falls back to the most recent balance before that date.
+     */
+    private BigDecimal getIntraDayBalance(Long accountId, LocalDateTime dateTime, LocalTime time) {
+        // If time is zero/midnight, treat it as "balance at the start of this day"
+        // which means we need the most recent balance before this date
+        if (time.equals(LocalTime.MIDNIGHT) || time.equals(LocalTime.MIN)) {
+            log.debug("Intra-day balance requested with zero time for account {} on {}, " +
+                     "returning most recent balance before that date", accountId, dateTime.toLocalDate());
+            return accountBalanceRepository.findMostRecentBalanceBeforeDate(accountId, dateTime.toLocalDate())
+                    .map(AccountBalance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+        }
+
+        // Otherwise, find the balance strictly before the specified timestamp
+        Optional<AccountBalance> balanceBefore = accountBalanceRepository.findBalanceStrictlyBefore(accountId, dateTime);
+        if (balanceBefore.isPresent()) {
+            log.debug("Found intra-day balance for account {} before {}: {}", accountId, dateTime, balanceBefore.get().getBalance());
+            return balanceBefore.get().getBalance();
+        }
+
+        // No balance found before this timestamp
+        log.debug("No balance found for account {} before {}", accountId, dateTime);
+        return BigDecimal.ZERO;
     }
 
     /**

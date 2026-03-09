@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.everrich.spendmanager.dto.AccountBalanceSummary;
 import com.everrich.spendmanager.entities.Account;
+import com.everrich.spendmanager.entities.BalanceType;
 import com.everrich.spendmanager.service.AccountBalanceService;
 import com.everrich.spendmanager.service.AccountService;
 
@@ -95,8 +96,10 @@ public class BalanceController {
         BigDecimal totalClosingBalance = BigDecimal.ZERO;
 
         for (Account account : selectedAccounts) {
-            BigDecimal startingBalance = accountBalanceService.getBalanceAtOrBefore(account.getId(), startDateTime);
-            BigDecimal closingBalance = accountBalanceService.getBalanceAtOrBefore(account.getId(), endDateTime);
+            // Use DAY_BEGIN_BALANCE for starting balance (first balance of the start day)
+            BigDecimal startingBalance = accountBalanceService.getBalance(account.getId(), startDateTime, BalanceType.DAY_BEGIN_BALANCE);
+            // Use DAY_END_BALANCE for closing balance (last balance of the end day)
+            BigDecimal closingBalance = accountBalanceService.getBalance(account.getId(), endDateTime, BalanceType.DAY_END_BALANCE);
 
             AccountBalanceSummary summary = new AccountBalanceSummary(
                     account.getId(),
