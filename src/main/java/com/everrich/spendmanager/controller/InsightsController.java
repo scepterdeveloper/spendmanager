@@ -31,6 +31,11 @@ public class InsightsController {
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
     
+    // End of day time with microsecond precision (PostgreSQL timestamp only supports microseconds, not nanoseconds)
+    // Using LocalTime.MAX (23:59:59.999999999) can cause rounding issues when cast to PostgreSQL timestamp,
+    // potentially rounding up to the next day. Using 23:59:59.999999 avoids this issue.
+    private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59, 999999000);
+    
     public InsightsController(InsightsService insightsService, CategoryRepository categoryRepository,
                               TransactionRepository transactionRepository) {
         this.insightsService = insightsService;
@@ -113,8 +118,7 @@ public class InsightsController {
         }
         
         model.addAttribute("result", result);
-        // Set back URL to return to insights page, and resultId for drill-down back navigation
-        model.addAttribute("backUrl", "/insights");
+        // Set back URL to return to insights page, and resultId for drill-down back navigation model.addAttribute("backUrl", "/insights");
         model.addAttribute("resultPageUrl", "/insights/result/" + resultId);
         
         return "insight-result";
@@ -174,7 +178,7 @@ public class InsightsController {
             
             // Convert LocalDate to LocalDateTime for repository calls
             LocalDateTime startDateTime = startDate.atStartOfDay();
-            LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+            LocalDateTime endDateTime = endDate.atTime(END_OF_DAY);
             
             // Fetch transactions for the category within the date range
             List<Transaction> transactions = transactionRepository.findByDateRangeAndCategories(

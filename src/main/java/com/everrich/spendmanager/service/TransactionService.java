@@ -406,6 +406,11 @@ public class TransactionService {
         }
     }
 
+    // End of day time with microsecond precision (PostgreSQL timestamp only supports microseconds, not nanoseconds)
+    // Using LocalTime.MAX (23:59:59.999999999) can cause rounding issues when cast to PostgreSQL timestamp,
+    // potentially rounding up to the next day. Using 23:59:59.999999 avoids this issue.
+    private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59, 999999000);
+    
     private DateTimeRange calculateDateTimeRange(String timeframe, LocalDate startDate, LocalDate endDate) {
         LocalDateTime start, end;
         LocalDate today = LocalDate.now();
@@ -419,26 +424,26 @@ public class TransactionService {
             case "last_month":
                 YearMonth lastMonth = ym.minusMonths(1);
                 start = lastMonth.atDay(1).atStartOfDay();
-                end = lastMonth.atEndOfMonth().atTime(LocalTime.MAX);
+                end = lastMonth.atEndOfMonth().atTime(END_OF_DAY);
                 break;
             case "current_year":
                 start = LocalDate.of(today.getYear(), 1, 1).atStartOfDay();
-                end = today.atTime(LocalTime.MAX);
+                end = today.atTime(END_OF_DAY);
                 break;
             case "previous_year":
                 LocalDate now = LocalDate.now();
                 start = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear()).atStartOfDay();
-                end = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear()).atTime(LocalTime.MAX);
+                end = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear()).atTime(END_OF_DAY);
                 break;
 
             case "date_range":
                 start = Optional.ofNullable(startDate).map(LocalDate::atStartOfDay).orElse(LocalDateTime.MIN);
-                end = Optional.ofNullable(endDate).map(d -> d.atTime(LocalTime.MAX)).orElse(LocalDateTime.MAX);
+                end = Optional.ofNullable(endDate).map(d -> d.atTime(END_OF_DAY)).orElse(LocalDateTime.MAX);
                 break;
             case "current_month":
             default:
                 start = ym.atDay(1).atStartOfDay();
-                end = ym.atEndOfMonth().atTime(LocalTime.MAX);
+                end = ym.atEndOfMonth().atTime(END_OF_DAY);
                 break;
         }
 
