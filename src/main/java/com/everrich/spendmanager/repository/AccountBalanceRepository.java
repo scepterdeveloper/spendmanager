@@ -81,18 +81,24 @@ public interface AccountBalanceRepository extends JpaRepository<AccountBalance, 
      * Find the last (latest) balance entry of a specific day for an account.
      * Used for DAY_END_BALANCE lookups.
      * 
+     * Uses transaction ID as a secondary sort to handle multiple transactions
+     * with the same timestamp on the same day.
+     * 
      * @param accountId The account ID
      * @param date The date to find the last balance for
      * @return The last balance entry of that day, or empty if no balance exists for that day
      */
     @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId " +
            "AND CAST(ab.timestamp AS LocalDate) = :date " +
-           "ORDER BY ab.timestamp DESC LIMIT 1")
+           "ORDER BY ab.timestamp DESC, ab.transaction.id DESC LIMIT 1")
     Optional<AccountBalance> findLastBalanceOfDay(@Param("accountId") Long accountId, @Param("date") LocalDate date);
 
     /**
      * Find the balance entry strictly before a given timestamp for a specific account.
      * Used for INTRA_DAY_BALANCE lookups (balance immediately before the specified time).
+     * 
+     * Uses transaction ID as a secondary sort to handle multiple transactions
+     * with the same timestamp (ensures we get the last one).
      * 
      * @param accountId The account ID
      * @param timestamp The timestamp to find the balance before
@@ -100,12 +106,15 @@ public interface AccountBalanceRepository extends JpaRepository<AccountBalance, 
      */
     @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId " +
            "AND ab.timestamp < :timestamp " +
-           "ORDER BY ab.timestamp DESC LIMIT 1")
+           "ORDER BY ab.timestamp DESC, ab.transaction.id DESC LIMIT 1")
     Optional<AccountBalance> findBalanceStrictlyBefore(@Param("accountId") Long accountId, @Param("timestamp") LocalDateTime timestamp);
 
     /**
      * Find the most recent balance entry before a given date (exclusive) for an account.
      * Used as a fallback when no balance exists for a specific day.
+     * 
+     * Uses transaction ID as a secondary sort to handle multiple transactions
+     * with the same timestamp on the same day (ensures we get the last one).
      * 
      * @param accountId The account ID
      * @param date The date to find balances before (exclusive)
@@ -113,7 +122,7 @@ public interface AccountBalanceRepository extends JpaRepository<AccountBalance, 
      */
     @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId " +
            "AND CAST(ab.timestamp AS LocalDate) < :date " +
-           "ORDER BY ab.timestamp DESC LIMIT 1")
+           "ORDER BY ab.timestamp DESC, ab.transaction.id DESC LIMIT 1")
     Optional<AccountBalance> findMostRecentBalanceBeforeDate(@Param("accountId") Long accountId, @Param("date") LocalDate date);
 
     /**
@@ -183,8 +192,11 @@ public interface AccountBalanceRepository extends JpaRepository<AccountBalance, 
 
     /**
      * Get the latest balance for an account.
+     * 
+     * Uses transaction ID as a secondary sort to handle multiple transactions
+     * with the same timestamp (ensures we get the last one).
      */
-    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId ORDER BY ab.timestamp DESC LIMIT 1")
+    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId ORDER BY ab.timestamp DESC, ab.transaction.id DESC LIMIT 1")
     Optional<AccountBalance> findLatestBalance(@Param("accountId") Long accountId);
 
     /**
@@ -206,10 +218,13 @@ public interface AccountBalanceRepository extends JpaRepository<AccountBalance, 
      * This serializes concurrent balance operations for the same account,
      * preventing race conditions during statement upload processing.
      * 
+     * Uses transaction ID as a secondary sort to handle multiple transactions
+     * with the same timestamp (ensures we get the last one).
+     * 
      * If no balance exists for the account, returns empty Optional (caller must handle this case).
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId ORDER BY ab.timestamp DESC LIMIT 1")
+    @Query("SELECT ab FROM AccountBalance ab WHERE ab.account.id = :accountId ORDER BY ab.timestamp DESC, ab.transaction.id DESC LIMIT 1")
     Optional<AccountBalance> findLatestBalanceWithLock(@Param("accountId") Long accountId);
 
     /**
