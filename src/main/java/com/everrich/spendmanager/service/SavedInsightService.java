@@ -42,13 +42,22 @@ public class SavedInsightService {
 
     /**
      * Saves a new or updated insight. For new insights, assigns the next display sequence value.
+     * For existing insights, preserves the original display sequence if not provided.
      * Ensures insightType is never null - defaults to CHART if not set.
      */
     public SavedInsight save(SavedInsight savedInsight) {
         // For new insights (no ID), assign the next display sequence
-        if (savedInsight.getId() == null && savedInsight.getDisplaySequence() == null) {
-            Integer maxSeq = savedInsightRepository.findMaxDisplaySequence().orElse(0);
-            savedInsight.setDisplaySequence(maxSeq + 1);
+        if (savedInsight.getId() == null) {
+            if (savedInsight.getDisplaySequence() == null) {
+                Integer maxSeq = savedInsightRepository.findMaxDisplaySequence().orElse(0);
+                savedInsight.setDisplaySequence(maxSeq + 1);
+            }
+        } else {
+            // For existing insights, preserve the original displaySequence if not provided
+            if (savedInsight.getDisplaySequence() == null) {
+                savedInsightRepository.findById(savedInsight.getId())
+                    .ifPresent(existing -> savedInsight.setDisplaySequence(existing.getDisplaySequence()));
+            }
         }
         
         // Ensure insightType is never null - default to CHART
