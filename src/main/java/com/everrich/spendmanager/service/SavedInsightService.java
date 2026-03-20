@@ -144,6 +144,9 @@ public class SavedInsightService {
 
         // Determine if this is an aggregated result (KPI) or not (Chart)
         boolean aggregateResults = insight.isKpi();
+        
+        // Get activateOperation flag (default to false if null for backwards compatibility)
+        boolean activateOperation = Boolean.TRUE.equals(insight.getActivateOperation());
 
         // Use the harmonized execution method from InsightsService
         InsightExecutionResult result = insightsService.executeAdHocInsight(
@@ -153,7 +156,8 @@ public class SavedInsightService {
                 categoryIds,
                 interval,
                 intervalFunction,
-                aggregateResults
+                aggregateResults,
+                activateOperation
         );
 
         // Override the auto-generated name and description with the saved insight's metadata

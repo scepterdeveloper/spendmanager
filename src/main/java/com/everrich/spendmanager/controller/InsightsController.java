@@ -62,6 +62,7 @@ public class InsightsController {
             @RequestParam(required = false) String interval,
             @RequestParam(required = false) String intervalFunction,
             @RequestParam(defaultValue = "CHART") String insightType,
+            @RequestParam(defaultValue = "false") boolean activateOperation,
             HttpSession session) {
         
         try {
@@ -81,7 +82,7 @@ public class InsightsController {
             // Convert insightType to boolean for service (KPI = aggregate results, CHART = detailed results)
             boolean aggregateResults = "KPI".equalsIgnoreCase(insightType);
 
-            // Execute the analysis
+            // Execute the analysis with activateOperation parameter
             InsightExecutionResult result = insightsService.executeAdHocInsight(
                     timeframe,
                     startDate,
@@ -89,7 +90,8 @@ public class InsightsController {
                     categoryIdList,
                     normalizedInterval,
                     intervalFunction,
-                    aggregateResults
+                    aggregateResults,
+                    activateOperation
             );
 
             // Store result in session with unique ID for GET retrieval

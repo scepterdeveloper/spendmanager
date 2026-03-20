@@ -102,6 +102,11 @@
             text-decoration: none;
         }
 
+        /* Hide on mobile */
+        @media (max-width: 767px) {
+            .hide-on-mobile { display: none !important; }
+        }
+
         /* Mobile responsive - page specific */
         @media (max-width: 767px) {
             .page-header h2 { font-size: 0; }
@@ -463,6 +468,13 @@
                         <label for="endDate">End Date</label>
                         <input type="date" id="endDate" name="endDate" th:value="${newInsight.endDate}" />
                     </div>
+                </div>
+
+                <!-- Activate Operation Row -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <input type="checkbox" id="activateOperation" name="activateOperation" th:checked="${newInsight.activateOperation}" value="true" style="margin: 0;" />
+                    <label for="activateOperation" style="display: inline; margin: 0; font-size: 0.875rem; color: var(--text-color); cursor: pointer;">Activate Operation</label>
+                    <small class="hide-on-mobile" style="color: var(--text-mellow);">(MINUS transactions will be negated)</small>
                 </div>
 
                 <!-- Inline Options Section -->

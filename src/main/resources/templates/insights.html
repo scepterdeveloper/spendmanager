@@ -72,6 +72,11 @@
         .category-field-wrapper { position: relative; }
         #category-list-dropdown label { display: inline; font-size: 0.85rem; text-transform: none; letter-spacing: normal; color: var(--primary-color); margin-left: 0.5rem; }
 
+        /* Hide on mobile */
+        @media (max-width: 767px) {
+            .hide-on-mobile { display: none !important; }
+        }
+
         /* Mobile responsive - page specific */
         @media (max-width: 767px) {
             .page-header h2 { font-size: 0; }
@@ -208,6 +213,13 @@
                     </div>
                 </div>
 
+                <!-- Activate Operation Row -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <input type="checkbox" id="activateOperation" name="activateOperation" value="true" style="margin: 0;" />
+                    <label for="activateOperation" style="display: inline; margin: 0; font-size: 0.875rem; color: var(--text-color); cursor: pointer;">Activate Operation</label>
+                    <small class="hide-on-mobile" style="color: var(--text-mellow);">(MINUS transactions will be negated)</small>
+                </div>
+
                 <!-- Inline Options Section -->
                 <div class="compact-options">
                     <div class="option-group">
@@ -250,7 +262,8 @@
                     startDate: document.getElementById('startDate').value,
                     endDate: document.getElementById('endDate').value,
                     categoryIds: document.getElementById('categoryIds').value,
-                    insightType: insightTypeSelect.value
+                    insightType: insightTypeSelect.value,
+                    activateOperation: document.getElementById('activateOperation').checked
                 };
                 sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             });
@@ -283,6 +296,11 @@
                 // Restore insight type
                 if (savedState.insightType) {
                     insightTypeSelect.value = savedState.insightType;
+                }
+                
+                // Restore activateOperation checkbox
+                if (savedState.activateOperation !== undefined) {
+                    document.getElementById('activateOperation').checked = savedState.activateOperation;
                 }
             }
 

@@ -60,6 +60,10 @@ public class SavedInsight {
     // Display sequence for ordering insights on dashboard and management page (nullable for backwards compatibility)
     private Integer displaySequence;
     
+    // When true, applies transaction operation (PLUS/MINUS) to amounts during aggregation
+    // MINUS operations will have their amounts multiplied by -1
+    private Boolean activateOperation = false;
+    
     public SavedInsight(String name, String description, String timeframe) {
         this.name = name;
         this.description = description;

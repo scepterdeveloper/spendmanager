@@ -7,6 +7,7 @@ import com.everrich.spendmanager.dto.InsightExecutionResult.XAxisType;
 import com.everrich.spendmanager.repository.TransactionRepository;
 import com.everrich.spendmanager.entities.Category;
 import com.everrich.spendmanager.entities.Transaction;
+import com.everrich.spendmanager.entities.TransactionOperation;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -59,6 +60,9 @@ public class InsightsService {
     /**
      * NEW: Execute an ad-hoc insight and return a result suitable for display.
      * This harmonizes the execution logic for both saved insights and ad-hoc analysis.
+     * 
+     * @param activateOperation When true, applies transaction operation (PLUS/MINUS) to amounts.
+     *                          MINUS operations will have their amounts multiplied by -1.
      */
     public InsightExecutionResult executeAdHocInsight(
             String timeframe,
@@ -67,7 +71,8 @@ public class InsightsService {
             List<Long> categoryIds,
             String interval,
             String intervalFunction,
-            boolean aggregateResults) {
+            boolean aggregateResults,
+            boolean activateOperation) {
 
         // Calculate the date range for drill-down context
         DateRange range = calculateDateRange(timeframe, startDate, endDate);
@@ -80,7 +85,8 @@ public class InsightsService {
                 categoryIds,
                 interval,
                 intervalFunction,
-                aggregateResults
+                aggregateResults,
+                activateOperation
         );
 
         // Build a generic insight name based on parameters
@@ -126,7 +132,22 @@ public class InsightsService {
     }
     
     /**
+     * Helper method to get effective amount based on transaction operation.
+     * When activateOperation is true, MINUS operations will have their amounts multiplied by -1.
+     */
+    private double getEffectiveAmount(Transaction t, boolean activateOperation) {
+        double amount = t.getAmount();
+        if (activateOperation && t.getOperation() == TransactionOperation.MINUS) {
+            return amount * -1;
+        }
+        return amount;
+    }
+
+    /**
      * Enhanced analysis method that returns DataPoints with drill-down context (categoryId, intervalKey).
+     * 
+     * @param activateOperation When true, applies transaction operation (PLUS/MINUS) to amounts.
+     *                          MINUS operations will have their amounts multiplied by -1.
      */
     public List<DataPoint> getCategoryInsightsWithDrillDown(
             String timeframe,
@@ -135,7 +156,8 @@ public class InsightsService {
             List<Long> categoryIds,
             String interval,
             String intervalFunction,
-            boolean aggregateResults) {
+            boolean aggregateResults,
+            boolean activateOperation) {
 
         DateRange range = calculateDateRange(timeframe, startDate, endDate);
         LocalDate finalStart = range.getStart();
@@ -173,7 +195,7 @@ public class InsightsService {
                 Map<YearMonth, Double> monthlyTotals = transactions.stream()
                         .collect(Collectors.groupingBy(
                                 t -> YearMonth.from(t.getDate()),
-                                Collectors.summingDouble(Transaction::getAmount)
+                                Collectors.summingDouble(t -> getEffectiveAmount(t, activateOperation))
                         ));
 
                 dataPoints = monthlyTotals.entrySet().stream()
@@ -193,7 +215,7 @@ public class InsightsService {
                     .filter(t -> t.getCategoryEntity() != null && t.getCategoryEntity().getName() != null)
                     .collect(Collectors.groupingBy(
                             Transaction::getCategoryEntity,
-                            Collectors.summingDouble(Transaction::getAmount)
+                            Collectors.summingDouble(t -> getEffectiveAmount(t, activateOperation))
                     ));
 
             dataPoints = categoryTotals.entrySet().stream()
