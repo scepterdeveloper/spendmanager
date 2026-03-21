@@ -2,7 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <title th:text="${appName} + ' - Manage Accounts'">EverRich - Manage Accounts</title>
+    <title th:text="${appName} + ' - Manage Account Groups'">EverRich - Manage Account Groups</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
@@ -15,7 +15,7 @@
             }
 
             .page-header h2::after {
-                content: "Manage Accounts";
+                content: "Account Groups";
                 font-size: 1.25rem;
             }
         }
@@ -25,6 +25,11 @@
     <div th:replace="~{fragments/header :: appHeader}"></div>
     
     <div id="toast-container"></div>
+    <!-- Flash message data for JavaScript -->
+    <div id="flash-message-data" 
+         th:if="${message}" 
+         th:attr="data-message=${message}, data-type=${messageType}" 
+         style="display: none;"></div>
     <div id="confirmation-modal" class="modal">
         <div class="modal-content">
             <p id="modal-message"></p>
@@ -42,13 +47,13 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
                 Back
             </a>
-            <h2>Manage Accounts</h2>
+            <h2>Manage Account Groups</h2>
         </div>
 
         <div class="collapsible-header" id="manual-header">
             <h3>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                <span th:text="${newAccount.id != null ? 'Edit Account #' + newAccount.id : 'Add a New Account'}">Add a New Account</span>
+                <span th:text="${newAccountGroup.id != null ? 'Edit Account Group #' + newAccountGroup.id : 'Add a New Account Group'}">Add a New Account Group</span>
             </h3>
             <span class="icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -56,46 +61,33 @@
         </div>        
 
         <div class="content-wrapper" id="manual-form-content">
-            <form th:action="@{/accounts}" th:object="${newAccount}" method="post">
+            <form th:action="@{/account-groups}" th:object="${newAccountGroup}" method="post">
                 
                 <input type="hidden" th:field="*{id}" />
                 
                 <div class="form-group">
-                    <label for="name">Name (e.g., Checking Account)</label>
+                    <label for="name">Name (e.g., Savings Group)</label>
                     <input type="text" id="name" th:field="*{name}" required />
                 </div>
                 
                 <div class="form-group">
-                    <label for="description">Description (e.g., Main checking account for daily expenses)</label>
+                    <label for="description">Description (e.g., Group for savings accounts)</label>
                     <textarea id="description" th:field="*{description}" rows="2" required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="accountGroupId">Account Group (optional)</label>
-                    <select id="accountGroupId" name="accountGroupId">
-                        <option value="">-- No Group --</option>
-                        <option th:each="group : ${accountGroups}" 
-                                th:value="${group.id}" 
-                                th:text="${group.name}"
-                                th:selected="${newAccount.accountGroup != null and newAccount.accountGroup.id == group.id}">
-                            Group Name
-                        </option>
-                    </select>
                 </div>
                 
                 <div class="form-actions">
                     <button type="submit" class="btn-primary">
-                        <span th:text="${newAccount.id != null ? 'Update Account' : 'Save Account'}">Save Account</span>
+                        <span th:text="${newAccountGroup.id != null ? 'Update Account Group' : 'Save Account Group'}">Save Account Group</span>
                     </button>
 
-                    <a th:if="${newAccount.id != null}" th:href="@{/accounts}" class="btn-cancel">
+                    <a th:if="${newAccountGroup.id != null}" th:href="@{/account-groups}" class="btn-cancel">
                         Cancel Edit
                     </a>
                 </div>
             </form>
         </div>
 
-        <h3>Existing Accounts</h3>
+        <h3>Existing Account Groups</h3>
         
         <div class="data-table-wrapper">
             <table class="data-table">
@@ -103,56 +95,51 @@
                     <tr>
                         <th>ID</th>
                         <th>Name</th>
-                        <th>Group</th>
                         <th>Description</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="account : ${accounts}">
-                        <td th:text="${account.id}">1</td>
-                        <td th:text="${account.name}">Checking Account</td>
-                        <td th:text="${account.accountGroup != null ? account.accountGroup.name : '-'}">-</td>
-                        <td th:text="${account.description}">Main checking account for daily expenses.</td>
+                    <tr th:each="accountGroup : ${accountGroups}">
+                        <td th:text="${accountGroup.id}">1</td>
+                        <td th:text="${accountGroup.name}">Savings Group</td>
+                        <td th:text="${accountGroup.description}">Group for savings accounts.</td>
                         <td>
-                            <a th:href="@{/accounts/edit/{id}(id=${account.id})}" class="btn-edit">
+                            <a th:href="@{/account-groups/edit/{id}(id=${accountGroup.id})}" class="btn-edit">
                                 Edit
                             </a>
                             
-                            <form th:action="@{/accounts/{id}/delete(id=${account.id})}" method="post" style="display: inline;" class="delete-account-form">
-                                <button type="button" class="btn-delete" th:attr="data-account-id=${account.id}">Delete</button>
+                            <form th:action="@{/account-groups/{id}/delete(id=${accountGroup.id})}" method="post" style="display: inline;" class="delete-accountgroup-form">
+                                <button type="button" class="btn-delete" th:attr="data-account-id=${accountGroup.id}">Delete</button>
                             </form>
                         </td>
                     </tr>
-                    <tr th:if="${accounts.empty}">
-                        <td colspan="5">No accounts defined yet. Please add a new one above.</td>
+                    <tr th:if="${accountGroups.empty}">
+                        <td colspan="4">No account groups defined yet. Please add a new one above.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <div class="mobile-list">
-            <div th:each="account : ${accounts}" class="mobile-card">
+            <div th:each="accountGroup : ${accountGroups}" class="mobile-card">
                 <div class="mobile-card-header">
                     <div class="mobile-card-title">
-                        <span th:text="${account.id} + ' - ' + ${account.name}">1 - Checking Account</span>
+                        <span th:text="${accountGroup.id} + ' - ' + ${accountGroup.name}">1 - Savings Group</span>
                     </div>
                 </div>
                 
-                <div class="mobile-card-group" th:if="${account.accountGroup != null}" style="font-size: 0.75rem; color: var(--text-mellow); margin-bottom: 0.25rem;">
-                    <span style="font-weight: 600;">Group:</span> <span th:text="${account.accountGroup.name}">Group Name</span>
-                </div>
-                <div class="mobile-card-description" th:text="${account.description}">Main checking account for daily expenses.</div>
+                <div class="mobile-card-description" th:text="${accountGroup.description}">Group for savings accounts.</div>
 
                 <div class="mobile-card-actions">
-                    <a th:href="@{/accounts/edit/{id}(id=${account.id})}" class="action-icon edit" title="Edit">
+                    <a th:href="@{/account-groups/edit/{id}(id=${accountGroup.id})}" class="action-icon edit" title="Edit">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                         </svg>
                     </a>
                     
-                    <form th:action="@{/accounts/{id}/delete(id=${account.id})}" method="post" style="display: inline;" class="delete-account-form">
-                        <button type="button" class="action-icon delete delete-btn-mobile" th:attr="data-account-id=${account.id}" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
+                    <form th:action="@{/account-groups/{id}/delete(id=${accountGroup.id})}" method="post" style="display: inline;" class="delete-accountgroup-form">
+                        <button type="button" class="action-icon delete delete-btn-mobile" th:attr="data-account-id=${accountGroup.id}" title="Delete" style="background: none; border: none; padding: 0; cursor: pointer;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -164,11 +151,13 @@
                 </div>
             </div>
 
-            <div th:if="${accounts.empty}" style="text-align: center; padding: 2rem; background-color: white; border-radius: 0.5rem; border: 1px solid #E5E7EB;">
-                No accounts defined yet. Please add a new one above.
+            <div th:if="${accountGroups.empty}" style="text-align: center; padding: 2rem; background-color: white; border-radius: 0.5rem; border: 1px solid #E5E7EB;">
+                No account groups defined yet. Please add a new one above.
             </div>
         </div>
     </div>
+    
+    <div th:replace="~{fragments/toast-script :: toastScript}"></div>
     
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -231,7 +220,7 @@
                     const form = button.closest('form');
                     
                     showModal(
-                        'Are you sure you want to delete this account? This cannot be undone and will affect existing transactions!', 
+                        'Are you sure you want to delete this account group? This cannot be undone and will affect existing transactions!', 
                         (confirmed) => {
                             if (confirmed) {
                                 form.submit();
@@ -267,6 +256,16 @@
                     showToast("Please use 'Cancel Edit' to hide the form.", 'error');
                  }
             });
+            
+            // --- Flash Message Handling ---
+            const flashMessageData = document.getElementById('flash-message-data');
+            if (flashMessageData) {
+                const message = flashMessageData.getAttribute('data-message');
+                const type = flashMessageData.getAttribute('data-type') || 'success';
+                if (message) {
+                    showToast(message, type);
+                }
+            }
         });
     </script>
 </body>

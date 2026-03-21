@@ -1,6 +1,7 @@
 package com.everrich.spendmanager.service;
 
 import com.everrich.spendmanager.entities.Account;
+import com.everrich.spendmanager.entities.AccountGroup;
 import com.everrich.spendmanager.repository.AccountRepository;
 
 import org.springframework.stereotype.Service;
@@ -36,5 +37,21 @@ public class AccountService {
 
     public Account findByName(String name) {
         return accountRepository.findByNameIgnoreCase(name);
+    }
+    
+    public List<Account> findByAccountGroup(AccountGroup accountGroup) {
+        List<Account> accounts = accountRepository.findByAccountGroup(accountGroup);
+        accounts.sort((a1, a2) -> a1.getName().compareToIgnoreCase(a2.getName()));
+        return accounts;
+    }
+    
+    public List<Account> findUngroupedAccounts() {
+        List<Account> accounts = accountRepository.findByAccountGroupIsNull();
+        accounts.sort((a1, a2) -> a1.getName().compareToIgnoreCase(a2.getName()));
+        return accounts;
+    }
+    
+    public long countByAccountGroup(AccountGroup accountGroup) {
+        return accountRepository.countByAccountGroup(accountGroup);
     }
 }

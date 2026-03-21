@@ -86,26 +86,185 @@
             font-weight: 600;
         }
         
+        /* Group header row - collapsible */
+        .group-header-row {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .group-header-row:hover {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        }
+        
+        .group-header-row td {
+            padding: 0.65rem 0.75rem;
+            color: var(--primary-color);
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .group-header-row td:first-child {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .group-toggle-icon {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+        
+        .group-header-row.collapsed .group-toggle-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .group-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .group-count-badge {
+            font-weight: 400;
+            font-size: 0.7rem;
+            color: white;
+            background: var(--primary-color);
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.75rem;
+            margin-left: 0.25rem;
+        }
+        
+        /* Account detail rows */
+        .account-detail-row {
+            transition: all 0.2s ease;
+        }
+        
+        .account-detail-row.hidden {
+            display: none;
+        }
+        
+        .account-detail-row td:first-child {
+            padding-left: 2.5rem;
+        }
+        
+        /* Mobile group section - collapsible */
+        .group-section {
+            margin-bottom: 1rem;
+        }
+        
+        .group-header-card {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .group-header-card:hover {
+            filter: brightness(1.1);
+        }
+        
+        .group-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .group-header-top .group-name-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .group-header-top .group-toggle-icon-mobile {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.2s ease;
+        }
+        
+        .group-header-card.collapsed .group-toggle-icon-mobile {
+            transform: rotate(-90deg);
+        }
+        
+        .group-header-card .group-count {
+            font-size: 0.7rem;
+            font-weight: 400;
+            opacity: 0.85;
+            background: rgba(255,255,255,0.2);
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.5rem;
+        }
+        
+        .group-totals-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .group-totals-row .total-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+        
+        .group-totals-row .total-label {
+            font-size: 0.6rem;
+            opacity: 0.75;
+            text-transform: uppercase;
+        }
+        
+        .group-totals-row .total-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .group-accounts-container {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .group-accounts-container.collapsed {
+            max-height: 0 !important;
+        }
+        
         /* Balance card for mobile */
         .balance-card {
             background: white;
             border: 1px solid #E5E7EB;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
+            border-top: none;
+            padding: 0.85rem 1rem;
+        }
+        
+        .balance-card:first-child {
+            border-top: 1px solid #E5E7EB;
+        }
+        
+        .balance-card:last-child {
+            border-radius: 0 0 0.5rem 0.5rem;
         }
         
         .balance-card .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
         
         .balance-card .account-name {
             font-weight: 600;
             color: #374151;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
         
         .balance-card .card-body {
@@ -118,18 +277,37 @@
         .balance-card .balance-item {
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.15rem;
         }
         
         .balance-card .balance-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #6B7280;
             text-transform: uppercase;
         }
         
         .balance-card .balance-value {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 500;
+        }
+        
+        /* Grand total card */
+        .grand-total-card {
+            background: #F0FDF4;
+            border: 2px solid var(--accent-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .grand-total-card .card-header {
+            margin-bottom: 0.75rem;
+        }
+        
+        .grand-total-card .account-name {
+            font-weight: 700;
+            color: var(--accent-color);
+            font-size: 0.95rem;
         }
         
         /* Mobile list - hidden on desktop */
@@ -289,24 +467,45 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Account</th>
+                    <th>Account / Group</th>
                     <th>Starting Balance</th>
                     <th>Closing Balance</th>
                     <th>Net Change</th>
                 </tr>
             </thead>
             <tbody>
-                <tr th:each="summary : ${balanceSummaries}">
-                    <td th:text="${summary.accountName}">Account Name</td>
-                    <td th:text="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
-                    <td th:text="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
-                    <td th:classappend="${summary.netChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}">
-                        <span th:text="${(summary.netChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
-                    </td>
-                </tr>
-                <!-- Totals Row -->
-                <tr th:if="${!balanceSummaries.empty}" style="font-weight: bold; border-top: 2px solid #E5E7EB;">
-                    <td>Total</td>
+                <!-- Grouped view -->
+                <th:block th:each="group, groupStat : ${groupedBalanceSummaries}">
+                    <!-- Group Header Row with totals - clickable to expand/collapse (collapsed by default) -->
+                    <tr class="group-header-row collapsed" th:data-group-id="${groupStat.index}" onclick="toggleGroup(this)">
+                        <td>
+                            <div class="group-name-cell">
+                                <svg class="group-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                <span th:text="${group.groupName}">Group Name</span>
+                                <span class="group-count-badge" th:text="${#lists.size(group.accountSummaries)}">0</span>
+                            </div>
+                        </td>
+                        <td th:text="${#numbers.formatDecimal(group.totalStartingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                        <td th:text="${#numbers.formatDecimal(group.totalClosingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                        <td th:classappend="${group.totalNetChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}">
+                            <span th:text="${(group.totalNetChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(group.totalNetChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                        </td>
+                    </tr>
+                    <!-- Account rows within the group - collapsible (hidden by default) -->
+                    <tr th:each="summary : ${group.accountSummaries}" class="account-detail-row hidden" th:data-group-id="${groupStat.index}">
+                        <td th:text="${summary.accountName}">Account Name</td>
+                        <td th:text="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                        <td th:text="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
+                        <td th:classappend="${summary.netChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}">
+                            <span th:text="${(summary.netChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                        </td>
+                    </tr>
+                </th:block>
+                <!-- Grand Totals Row -->
+                <tr th:if="${!balanceSummaries.empty}" style="font-weight: bold; border-top: 2px solid #E5E7EB; background: #f0fdf4;">
+                    <td>Grand Total</td>
                     <td th:text="${#numbers.formatDecimal(totalStartingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
                     <td th:text="${#numbers.formatDecimal(totalClosingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</td>
                     <td th:classappend="${totalNetChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}">
@@ -322,32 +521,67 @@
 
         <!-- Mobile Cards -->
         <div class="balance-list-mobile">
-            <div th:each="summary : ${balanceSummaries}" class="balance-card">
-                <div class="card-header">
-                    <span class="account-name" th:text="${summary.accountName}">Account Name</span>
+            <!-- Grouped Mobile View -->
+            <div th:each="group, groupStat : ${groupedBalanceSummaries}" class="group-section">
+                <!-- Group Header with totals - clickable to expand/collapse (collapsed by default) -->
+                <div class="group-header-card collapsed" th:data-group-id="${'mobile-' + groupStat.index}" onclick="toggleGroupMobile(this)">
+                    <div class="group-header-top">
+                        <div class="group-name-wrapper">
+                            <svg class="group-toggle-icon-mobile" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <span th:text="${group.groupName}">Group Name</span>
+                        </div>
+                        <span class="group-count" th:text="${#lists.size(group.accountSummaries)} + ' account(s)'">0 account(s)</span>
+                    </div>
+                    <div class="group-totals-row">
+                        <div class="total-item">
+                            <span class="total-label">Starting</span>
+                            <span class="total-value" th:text="${#numbers.formatDecimal(group.totalStartingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                        </div>
+                        <div class="total-item">
+                            <span class="total-label">Closing</span>
+                            <span class="total-value" th:text="${#numbers.formatDecimal(group.totalClosingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                        </div>
+                        <div class="total-item">
+                            <span class="total-label">Net Change</span>
+                            <span class="total-value" 
+                                  th:classappend="${group.totalNetChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}"
+                                  th:text="${(group.totalNetChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(group.totalNetChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="balance-item">
-                        <span class="balance-label">Starting</span>
-                        <span class="balance-value" th:text="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
-                    </div>
-                    <div class="balance-item">
-                        <span class="balance-label">Closing</span>
-                        <span class="balance-value" th:text="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
-                    </div>
-                    <div class="balance-item">
-                        <span class="balance-label">Net Change</span>
-                        <span class="balance-value" 
-                              th:classappend="${summary.netChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}"
-                              th:text="${(summary.netChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                
+                <!-- Account cards container - collapsible (collapsed by default) -->
+                <div class="group-accounts-container collapsed" th:data-group-id="${'mobile-' + groupStat.index}">
+                    <div th:each="summary : ${group.accountSummaries}" class="balance-card">
+                        <div class="card-header">
+                            <span class="account-name" th:text="${summary.accountName}">Account Name</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="balance-item">
+                                <span class="balance-label">Starting</span>
+                                <span class="balance-value" th:text="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                            </div>
+                            <div class="balance-item">
+                                <span class="balance-label">Closing</span>
+                                <span class="balance-value" th:text="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                            </div>
+                            <div class="balance-item">
+                                <span class="balance-label">Net Change</span>
+                                <span class="balance-value" 
+                                      th:classappend="${summary.netChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}"
+                                      th:text="${(summary.netChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Totals Card -->
-            <div th:if="${!balanceSummaries.empty}" class="balance-card" style="background: #F9FAFB; border-color: var(--accent-color);">
+            <!-- Grand Totals Card -->
+            <div th:if="${!balanceSummaries.empty}" class="grand-total-card">
                 <div class="card-header">
-                    <span class="account-name" style="color: var(--accent-color);">Total (All Accounts)</span>
+                    <span class="account-name">Grand Total (All Accounts)</span>
                 </div>
                 <div class="card-body">
                     <div class="balance-item">
@@ -374,6 +608,34 @@
     </div>
 
     <script>
+        // Desktop table group toggle
+        function toggleGroup(headerRow) {
+            const groupId = headerRow.dataset.groupId;
+            const detailRows = document.querySelectorAll(`.account-detail-row[data-group-id="${groupId}"]`);
+            const isCollapsed = headerRow.classList.toggle('collapsed');
+            
+            detailRows.forEach(row => {
+                if (isCollapsed) {
+                    row.classList.add('hidden');
+                } else {
+                    row.classList.remove('hidden');
+                }
+            });
+        }
+        
+        // Mobile group toggle
+        function toggleGroupMobile(headerCard) {
+            const groupId = headerCard.dataset.groupId;
+            const accountsContainer = document.querySelector(`.group-accounts-container[data-group-id="${groupId}"]`);
+            const isCollapsed = headerCard.classList.toggle('collapsed');
+            
+            if (isCollapsed) {
+                accountsContainer.classList.add('collapsed');
+            } else {
+                accountsContainer.classList.remove('collapsed');
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', function () {
             const timeframeSelect = document.getElementById('timeframe');
             const dateRangeFields = document.getElementById('date-range-fields');
@@ -559,6 +821,13 @@
 
             window.addEventListener('load', function () {
                 accountCheckboxes.forEach(cb => cb.disabled = false);
+            });
+            
+            // Initialize mobile containers - set max-height to 0 since collapsed by default
+            document.querySelectorAll('.group-accounts-container').forEach(container => {
+                // Store the scroll height for when we expand
+                container.dataset.scrollHeight = container.scrollHeight + 'px';
+                container.style.maxHeight = '0';
             });
         });
     </script>

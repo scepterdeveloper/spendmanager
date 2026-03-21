@@ -1,12 +1,9 @@
 package com.everrich.spendmanager.entities;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,9 +12,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @Setter
 @Entity
-@Table(name = "ACCOUNT")
+@Table(name = "ACCOUNT_GROUP")
 @NoArgsConstructor
-public class Account {
+public class AccountGroup {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,18 +24,8 @@ public class Account {
     
     private String description;
     
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "account_group_id")
-    private AccountGroup accountGroup;
-    
-    public Account(String name, String description) {
+    public AccountGroup(String name, String description) {
         this.name = name;
         this.description = description;
-    }
-    
-    public Account(String name, String description, AccountGroup accountGroup) {
-        this.name = name;
-        this.description = description;
-        this.accountGroup = accountGroup;
     }
 }

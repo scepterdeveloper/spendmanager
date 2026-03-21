@@ -7,9 +7,12 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import com.everrich.spendmanager.dto.AccountBalanceSummary;
+import com.everrich.spendmanager.dto.GroupedBalanceSummary;
 import com.everrich.spendmanager.entities.Account;
+import com.everrich.spendmanager.entities.AccountGroup;
 import com.everrich.spendmanager.entities.BalanceType;
 import com.everrich.spendmanager.service.AccountBalanceService;
+import com.everrich.spendmanager.service.AccountGroupService;
 import com.everrich.spendmanager.service.AccountService;
 
 import java.math.BigDecimal;
@@ -21,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,10 +37,12 @@ public class BalanceController {
 
     private final AccountService accountService;
     private final AccountBalanceService accountBalanceService;
+    private final AccountGroupService accountGroupService;
 
-    public BalanceController(AccountService accountService, AccountBalanceService accountBalanceService) {
+    public BalanceController(AccountService accountService, AccountBalanceService accountBalanceService, AccountGroupService accountGroupService) {
         this.accountService = accountService;
         this.accountBalanceService = accountBalanceService;
+        this.accountGroupService = accountGroupService;
     }
 
     @GetMapping
@@ -90,10 +96,23 @@ public class BalanceController {
                     .toList();
         }
 
-        // Calculate balance summaries for selected accounts
+        // Calculate balance summaries for selected accounts, grouped by AccountGroup
         List<AccountBalanceSummary> balanceSummaries = new ArrayList<>();
         BigDecimal totalStartingBalance = BigDecimal.ZERO;
         BigDecimal totalClosingBalance = BigDecimal.ZERO;
+
+        // Group accounts by their AccountGroup
+        // Use LinkedHashMap to maintain insertion order
+        Map<Long, GroupedBalanceSummary> groupedSummariesMap = new LinkedHashMap<>();
+        // Special key for ungrouped accounts (null group)
+        final Long UNGROUPED_KEY = -1L;
+        groupedSummariesMap.put(UNGROUPED_KEY, new GroupedBalanceSummary(null, "Ungrouped"));
+
+        // Pre-populate with all account groups
+        List<AccountGroup> allGroups = accountGroupService.findAll();
+        for (AccountGroup group : allGroups) {
+            groupedSummariesMap.put(group.getId(), new GroupedBalanceSummary(group.getId(), group.getName()));
+        }
 
         for (Account account : selectedAccounts) {
             // Use DAY_BEGIN_BALANCE for starting balance (first balance of the start day)
@@ -109,11 +128,29 @@ public class BalanceController {
 
             balanceSummaries.add(summary);
 
+            // Add to grouped summary
+            Long groupKey = (account.getAccountGroup() != null) ? account.getAccountGroup().getId() : UNGROUPED_KEY;
+            GroupedBalanceSummary groupedSummary = groupedSummariesMap.get(groupKey);
+            if (groupedSummary != null) {
+                groupedSummary.addAccountSummary(summary);
+            }
+
             totalStartingBalance = totalStartingBalance.add(startingBalance);
             totalClosingBalance = totalClosingBalance.add(closingBalance);
         }
 
+        // Convert to list and filter out empty groups
+        List<GroupedBalanceSummary> groupedBalanceSummaries = new ArrayList<>();
+        for (Map.Entry<Long, GroupedBalanceSummary> entry : groupedSummariesMap.entrySet()) {
+            GroupedBalanceSummary group = entry.getValue();
+            // Only include groups that have accounts
+            if (!group.getAccountSummaries().isEmpty()) {
+                groupedBalanceSummaries.add(group);
+            }
+        }
+
         model.addAttribute("balanceSummaries", balanceSummaries);
+        model.addAttribute("groupedBalanceSummaries", groupedBalanceSummaries);
         model.addAttribute("totalStartingBalance", totalStartingBalance);
         model.addAttribute("totalClosingBalance", totalClosingBalance);
         model.addAttribute("totalNetChange", totalClosingBalance.subtract(totalStartingBalance));

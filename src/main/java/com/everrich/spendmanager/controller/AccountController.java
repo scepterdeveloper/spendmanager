@@ -1,6 +1,8 @@
 package com.everrich.spendmanager.controller;
 
 import com.everrich.spendmanager.entities.Account;
+import com.everrich.spendmanager.entities.AccountGroup;
+import com.everrich.spendmanager.service.AccountGroupService;
 import com.everrich.spendmanager.service.AccountService;
 
 import org.springframework.stereotype.Controller;
@@ -12,9 +14,11 @@ import org.springframework.web.bind.annotation.*;
 public class AccountController {
 
     private final AccountService accountService;
+    private final AccountGroupService accountGroupService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, AccountGroupService accountGroupService) {
         this.accountService = accountService;
+        this.accountGroupService = accountGroupService;
     }
 
     // List all accounts (GET /accounts)
@@ -22,8 +26,9 @@ public class AccountController {
     public String listAccounts(Model model) {
         model.addAttribute("appName", "EverRich");
         model.addAttribute("accounts", accountService.findAll());
+        model.addAttribute("accountGroups", accountGroupService.findAll());
         model.addAttribute("newAccount", new Account()); // For the creation form
-        return "account-management"; // Assuming you will create an account-management.html template
+        return "account-management";
     }
 
     // Handles fetching an account for editing (GET /accounts/edit/{id})
@@ -38,6 +43,7 @@ public class AccountController {
         
         // Also load the list of all accounts for the table view
         model.addAttribute("accounts", accountService.findAll());
+        model.addAttribute("accountGroups", accountGroupService.findAll());
         
         // We reuse the same template
         return "account-management";
@@ -45,7 +51,14 @@ public class AccountController {
 
     // Save a new or edited account (POST /accounts)
     @PostMapping
-    public String saveAccount(@ModelAttribute Account account) {
+    public String saveAccount(@ModelAttribute Account account, @RequestParam(required = false) Long accountGroupId) {
+        // Handle account group assignment
+        if (accountGroupId != null) {
+            AccountGroup accountGroup = accountGroupService.findById(accountGroupId).orElse(null);
+            account.setAccountGroup(accountGroup);
+        } else {
+            account.setAccountGroup(null);
+        }
         accountService.save(account);
         return "redirect:/accounts";
     }
