@@ -356,6 +356,28 @@
                 display: block;
             }
         }
+        
+        /* Modal Styles for Mobile */
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:flex-end; }
+        .modal-overlay.show { display:flex; }
+        .modal-content { background:white; width:100%; max-height:85vh; border-radius:1rem 1rem 0 0; overflow:hidden; display:flex; flex-direction:column; transform:translateY(100%); animation:slideUp 0.3s ease forwards; }
+        @keyframes slideUp { to { transform:translateY(0); } }
+        .modal-header { background:linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%); color:white; padding:1rem; display:flex; justify-content:space-between; align-items:center; }
+        .modal-header h3 { margin:0; font-size:1rem; font-weight:600; }
+        .modal-close-btn { background:rgba(255,255,255,0.2); border:none; color:white; width:32px; height:32px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
+        .modal-totals { background:linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%); color:white; padding:0 1rem 1rem; display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; text-align:center; }
+        .modal-totals .total-item { display:flex; flex-direction:column; gap:0.1rem; }
+        .modal-totals .total-label { font-size:0.65rem; opacity:0.75; text-transform:uppercase; }
+        .modal-totals .total-value { font-size:0.9rem; font-weight:600; }
+        .modal-body { flex:1; overflow-y:auto; padding:0; }
+        .modal-account-card { padding:0.85rem 1rem; border-bottom:1px solid #E5E7EB; }
+        .modal-account-card:last-child { border-bottom:none; }
+        .modal-account-card .account-name { font-weight:600; color:#374151; font-size:0.9rem; margin-bottom:0.5rem; }
+        .modal-account-card .account-details { display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; text-align:center; }
+        .modal-account-card .detail-item { display:flex; flex-direction:column; gap:0.15rem; }
+        .modal-account-card .detail-label { font-size:0.65rem; color:#6B7280; text-transform:uppercase; }
+        .modal-account-card .detail-value { font-size:0.8rem; font-weight:500; }
+        .group-accounts-data { display:none; }
     </style>
 </head>
 
@@ -523,16 +545,23 @@
         <div class="balance-list-mobile">
             <!-- Grouped Mobile View -->
             <div th:each="group, groupStat : ${groupedBalanceSummaries}" class="group-section">
-                <!-- Group Header with totals - clickable to expand/collapse (collapsed by default) -->
-                <div class="group-header-card collapsed" th:data-group-id="${'mobile-' + groupStat.index}" onclick="toggleGroupMobile(this)">
+                <!-- Group Header - clickable to open modal -->
+                <div class="group-header-card" 
+                     th:data-group-id="${groupStat.index}"
+                     th:data-group-name="${group.groupName}"
+                     th:data-starting="${#numbers.formatDecimal(group.totalStartingBalance, 1, 'COMMA', 2, 'POINT')}"
+                     th:data-closing="${#numbers.formatDecimal(group.totalClosingBalance, 1, 'COMMA', 2, 'POINT')}"
+                     th:data-netchange="${#numbers.formatDecimal(group.totalNetChange, 1, 'COMMA', 2, 'POINT')}"
+                     th:data-netchange-positive="${group.totalNetChange.signum() >= 0}"
+                     onclick="openGroupModal(this)">
                     <div class="group-header-top">
                         <div class="group-name-wrapper">
-                            <svg class="group-toggle-icon-mobile" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
                             <span th:text="${group.groupName}">Group Name</span>
                         </div>
-                        <span class="group-count" th:text="${#lists.size(group.accountSummaries)} + ' account(s)'">0 account(s)</span>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <span class="group-count" th:text="${#lists.size(group.accountSummaries)} + ' account(s)'">0 account(s)</span>
+                            <svg style="width:18px;height:18px;opacity:0.85;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </div>
                     </div>
                     <div class="group-totals-row">
                         <div class="total-item">
@@ -551,30 +580,14 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Account cards container - collapsible (collapsed by default) -->
-                <div class="group-accounts-container collapsed" th:data-group-id="${'mobile-' + groupStat.index}">
-                    <div th:each="summary : ${group.accountSummaries}" class="balance-card">
-                        <div class="card-header">
-                            <span class="account-name" th:text="${summary.accountName}">Account Name</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="balance-item">
-                                <span class="balance-label">Starting</span>
-                                <span class="balance-value" th:text="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
-                            </div>
-                            <div class="balance-item">
-                                <span class="balance-label">Closing</span>
-                                <span class="balance-value" th:text="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
-                            </div>
-                            <div class="balance-item">
-                                <span class="balance-label">Net Change</span>
-                                <span class="balance-value" 
-                                      th:classappend="${summary.netChange.signum() >= 0 ? 'net-change-positive' : 'net-change-negative'}"
-                                      th:text="${(summary.netChange.signum() >= 0 ? '+' : '') + #numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')} + ' €'">0,00 €</span>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Hidden data for modal -->
+                <div class="group-accounts-data" th:data-group-id="${groupStat.index}">
+                    <div th:each="summary : ${group.accountSummaries}" class="account-data"
+                         th:data-name="${summary.accountName}"
+                         th:data-starting="${#numbers.formatDecimal(summary.startingBalance, 1, 'COMMA', 2, 'POINT')}"
+                         th:data-closing="${#numbers.formatDecimal(summary.closingBalance, 1, 'COMMA', 2, 'POINT')}"
+                         th:data-netchange="${#numbers.formatDecimal(summary.netChange, 1, 'COMMA', 2, 'POINT')}"
+                         th:data-netchange-positive="${summary.netChange.signum() >= 0}"></div>
                 </div>
             </div>
 
@@ -605,9 +618,57 @@
                 No account balances available.
             </div>
         </div>
+        
+        <!-- Modal for Account Details (Mobile) -->
+        <div id="group-modal" class="modal-overlay" onclick="closeGroupModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3 id="modal-group-name">Group Name</h3>
+                    <button class="modal-close-btn" onclick="closeGroupModal(event)">✕</button>
+                </div>
+                <div class="modal-totals">
+                    <div class="total-item"><span class="total-label">Starting</span><span class="total-value" id="modal-starting">0 €</span></div>
+                    <div class="total-item"><span class="total-label">Closing</span><span class="total-value" id="modal-closing">0 €</span></div>
+                    <div class="total-item"><span class="total-label">Net Change</span><span class="total-value" id="modal-netchange">0 €</span></div>
+                </div>
+                <div class="modal-body" id="modal-accounts"></div>
+            </div>
+        </div>
     </div>
 
     <script>
+        // Modal functions for mobile
+        function openGroupModal(card) {
+            const groupId = card.dataset.groupId;
+            const modal = document.getElementById('group-modal');
+            document.getElementById('modal-group-name').textContent = card.dataset.groupName;
+            document.getElementById('modal-starting').textContent = card.dataset.starting + ' €';
+            document.getElementById('modal-closing').textContent = card.dataset.closing + ' €';
+            const nc = document.getElementById('modal-netchange');
+            const isPositive = card.dataset.netchangePositive === 'true';
+            nc.textContent = (isPositive ? '+' : '') + card.dataset.netchange + ' €';
+            nc.className = 'total-value ' + (isPositive ? 'net-change-positive' : 'net-change-negative');
+            const dataContainer = document.querySelector('.group-accounts-data[data-group-id="' + groupId + '"]');
+            const accounts = dataContainer.querySelectorAll('.account-data');
+            let html = '';
+            accounts.forEach(function(acc) {
+                const pos = acc.dataset.netchangePositive === 'true';
+                html += '<div class="modal-account-card"><div class="account-name">' + acc.dataset.name + '</div><div class="account-details">';
+                html += '<div class="detail-item"><span class="detail-label">Starting</span><span class="detail-value">' + acc.dataset.starting + ' €</span></div>';
+                html += '<div class="detail-item"><span class="detail-label">Closing</span><span class="detail-value">' + acc.dataset.closing + ' €</span></div>';
+                html += '<div class="detail-item"><span class="detail-label">Net Change</span><span class="detail-value ' + (pos ? 'net-change-positive' : 'net-change-negative') + '">' + (pos ? '+' : '') + acc.dataset.netchange + ' €</span></div>';
+                html += '</div></div>';
+            });
+            document.getElementById('modal-accounts').innerHTML = html;
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeGroupModal(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('group-modal').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+        
         // Desktop table group toggle
         function toggleGroup(headerRow) {
             const groupId = headerRow.dataset.groupId;
