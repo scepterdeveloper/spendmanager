@@ -21,14 +21,17 @@ import java.beans.PropertyEditorSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import com.everrich.spendmanager.multitenancy.TenantContext;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 @RequestMapping("/transactions")
@@ -195,7 +198,7 @@ public class TransactionController {
     @GetMapping("/edit/{id}")
     public String editTransaction(
         @PathVariable("id") Long id, 
-        @RequestParam Map<String, String> params, 
+        HttpServletRequest request,
         Model model) {
         
         model.addAttribute("appName", "EverRich");
@@ -206,8 +209,10 @@ public class TransactionController {
             model.addAttribute("operations", TransactionOperation.values());
         });        
 
+        // Build filter params map that preserves multiple values for accountIds and categoryIds
+        Map<String, List<String>> filterParams = buildFilterParamsMap(request);
+
         if (optionalTransaction.isEmpty()) {
-            params.forEach(model::addAttribute);
             return "redirect:/transactions"; 
         }
 
@@ -215,16 +220,44 @@ public class TransactionController {
         model.addAttribute("categories", categoryService.findAll());
         model.addAttribute("accounts", accountService.findAll()); 
         
-        model.addAttribute("filterParams", params);
+        model.addAttribute("filterParams", filterParams);
         
         return "transaction-form";
+    }
+    
+    /**
+     * Build a filter params map that preserves multiple values for multi-value parameters
+     * like accountIds and categoryIds.
+     */
+    private Map<String, List<String>> buildFilterParamsMap(HttpServletRequest request) {
+        Map<String, List<String>> filterParams = new HashMap<>();
+        Map<String, String[]> parameterMap = request.getParameterMap();
+        
+        for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
+            String key = entry.getKey();
+            String[] values = entry.getValue();
+            
+            if (values != null && values.length > 0) {
+                List<String> valueList = new ArrayList<>();
+                for (String value : values) {
+                    if (value != null && !value.trim().isEmpty()) {
+                        valueList.add(value);
+                    }
+                }
+                if (!valueList.isEmpty()) {
+                    filterParams.put(key, valueList);
+                }
+            }
+        }
+        
+        return filterParams;
     }
 
     @PostMapping("/save")
     public String saveTransaction(
         @ModelAttribute Transaction transaction,
         @RequestParam(required = false) Long originalCategoryId, 
-        @RequestParam Map<String, Object> filterParams, 
+        HttpServletRequest request,
         RedirectAttributes redirectAttributes) {
 
         boolean isNewTransaction = transaction.getId() == null; 
@@ -277,15 +310,37 @@ public class TransactionController {
         if (isNewTransaction) {
             return "redirect:/dashboard"; 
         } else {
-            filterParams.forEach(redirectAttributes::addAttribute);
+            // Add filter parameters to redirect, preserving multi-value params
+            addFilterParamsToRedirect(request, redirectAttributes);
             return "redirect:/transactions";
+        }
+    }
+    
+    /**
+     * Add filter parameters to redirect attributes, properly handling multi-value parameters.
+     */
+    private void addFilterParamsToRedirect(HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        // List of filter parameter names to include in redirect
+        List<String> filterParamNames = List.of("timeframe", "startDate", "endDate", "accountIds", "categoryIds", "reviewedFilter", "query");
+        
+        Map<String, String[]> parameterMap = request.getParameterMap();
+        
+        for (String paramName : filterParamNames) {
+            String[] values = parameterMap.get(paramName);
+            if (values != null) {
+                for (String value : values) {
+                    if (value != null && !value.trim().isEmpty()) {
+                        redirectAttributes.addAttribute(paramName, value);
+                    }
+                }
+            }
         }
     }
     
     @PostMapping("/{id}/delete")
     public String deleteTransaction(
         @PathVariable("id") Long id, 
-        @RequestParam Map<String, Object> filterParams, 
+        HttpServletRequest request,
         RedirectAttributes redirectAttributes) {
         
         try {
@@ -297,7 +352,8 @@ public class TransactionController {
             redirectAttributes.addFlashAttribute("messageType", "error");
         }
         
-        filterParams.forEach(redirectAttributes::addAttribute);
+        // Add filter parameters to redirect, preserving multi-value params
+        addFilterParamsToRedirect(request, redirectAttributes);
 
         return "redirect:/transactions";
     }

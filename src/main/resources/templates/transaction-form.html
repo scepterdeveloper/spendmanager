@@ -431,9 +431,12 @@
             <form th:action="@{/transactions/save}" th:object="${transaction}" method="post">
                 <input type="hidden" th:field="*{id}" />
                 <input type="hidden" th:field="*{statementId}" />
-                <div th:each="entry : ${filterParams}">
-                    <input type="hidden" th:name="${entry.key}" th:value="${entry.value}" />
-                </div>
+                <!-- Render hidden inputs for filter parameters, supporting multi-value params like accountIds and categoryIds -->
+                <th:block th:each="entry : ${filterParams}">
+                    <th:block th:each="value : ${entry.value}">
+                        <input type="hidden" th:name="${entry.key}" th:value="${value}" />
+                    </th:block>
+                </th:block>
 
                 <div class="form-group">
                     <label for="date">Date</label>

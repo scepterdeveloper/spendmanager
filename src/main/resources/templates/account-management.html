@@ -8,6 +8,99 @@
     <style>
         /* Page-specific styles for Account Management */
         
+        /* Search box styling */
+        .search-container {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .search-input-wrapper {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+        
+        .search-input-wrapper svg {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-mellow);
+            pointer-events: none;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+        }
+        
+        .clear-search-btn {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-mellow);
+            cursor: pointer;
+            padding: 0.25rem;
+            display: none;
+        }
+        
+        .clear-search-btn.visible {
+            display: block;
+        }
+        
+        .clear-search-btn:hover {
+            color: var(--danger-color);
+        }
+        
+        /* Column width adjustments */
+        .data-table th:nth-child(1),
+        .data-table td:nth-child(1) {
+            width: 60px;
+        }
+        
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2) {
+            width: 150px;
+        }
+        
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) {
+            width: 100px;
+        }
+        
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) {
+            width: auto;
+            min-width: 300px;
+        }
+        
+        .data-table th:nth-child(5),
+        .data-table td:nth-child(5) {
+            width: 130px;
+        }
+        
+        /* No results message */
+        .no-results-message {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-mellow);
+            font-style: italic;
+        }
+        
         /* Mobile responsive title override */
         @media (max-width: 767px) {
             .page-header h2 {
@@ -17,6 +110,10 @@
             .page-header h2::after {
                 content: "Manage Accounts";
                 font-size: 1.25rem;
+            }
+            
+            .search-input-wrapper {
+                max-width: 100%;
             }
         }
     </style>
@@ -97,8 +194,16 @@
 
         <h3>Existing Accounts</h3>
         
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" id="account-search" class="search-input" placeholder="Search by ID, name, group, or description..." />
+                <button type="button" id="clear-search" class="clear-search-btn">&times;</button>
+            </div>
+        </div>
+        
         <div class="data-table-wrapper">
-            <table class="data-table">
+            <table class="data-table" id="accounts-table">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -267,6 +372,104 @@
                     showToast("Please use 'Cancel Edit' to hide the form.", 'error');
                  }
             });
+
+            // --- Search Functionality ---
+            const searchInput = document.getElementById('account-search');
+            const clearSearchBtn = document.getElementById('clear-search');
+            const accountsTable = document.getElementById('accounts-table');
+            const tableBody = accountsTable ? accountsTable.querySelector('tbody') : null;
+            const mobileList = document.querySelector('.mobile-list');
+            const mobileCards = mobileList ? mobileList.querySelectorAll('.mobile-card') : [];
+
+            function filterAccounts(searchTerm) {
+                const term = searchTerm.toLowerCase().trim();
+                
+                // Filter table rows
+                if (tableBody) {
+                    const rows = tableBody.querySelectorAll('tr');
+                    let visibleCount = 0;
+                    
+                    rows.forEach(row => {
+                        if (row.querySelector('td[colspan]')) return; // Skip "no accounts" row
+                        
+                        const id = row.cells[0]?.textContent?.toLowerCase() || '';
+                        const name = row.cells[1]?.textContent?.toLowerCase() || '';
+                        const group = row.cells[2]?.textContent?.toLowerCase() || '';
+                        const description = row.cells[3]?.textContent?.toLowerCase() || '';
+                        
+                        const matches = id.includes(term) || name.includes(term) || 
+                                       group.includes(term) || description.includes(term);
+                        
+                        row.style.display = matches ? '' : 'none';
+                        if (matches) visibleCount++;
+                    });
+
+                    // Show/hide no results message for table
+                    let noResultsRow = tableBody.querySelector('.no-results-row');
+                    if (visibleCount === 0 && term !== '') {
+                        if (!noResultsRow) {
+                            noResultsRow = document.createElement('tr');
+                            noResultsRow.className = 'no-results-row';
+                            noResultsRow.innerHTML = '<td colspan="5" class="no-results-message">No accounts match your search.</td>';
+                            tableBody.appendChild(noResultsRow);
+                        }
+                        noResultsRow.style.display = '';
+                    } else if (noResultsRow) {
+                        noResultsRow.style.display = 'none';
+                    }
+                }
+                
+                // Filter mobile cards
+                let mobileVisibleCount = 0;
+                mobileCards.forEach(card => {
+                    const titleEl = card.querySelector('.mobile-card-title');
+                    const groupEl = card.querySelector('.mobile-card-group');
+                    const descEl = card.querySelector('.mobile-card-description');
+                    
+                    const title = titleEl?.textContent?.toLowerCase() || '';
+                    const group = groupEl?.textContent?.toLowerCase() || '';
+                    const description = descEl?.textContent?.toLowerCase() || '';
+                    
+                    const matches = title.includes(term) || group.includes(term) || description.includes(term);
+                    
+                    card.style.display = matches ? '' : 'none';
+                    if (matches) mobileVisibleCount++;
+                });
+
+                // Show/hide no results message for mobile
+                let mobileNoResults = mobileList?.querySelector('.mobile-no-results');
+                if (mobileVisibleCount === 0 && term !== '' && mobileCards.length > 0) {
+                    if (!mobileNoResults) {
+                        mobileNoResults = document.createElement('div');
+                        mobileNoResults.className = 'mobile-no-results no-results-message';
+                        mobileNoResults.style.background = 'white';
+                        mobileNoResults.style.borderRadius = '0.5rem';
+                        mobileNoResults.style.border = '1px solid #E5E7EB';
+                        mobileNoResults.textContent = 'No accounts match your search.';
+                        mobileList.appendChild(mobileNoResults);
+                    }
+                    mobileNoResults.style.display = '';
+                } else if (mobileNoResults) {
+                    mobileNoResults.style.display = 'none';
+                }
+
+                // Show/hide clear button
+                clearSearchBtn.classList.toggle('visible', term !== '');
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    filterAccounts(e.target.value);
+                });
+            }
+
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    filterAccounts('');
+                    searchInput.focus();
+                });
+            }
         });
     </script>
 </body>
