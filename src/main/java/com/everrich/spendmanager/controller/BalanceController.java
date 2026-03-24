@@ -2,6 +2,7 @@ package com.everrich.spendmanager.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -11,9 +12,11 @@ import com.everrich.spendmanager.dto.GroupedBalanceSummary;
 import com.everrich.spendmanager.entities.Account;
 import com.everrich.spendmanager.entities.AccountGroup;
 import com.everrich.spendmanager.entities.BalanceType;
+import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.service.AccountBalanceService;
 import com.everrich.spendmanager.service.AccountGroupService;
 import com.everrich.spendmanager.service.AccountService;
+import com.everrich.spendmanager.service.TransactionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +42,16 @@ public class BalanceController {
     private final AccountService accountService;
     private final AccountBalanceService accountBalanceService;
     private final AccountGroupService accountGroupService;
+    private final TransactionService transactionService;
 
-    public BalanceController(AccountService accountService, AccountBalanceService accountBalanceService, AccountGroupService accountGroupService) {
+    public BalanceController(AccountService accountService, 
+                             AccountBalanceService accountBalanceService, 
+                             AccountGroupService accountGroupService,
+                             TransactionService transactionService) {
         this.accountService = accountService;
         this.accountBalanceService = accountBalanceService;
         this.accountGroupService = accountGroupService;
+        this.transactionService = transactionService;
     }
 
     @GetMapping
@@ -161,8 +170,70 @@ public class BalanceController {
         model.addAttribute("selectedEndDate", endDateStr);
         model.addAttribute("selectedAccountIds", accountIds);
         model.addAttribute("filterParams", params);
+        
+        // Pass computed date range for transaction modal (formatted as yyyy-MM-dd)
+        model.addAttribute("computedStartDate", startDateTime.toLocalDate().format(formatter));
+        model.addAttribute("computedEndDate", endDateTime.toLocalDate().format(formatter));
 
         return "balance-management";
+    }
+
+    /**
+     * REST endpoint to fetch transactions for a specific account within a date range.
+     * Used by the transactions modal in the balance management page.
+     */
+    @GetMapping("/api/transactions")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getTransactionsForAccount(
+            @RequestParam Long accountId,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        
+        log.info("Fetching transactions for account {} from {} to {}", accountId, startDate, endDate);
+        
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate start = LocalDate.parse(startDate, formatter);
+        LocalDate end = LocalDate.parse(endDate, formatter);
+        
+        // Use the existing filtered transactions method with date_range timeframe
+        List<Transaction> transactions = transactionService.getFilteredTransactions(
+                "date_range",
+                start,
+                end,
+                List.of(accountId),
+                null,  // no category filter
+                null,  // no reviewed filter
+                null   // no query filter
+        );
+        
+        // Calculate totals
+        BigDecimal totalCredits = transactionService.calculateTotalCredits(transactions);
+        BigDecimal totalDebits = transactionService.calculateTotalDebits(transactions);
+        BigDecimal netChange = totalCredits.subtract(totalDebits);
+        
+        // Map transactions to a simpler format for JSON response
+        List<Map<String, Object>> transactionList = new ArrayList<>();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
+        
+        for (Transaction t : transactions) {
+            Map<String, Object> txMap = new HashMap<>();
+            txMap.put("id", t.getId());
+            txMap.put("date", t.getDate() != null ? t.getDate().format(dateFormatter) : "");
+            txMap.put("description", t.getDescription());
+            txMap.put("amount", t.getAmount());
+            txMap.put("operation", t.getOperation() != null ? t.getOperation().name() : "");
+            txMap.put("category", t.getCategoryEntity() != null ? t.getCategoryEntity().getName() : "");
+            transactionList.add(txMap);
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("transactions", transactionList);
+        response.put("totalCredits", totalCredits);
+        response.put("totalDebits", totalDebits);
+        response.put("netChange", netChange);
+        response.put("count", transactions.size());
+        
+        return ResponseEntity.ok(response);
     }
 
     /**
