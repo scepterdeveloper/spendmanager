@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,6 +24,9 @@ public class Statement {
     private LocalDateTime uploadDateTime;
     private StatementStatus status; // Enum: UPLOADING, PROCESSING, COMPLETED, FAILED
     private byte[] content;
+    
+    @Enumerated(EnumType.STRING)
+    private StatementFileType fileType = StatementFileType.PDF; // Default to PDF for backward compatibility
     
     // Optional statement metadata fields - derived from LLM parsing when available
     private LocalDate periodStartDate;
@@ -145,5 +150,13 @@ public class Statement {
 
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+    }
+
+    public StatementFileType getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(StatementFileType fileType) {
+        this.fileType = fileType;
     }
 }

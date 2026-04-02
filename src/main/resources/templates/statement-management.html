@@ -550,7 +550,13 @@
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     const file = files[0];
-                    if (file.type === 'application/pdf') {
+                    const fileName = file.name.toLowerCase();
+                    const isValidType = file.type === 'application/pdf' || 
+                                        file.type === 'text/csv' || 
+                                        file.type === 'application/csv' ||
+                                        fileName.endsWith('.pdf') || 
+                                        fileName.endsWith('.csv');
+                    if (isValidType) {
                         // Create a new DataTransfer to set files
                         const dataTransfer = new DataTransfer();
                         dataTransfer.items.add(file);
@@ -558,7 +564,7 @@
                         updateDropzoneUI();
                         updateUploadButtonState();
                     } else {
-                        showToast('Please select a PDF file', 'error');
+                        showToast('Please select a PDF or CSV file', 'error');
                     }
                 }
             });
@@ -925,7 +931,7 @@
     <div id="uploadModal" class="modal-overlay" onclick="if(event.target===this) closeUploadModal();">
         <div class="modal-content" style="max-width: 550px;">
             <div class="modal-header">
-                <h3>Upload New Statement (PDF)</h3>
+                <h3>Upload Statement</h3>
                 <button type="button" class="close-modal" onclick="closeUploadModal();">&times;</button>
             </div>
             
@@ -939,9 +945,9 @@
                 </div>
                 
                 <div class="modal-form-field">
-                    <label for="fileInput">PDF Statement File</label>
+                    <label for="fileInput">Statement File (PDF or CSV)</label>
                     <div class="file-upload-wrapper">
-                        <input type="file" id="fileInput" name="file" accept="application/pdf" required class="file-upload-input">
+                        <input type="file" id="fileInput" name="file" accept="application/pdf,.csv,text/csv" required class="file-upload-input">
                         <div id="fileDropzone" class="file-upload-dropzone">
                             <!-- Default state: upload prompt -->
                             <div id="dropzoneDefault">
@@ -952,9 +958,9 @@
                                 </svg>
                                 <div class="file-upload-text">
                                     <div class="file-upload-text-main">
-                                        Drag and drop your PDF here, or <span class="browse-link">browse</span>
+                                        Drag and drop your file here, or <span class="browse-link">browse</span>
                                     </div>
-                                    <div class="file-upload-text-sub">Only PDF files are accepted</div>
+                                    <div class="file-upload-text-sub">PDF and CSV files are accepted</div>
                                 </div>
                             </div>
                             <!-- Selected state: show filename -->

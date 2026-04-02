@@ -31,6 +31,7 @@ import com.everrich.spendmanager.service.TransactionService;
 import com.everrich.spendmanager.service.CategoryService;
 import com.everrich.spendmanager.service.AccountService;
 import com.everrich.spendmanager.entities.Account;
+import com.everrich.spendmanager.entities.StatementFileType;
 
 @Controller
 public class PdfController {
@@ -191,24 +192,32 @@ public class PdfController {
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         }
 
-        log.info("START: Processing statement");
+        // Determine file type based on content type or file extension
+        String originalFilename = file.getOriginalFilename();
+        String contentType = file.getContentType();
+        StatementFileType fileType = determineFileType(originalFilename, contentType);
+        
+        if (fileType == null) {
+            Map<String, String> error = Map.of("status", "error", "message", 
+                    "Unsupported file type. Please upload a PDF or CSV file.");
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+
+        log.info("START: Processing {} statement: {}", fileType, originalFilename);
 
         try {
             // Retrieve the account
             Account account = accountService.findById(accountId)
                     .orElseThrow(() -> new IllegalArgumentException("Account not found with ID: " + accountId));
 
-            Statement newStatement = statementService.createInitialStatement(file.getOriginalFilename(), account, file.getBytes());
+            Statement newStatement = statementService.createInitialStatement(originalFilename, account, file.getBytes(), fileType);
             String statementIdString = newStatement.getId().toString();
-            /*List<Transaction> transactions = statementService.extractTransactionsFromPdf(newStatement.getId(),
-                    file.getBytes());
-            if (transactions != null) statementService.categorizeTransactions(newStatement.getId(), transactions);
-                //statementService.resolveCategories(newStatement.getId(), transactions);*/
 
             Map<String, String> success = Map.of(
                     "status", "success",
-                    "message", "File '" + file.getOriginalFilename() + "' uploaded. Processing started.",
-                    "statementId", statementIdString);
+                    "message", "File '" + originalFilename + "' uploaded. Processing started.",
+                    "statementId", statementIdString,
+                    "fileType", fileType.name());
 
             return new ResponseEntity<>(success, HttpStatus.ACCEPTED);
 
@@ -222,6 +231,40 @@ public class PdfController {
                     "Processing initiation failed: " + e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+    
+    /**
+     * Determines the file type (PDF or CSV) based on filename extension and content type.
+     * 
+     * @param filename The original filename
+     * @param contentType The MIME content type
+     * @return StatementFileType.PDF, StatementFileType.CSV, or null if unsupported
+     */
+    private StatementFileType determineFileType(String filename, String contentType) {
+        // Check by file extension first (more reliable)
+        if (filename != null) {
+            String lowerFilename = filename.toLowerCase();
+            if (lowerFilename.endsWith(".pdf")) {
+                return StatementFileType.PDF;
+            }
+            if (lowerFilename.endsWith(".csv")) {
+                return StatementFileType.CSV;
+            }
+        }
+        
+        // Fallback to content type
+        if (contentType != null) {
+            if (contentType.equals("application/pdf")) {
+                return StatementFileType.PDF;
+            }
+            if (contentType.equals("text/csv") || 
+                contentType.equals("application/csv") ||
+                contentType.equals("text/comma-separated-values")) {
+                return StatementFileType.CSV;
+            }
+        }
+        
+        return null; // Unsupported file type
     }
 
     /**

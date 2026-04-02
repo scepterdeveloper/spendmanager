@@ -2,6 +2,7 @@ package com.everrich.spendmanager.service;
 
 import com.everrich.spendmanager.entities.Account;
 import com.everrich.spendmanager.entities.Statement;
+import com.everrich.spendmanager.entities.StatementFileType;
 import com.everrich.spendmanager.entities.StatementStatus;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionCategorizationStatus;
@@ -68,12 +69,17 @@ public class StatementService {
     }
 
     public Statement createInitialStatement(String fileName, Account account, byte[] content) {
+        return createInitialStatement(fileName, account, content, StatementFileType.PDF);
+    }
+    
+    public Statement createInitialStatement(String fileName, Account account, byte[] content, StatementFileType fileType) {
         Statement statement = new Statement();
         statement.setOriginalFileName(fileName);
         statement.setUploadDateTime(LocalDateTime.now());
         statement.setStatus(StatementStatus.OPEN); 
         statement.setAccount(account); 
         statement.setContent(content);
+        statement.setFileType(fileType);
         return statementRepository.save(statement);
     }
 

@@ -28,6 +28,7 @@ import com.everrich.spendmanager.dto.ParsedStatementDTO;
 import com.everrich.spendmanager.entities.Registration;
 import com.everrich.spendmanager.entities.RegistrationStatus;
 import com.everrich.spendmanager.entities.Statement;
+import com.everrich.spendmanager.entities.StatementFileType;
 import com.everrich.spendmanager.entities.StatementStatus;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionCategorizationStatus;
@@ -58,6 +59,7 @@ public class StatementProcessor {
     private final TransactionService transactionService;
     private final ChatClient chatClient;
     private final PdfProcessor pdfProcessor;
+    private final CsvProcessor csvProcessor;
     private final RegistrationRepository registrationRepository;
     private static final Logger log = LoggerFactory.getLogger(StatementProcessor.class);
     @Value("classpath:/prompts/parse-transactions-prompt.st")
@@ -80,11 +82,13 @@ public class StatementProcessor {
             TransactionService transactionService,
             ChatClient.Builder chatClientBuilder,
             PdfProcessor pdfProcessor,
+            CsvProcessor csvProcessor,
             RegistrationRepository registrationRepository) {
 
         this.transactionService = transactionService;
         this.statementService = statementService;
         this.pdfProcessor = pdfProcessor;
+        this.csvProcessor = csvProcessor;
         this.registrationRepository = registrationRepository;
         this.chatClient = chatClientBuilder.build();
         DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
@@ -282,8 +286,10 @@ public class StatementProcessor {
             return;
         }
         
-        // Extract transactions from PDF (this calls LLM for parsing, not categorization)
-        List<Transaction> transactions = extractTransactionsFromPdf(currentStatement);
+        // Extract transactions based on file type
+        // PDF: Uses LLM for parsing unstructured text
+        // CSV: Direct parsing (no LLM needed - faster and cheaper)
+        List<Transaction> transactions = extractTransactionsFromStatement(currentStatement);
 
         if (transactions == null || transactions.isEmpty()) {
             log.warn("No transactions extracted from statement {}", currentStatement.getId());
@@ -381,6 +387,78 @@ public class StatementProcessor {
         }
         
         return "An unexpected error occurred while processing the statement. Please try again or contact support.";
+    }
+
+    /**
+     * Extracts transactions from a statement based on its file type.
+     * Routes to PDF or CSV processor accordingly.
+     * 
+     * @param statement The statement to extract transactions from
+     * @return List of transactions extracted from the statement
+     */
+    public List<Transaction> extractTransactionsFromStatement(Statement statement) {
+        StatementFileType fileType = statement.getFileType();
+        
+        // Default to PDF for backward compatibility with existing statements
+        if (fileType == null) {
+            fileType = StatementFileType.PDF;
+        }
+        
+        if (fileType == StatementFileType.CSV) {
+            return extractTransactionsFromCsv(statement);
+        } else {
+            return extractTransactionsFromPdf(statement);
+        }
+    }
+    
+    /**
+     * Extracts transactions from a CSV statement using LLM parsing.
+     * CSV text is sent directly to the LLM for intelligent parsing.
+     * This handles varying bank formats, encodings, and column layouts.
+     * 
+     * @param statement The CSV statement to extract transactions from
+     * @return List of transactions extracted from the CSV
+     */
+    public List<Transaction> extractTransactionsFromCsv(Statement statement) {
+        log.info("Extracting transactions from CSV (LLM parsing)");
+        
+        try {
+            // Convert CSV bytes to string
+            String csvText = new String(statement.getContent(), java.nio.charset.StandardCharsets.UTF_8);
+            
+            // Use the same LLM parsing flow as PDF
+            String parsedJson = parseTransactionsWithGemini(csvText);
+            String cleanJson = cleanLLMResponse(parsedJson);
+            log.debug("LLM parsing completed for CSV statement {}", statement.getId());
+            
+            // Deserialize to ParsedStatementDTO which contains both metadata and transactions
+            ParsedStatementDTO parsedStatement = deserializeParsedStatement(cleanJson);
+            
+            if (parsedStatement == null) {
+                log.warn("Failed to deserialize LLM response for CSV statement {}", statement.getId());
+                return Collections.emptyList();
+            }
+            
+            // Apply statement metadata if available
+            applyStatementMetadata(statement, parsedStatement);
+            
+            List<Transaction> transactions = parsedStatement.getTransactions();
+            if (transactions == null) {
+                transactions = Collections.emptyList();
+            }
+            
+            log.info("CSV LLM parsing completed for statement {}: {} transactions extracted", 
+                    statement.getId(), transactions.size());
+            
+            return transactions;
+            
+        } catch (Exception e) {
+            log.error("Error while processing CSV to extract transactions for statement {}", 
+                    statement.getId(), e);
+            statement.setStatus(StatementStatus.FAILED);
+            statement.setErrorMessage(createHumanReadableError(e));
+            return null;
+        }
     }
 
     /**
