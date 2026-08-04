@@ -10,8 +10,13 @@ import org.springframework.stereotype.Service;
 
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionOperation;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,16 +28,24 @@ public class VectorStoreService {
     private final ChatClient chatClient;
     private final RedisAdapter redisAdapter;
     private final LlmRateLimiter llmRateLimiter;
+    private final Gson gson;
     private static final Logger log = LoggerFactory.getLogger(VectorStoreService.class);
+    
+    private static final String JSON_CODE_FENCE = "```";
+    private static final String JSON_MARKER = "json";
 
     @Value("classpath:/prompts/normalize-description-prompt.st")
     private Resource normalizeDescriptionPromptResource;
+    
+    @Value("classpath:/prompts/normalize-description-prompt-batch.st")
+    private Resource normalizeDescriptionBatchPromptResource;
 
     public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder, 
             LlmRateLimiter llmRateLimiter) {
         this.chatClient = chatClientBuilder.build();
         this.redisAdapter = redisAdapter;
         this.llmRateLimiter = llmRateLimiter;
+        this.gson = new GsonBuilder().create();
 
         if (redisAdapter == null) {
             log.error("RedisAdapter is null while wiring VectorStore");
@@ -109,6 +122,9 @@ public class VectorStoreService {
      * This aggregates unique descriptions and performs searches, then combines
      * all results into a single context string to share across all transactions.
      * 
+     * Uses batch normalization to reduce LLM calls - normalizes all unique descriptions
+     * in a single LLM call instead of one call per description.
+     * 
      * @param transactions List of transactions to search context for
      * @return Aggregated context string with historical categorization decisions
      */
@@ -120,41 +136,55 @@ public class VectorStoreService {
         long methodStart = System.currentTimeMillis();
         log.info("LLM_TIMING: Starting batch similarity search for {} transactions", transactions.size());
         
-        // Collect unique normalized descriptions to avoid duplicate searches
-        Set<String> processedDescriptions = new HashSet<>();
+        // STEP 1: Collect unique descriptions and their associated transaction info
+        // Map from original description to list of transactions with that description
+        Map<String, List<Transaction>> descriptionToTransactions = new HashMap<>();
+        for (Transaction transaction : transactions) {
+            String desc = transaction.getDescription();
+            descriptionToTransactions.computeIfAbsent(desc, k -> new ArrayList<>()).add(transaction);
+        }
+        
+        List<String> uniqueDescriptions = new ArrayList<>(descriptionToTransactions.keySet());
+        log.info("LLM_TIMING: Found {} unique descriptions from {} transactions", 
+                uniqueDescriptions.size(), transactions.size());
+        
+        // STEP 2: Batch normalize all unique descriptions in a single LLM call
+        long normalizeStart = System.currentTimeMillis();
+        Map<String, String> normalizedMap = batchNormalizeDescriptions(uniqueDescriptions);
+        long normalizeDuration = System.currentTimeMillis() - normalizeStart;
+        log.info("LLM_TIMING: batchNormalizeDescriptions took {} ms for {} descriptions (single LLM call)", 
+                normalizeDuration, uniqueDescriptions.size());
+        
+        // STEP 3: Perform similarity searches using normalized descriptions
+        Set<String> processedNormalizedDescriptions = new HashSet<>();
         List<RedisDocument> allResults = new ArrayList<>();
         
-        long totalNormalizationTime = 0;
-        int normalizationCount = 0;
-        
-        for (Transaction transaction : transactions) {
-            long normalizeStart = System.currentTimeMillis();
-            String normalizedDescription = normalizeDescription(transaction.getDescription());
-            long normalizeDuration = System.currentTimeMillis() - normalizeStart;
-            totalNormalizationTime += normalizeDuration;
-            normalizationCount++;
+        for (Map.Entry<String, List<Transaction>> entry : descriptionToTransactions.entrySet()) {
+            String originalDescription = entry.getKey();
+            List<Transaction> txnsWithDesc = entry.getValue();
+            
+            // Get normalized description (fallback to original if not found)
+            String normalizedDescription = normalizedMap.getOrDefault(originalDescription, originalDescription);
             
             // Skip if we've already searched for this normalized description
-            if (processedDescriptions.contains(normalizedDescription)) {
+            if (processedNormalizedDescriptions.contains(normalizedDescription)) {
                 continue;
             }
-            processedDescriptions.add(normalizedDescription);
+            processedNormalizedDescriptions.add(normalizedDescription);
             
-            // Perform similarity search
-            String accountName = transaction.getAccount() != null ? transaction.getAccount().getName() : "Unknown";
+            // Use first transaction's info for the search (they all have the same description)
+            Transaction firstTxn = txnsWithDesc.get(0);
+            String accountName = firstTxn.getAccount() != null ? firstTxn.getAccount().getName() : "Unknown";
+            
             List<RedisDocument> searchResults = redisAdapter.searchDocuments(
                     normalizedDescription, 
-                    transaction.getOperation().name(),
+                    firstTxn.getOperation().name(),
                     accountName);
             
             if (searchResults != null && !searchResults.isEmpty()) {
                 allResults.addAll(searchResults);
             }
         }
-        
-        log.info("LLM_TIMING: normalizeDescription called {} times, total time: {} ms, avg: {} ms", 
-                normalizationCount, totalNormalizationTime, 
-                normalizationCount > 0 ? totalNormalizationTime / normalizationCount : 0);
         
         // Handle null or empty results gracefully
         if (allResults.isEmpty()) {
@@ -186,12 +216,133 @@ public class VectorStoreService {
         
         String context = contextBuilder.toString();
         long totalDuration = System.currentTimeMillis() - methodStart;
-        log.info("LLM_TIMING: batchSimilaritySearch total took {} ms for {} transactions ({} unique descriptions)", 
-                totalDuration, transactions.size(), processedDescriptions.size());
+        log.info("LLM_TIMING: batchSimilaritySearch total took {} ms for {} transactions ({} unique descriptions, {} unique normalized)", 
+                totalDuration, transactions.size(), uniqueDescriptions.size(), processedNormalizedDescriptions.size());
         log.info("Batch similarity search completed. Found {} unique context entries from {} searches", 
-                seenContexts.size(), processedDescriptions.size());
+                seenContexts.size(), processedNormalizedDescriptions.size());
         
         return context;
+    }
+    
+    /**
+     * Batch normalize multiple descriptions in a single LLM call.
+     * This is much more efficient than normalizing each description individually.
+     * 
+     * @param descriptions List of descriptions to normalize
+     * @return Map from original description to normalized description
+     */
+    private Map<String, String> batchNormalizeDescriptions(List<String> descriptions) {
+        Map<String, String> results = new HashMap<>();
+        
+        if (descriptions == null || descriptions.isEmpty()) {
+            return results;
+        }
+        
+        // For very small batches (1-2 items), use individual normalization
+        // This avoids JSON parsing overhead for trivial cases
+        if (descriptions.size() <= 2) {
+            for (String desc : descriptions) {
+                results.put(desc, normalizeDescription(desc));
+            }
+            return results;
+        }
+        
+        // Build the numbered list of descriptions for the prompt
+        StringBuilder descriptionsBuilder = new StringBuilder();
+        Map<Integer, String> indexToOriginal = new HashMap<>();
+        for (int i = 0; i < descriptions.size(); i++) {
+            int index = i + 1; // 1-based index
+            String desc = descriptions.get(i);
+            descriptionsBuilder.append(String.format("%d. %s%n", index, desc));
+            indexToOriginal.put(index, desc);
+        }
+        
+        try {
+            String response = llmRateLimiter.executeWithRetryOrThrow(() -> {
+                PromptTemplate promptTemplate = new PromptTemplate(normalizeDescriptionBatchPromptResource);
+                Map<String, Object> model = Map.of("descriptions", descriptionsBuilder.toString());
+                
+                return chatClient.prompt(promptTemplate.create(model))
+                        .call()
+                        .content();
+            });
+            
+            // Parse the JSON response
+            String cleanedResponse = cleanLLMResponse(response);
+            Type listType = new TypeToken<List<NormalizedDescription>>(){}.getType();
+            List<NormalizedDescription> normalizedList = gson.fromJson(cleanedResponse, listType);
+            
+            if (normalizedList != null) {
+                for (NormalizedDescription nd : normalizedList) {
+                    String originalDesc = indexToOriginal.get(nd.getIndex());
+                    if (originalDesc != null && nd.getNormalized() != null) {
+                        results.put(originalDesc, nd.getNormalized().trim());
+                    }
+                }
+            }
+            
+            log.debug("Batch normalization: Successfully normalized {} of {} descriptions", 
+                    results.size(), descriptions.size());
+            
+            // Fill in any missing normalizations with original descriptions
+            for (String desc : descriptions) {
+                if (!results.containsKey(desc)) {
+                    log.warn("Batch normalization: No result for description, using original: {}", desc);
+                    results.put(desc, desc);
+                }
+            }
+            
+        } catch (LlmRateLimiter.LlmRateLimitException e) {
+            log.warn("Batch normalization rate limited, falling back to originals: {}", e.getMessage());
+            // Fall back to original descriptions
+            for (String desc : descriptions) {
+                results.put(desc, desc);
+            }
+        } catch (Exception e) {
+            log.warn("Batch normalization failed, falling back to originals: {}", e.getMessage());
+            // Fall back to original descriptions
+            for (String desc : descriptions) {
+                results.put(desc, desc);
+            }
+        }
+        
+        return results;
+    }
+    
+    /**
+     * Clean LLM response by removing code fences and trimming.
+     */
+    private String cleanLLMResponse(String rawResponse) {
+        String cleaned = rawResponse.trim();
+        String fullFenceStart = JSON_CODE_FENCE + JSON_MARKER;
+        
+        if (cleaned.startsWith(fullFenceStart)) {
+            cleaned = cleaned.substring(fullFenceStart.length()).trim();
+        } else if (cleaned.startsWith(JSON_CODE_FENCE)) {
+            cleaned = cleaned.substring(JSON_CODE_FENCE.length()).trim();
+        }
+        
+        if (cleaned.endsWith(JSON_CODE_FENCE)) {
+            cleaned = cleaned.substring(0, cleaned.lastIndexOf(JSON_CODE_FENCE)).trim();
+        }
+        
+        return cleaned;
+    }
+    
+    /**
+     * DTO for parsing batch normalization response.
+     */
+    private static class NormalizedDescription {
+        private int index;
+        private String normalized;
+        
+        public int getIndex() {
+            return index;
+        }
+        
+        public String getNormalized() {
+            return normalized;
+        }
     }
 
     // LLM based

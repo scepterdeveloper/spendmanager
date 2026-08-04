@@ -58,18 +58,21 @@ public class CategorizationProcessor {
     private final CategoryService categoryService;
     private final StatementService statementService;
     private final RegistrationRepository registrationRepository;
+    private final AccountBalanceService accountBalanceService;
 
     public CategorizationProcessor(
             TransactionRepository transactionRepository,
             RagService ragService,
             CategoryService categoryService,
             StatementService statementService,
-            RegistrationRepository registrationRepository) {
+            RegistrationRepository registrationRepository,
+            AccountBalanceService accountBalanceService) {
         this.transactionRepository = transactionRepository;
         this.ragService = ragService;
         this.categoryService = categoryService;
         this.statementService = statementService;
         this.registrationRepository = registrationRepository;
+        this.accountBalanceService = accountBalanceService;
     }
 
     /**
@@ -394,7 +397,7 @@ public class CategorizationProcessor {
 
     /**
      * Marks a statement as FAILED when categorization fails.
-     * Also deletes all transactions associated with the failed statement to clean up.
+     * Also deletes all transactions and their associated balance entries to clean up.
      * 
      * @param statementId The statement ID to mark as failed
      */
@@ -406,11 +409,16 @@ public class CategorizationProcessor {
         }
         
         try {
-            // First, delete all transactions associated with this statement
+            // IMPORTANT: Delete AccountBalance entries FIRST (due to foreign key constraint to Transaction)
+            // AccountBalance has a non-null FK reference to Transaction, so balances must be deleted first
+            int deletedBalances = accountBalanceService.deleteBalanceEntriesByStatementId(statementId);
+            log.info("Deleted {} balance entries for failed statement {}", deletedBalances, statementId);
+            
+            // Then delete all transactions associated with this statement
             transactionRepository.deleteByStatementId(statementId);
             log.info("Deleted all transactions for failed statement {}", statementId);
             
-            // Then mark the statement as FAILED
+            // Finally mark the statement as FAILED
             Statement statement = statementService.getStatementById(statementId);
             if (statement != null) {
                 statement.setStatus(StatementStatus.FAILED);

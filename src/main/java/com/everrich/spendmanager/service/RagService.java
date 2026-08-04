@@ -37,6 +37,7 @@ public class RagService {
     private final CategoryService categoryService;
     private final VectorStoreService vectorStoreService;
     private final TaskExecutor taskExecutor;
+    private final LlmRateLimiter llmRateLimiter;
     private final Gson gson;
 
     private static final Logger log = LoggerFactory.getLogger(RagService.class);
@@ -56,11 +57,13 @@ public class RagService {
     public RagService(VectorStoreService vectorStoreService, 
                       CategoryService categoryService,
                       ChatClient.Builder chatClientBuilder,
-                      @Qualifier("transactionProcessingExecutor") TaskExecutor taskExecutor) {
+                      @Qualifier("transactionProcessingExecutor") TaskExecutor taskExecutor,
+                      LlmRateLimiter llmRateLimiter) {
         this.vectorStoreService = vectorStoreService;
         this.chatClient = chatClientBuilder.build();
         this.categoryService = categoryService;
         this.taskExecutor = taskExecutor;
+        this.llmRateLimiter = llmRateLimiter;
         this.gson = new GsonBuilder().create();
     }
 
@@ -93,9 +96,17 @@ public class RagService {
         Prompt prompt = promptTemplate.create(promptParameters);
         
         long llmCallStart = System.currentTimeMillis();
-        String response = chatClient.prompt(prompt)
-                .call()
-                .content();
+        String response;
+        try {
+            response = llmRateLimiter.executeWithRetryOrThrow(() -> 
+                chatClient.prompt(prompt)
+                    .call()
+                    .content()
+            );
+        } catch (LlmRateLimiter.LlmRateLimitException e) {
+            log.error("Rate limit exceeded for categorization: {}", e.getMessage());
+            throw new RuntimeException("Rate limit exceeded while categorizing transaction", e);
+        }
         long llmCallDuration = System.currentTimeMillis() - llmCallStart;
         log.info("LLM_TIMING: Category LLM call took {} ms for transaction: {}", 
                 llmCallDuration, transaction.getDescription());
@@ -184,9 +195,16 @@ public class RagService {
         long llmCallStart = System.currentTimeMillis();
         String response;
         try {
-            response = chatClient.prompt(prompt)
+            response = llmRateLimiter.executeWithRetryOrThrow(() -> 
+                chatClient.prompt(prompt)
                     .call()
-                    .content();
+                    .content()
+            );
+        } catch (LlmRateLimiter.LlmRateLimitException e) {
+            long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+            log.error("LLM batch call rate limited after {} ms for {} transactions: {}", 
+                    llmCallDuration, batchCount, e.getMessage());
+            throw new RuntimeException("LLM batch call rate limited: " + e.getMessage(), e);
         } catch (Exception e) {
             long llmCallDuration = System.currentTimeMillis() - llmCallStart;
             log.error("LLM batch call failed after {} ms for {} transactions: {}", 
@@ -384,13 +402,20 @@ public class RagService {
         log.debug("LLM_TIMING: Chunk prompt prepared, content length: {} characters, {} transactions", 
                 prompt.getContents().length(), chunk.size());
         
-        // Call LLM
+        // Call LLM with retry support
         long llmCallStart = System.currentTimeMillis();
         String response;
         try {
-            response = chatClient.prompt(prompt)
+            response = llmRateLimiter.executeWithRetryOrThrow(() -> 
+                chatClient.prompt(prompt)
                     .call()
-                    .content();
+                    .content()
+            );
+        } catch (LlmRateLimiter.LlmRateLimitException e) {
+            long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+            log.error("LLM call rate limited after {} ms for chunk with offset {}: {}", 
+                    llmCallDuration, globalOffset, e.getMessage());
+            throw new RuntimeException("LLM call rate limited: " + e.getMessage(), e);
         } catch (Exception e) {
             long llmCallDuration = System.currentTimeMillis() - llmCallStart;
             log.error("LLM call failed after {} ms for chunk with offset {}: {}", 
