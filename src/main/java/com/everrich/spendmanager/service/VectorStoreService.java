@@ -21,15 +21,18 @@ import java.util.Set;
 public class VectorStoreService {
 
     private final ChatClient chatClient;
-    private RedisAdapter redisAdapter;
+    private final RedisAdapter redisAdapter;
+    private final LlmRateLimiter llmRateLimiter;
     private static final Logger log = LoggerFactory.getLogger(VectorStoreService.class);
 
     @Value("classpath:/prompts/normalize-description-prompt.st")
     private Resource normalizeDescriptionPromptResource;
 
-    public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder) {
+    public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder, 
+            LlmRateLimiter llmRateLimiter) {
         this.chatClient = chatClientBuilder.build();
         this.redisAdapter = redisAdapter;
+        this.llmRateLimiter = llmRateLimiter;
 
         if (redisAdapter == null) {
             log.error("RedisAdapter is null while wiring VectorStore");
@@ -195,16 +198,23 @@ public class VectorStoreService {
     private String normalizeDescription(String transactionDescription) {
         long start = System.currentTimeMillis();
         
-        PromptTemplate promptTemplate = new PromptTemplate(normalizeDescriptionPromptResource);
-        Map<String, Object> model = Map.of(
-                "transactionDescription", transactionDescription // Corrected key and value
-        );
+        // Use the rate limiter with retry support
+        // Falls back to original description if rate limited or all retries fail
+        String result = llmRateLimiter.executeWithRetry(
+            () -> {
+                PromptTemplate promptTemplate = new PromptTemplate(normalizeDescriptionPromptResource);
+                Map<String, Object> model = Map.of(
+                        "transactionDescription", transactionDescription
+                );
 
-        // 3. Create, call, and return the response content
-        String result = chatClient.prompt(promptTemplate.create(model))
-                .call()
-                .content()
-                .trim(); // Always good practice to trim the output
+                // Create, call, and return the response content
+                return chatClient.prompt(promptTemplate.create(model))
+                        .call()
+                        .content()
+                        .trim(); // Always good practice to trim the output
+            },
+            transactionDescription // Fallback to original description
+        );
         
         long duration = System.currentTimeMillis() - start;
         log.debug("LLM_TIMING: normalizeDescription LLM call took {} ms for: {}", 
