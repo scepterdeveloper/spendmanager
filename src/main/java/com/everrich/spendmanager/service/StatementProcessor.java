@@ -61,6 +61,7 @@ public class StatementProcessor {
     private final PdfProcessor pdfProcessor;
     private final CsvProcessor csvProcessor;
     private final RegistrationRepository registrationRepository;
+    private final LlmRateLimiter llmRateLimiter;
     private static final Logger log = LoggerFactory.getLogger(StatementProcessor.class);
     @Value("classpath:/prompts/parse-transactions-prompt.st")
     private Resource parseTransactionsPromptResource;
@@ -83,13 +84,15 @@ public class StatementProcessor {
             ChatClient.Builder chatClientBuilder,
             PdfProcessor pdfProcessor,
             CsvProcessor csvProcessor,
-            RegistrationRepository registrationRepository) {
+            RegistrationRepository registrationRepository,
+            LlmRateLimiter llmRateLimiter) {
 
         this.transactionService = transactionService;
         this.statementService = statementService;
         this.pdfProcessor = pdfProcessor;
         this.csvProcessor = csvProcessor;
         this.registrationRepository = registrationRepository;
+        this.llmRateLimiter = llmRateLimiter;
         this.chatClient = chatClientBuilder.build();
         DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         this.gson = new GsonBuilder()
@@ -550,10 +553,20 @@ public class StatementProcessor {
         log.debug("Going to call LLM for parsing");
         Prompt prompt = promptTemplate.create(model);
         log.debug("Prompt created for LLM parsing");
-        String LLMOutput = chatClient.prompt(prompt)
-                .call()
-                .content();
-        return LLMOutput;
+        
+        // Use the rate limiter with retry support for transient gRPC errors
+        // (e.g., UNAVAILABLE, session_timed_out)
+        try {
+            String LLMOutput = llmRateLimiter.executeWithRetryOrThrow(() -> 
+                chatClient.prompt(prompt)
+                    .call()
+                    .content()
+            );
+            return LLMOutput;
+        } catch (LlmRateLimiter.LlmRateLimitException e) {
+            log.error("Rate limit exceeded for parsing transactions: {}", e.getMessage());
+            throw new RuntimeException("Rate limit exceeded while parsing transactions", e);
+        }
     }
 
     private String cleanLLMResponse(String rawLLMResponse) {
