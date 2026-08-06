@@ -245,10 +245,13 @@ public class BalanceController {
     @PostMapping("/api/rebuild")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> rebuildBalances() {
-        log.info("Received request to rebuild all account balances");
+        log.info("=== REBUILD BALANCES API CALLED ===");
+        log.info("Request received at: {}", java.time.LocalDateTime.now());
         
         try {
+            log.info("Calling accountBalanceService.rebuildAllBalances()...");
             RebuildResult result = accountBalanceService.rebuildAllBalances();
+            log.info("Rebuild completed successfully: {}", result);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

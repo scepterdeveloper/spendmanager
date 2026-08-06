@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.everrich.spendmanager.entities.Account;
@@ -680,6 +681,7 @@ public class AccountBalanceService {
      * 
      * @return RebuildResult containing statistics about the rebuild operation
      */
+    @Transactional
     public RebuildResult rebuildAllBalances() {
         long startTime = System.currentTimeMillis();
         log.info("Starting balance rebuild for all accounts...");

@@ -5,6 +5,8 @@
     <title th:text="${appName} + ' - Balances'">EverRich - Balances</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link rel="stylesheet" th:href="@{/css/app-theme.css}">
     <style>
         /* Page-specific styles for Balance Management */
@@ -1823,11 +1825,23 @@
             confirmBtn.textContent = 'Rebuilding...';
             rebuildBtn.classList.add('loading');
             
+            // Get CSRF token from meta tags or cookie
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN';
+            
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Add CSRF token if available
+            if (csrfToken) {
+                headers[csrfHeader] = csrfToken;
+            }
+            
             fetch('/balances/api/rebuild', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: headers,
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
