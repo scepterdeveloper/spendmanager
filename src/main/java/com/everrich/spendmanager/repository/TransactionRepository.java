@@ -105,4 +105,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Transactional
     @Modifying
     void deleteByStatementId(Long statementId);
+    
+    /**
+     * Find all transactions for a specific account, ordered by date and ID.
+     * Used for rebuilding account balances from transactions.
+     * The ordering (date ASC, id ASC) ensures proper chronological processing
+     * with transaction ID as tiebreaker for same-timestamp transactions.
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.account.id = :accountId ORDER BY t.date ASC, t.id ASC")
+    List<Transaction> findByAccountIdOrderByDateAscIdAsc(@Param("accountId") Long accountId);
 }

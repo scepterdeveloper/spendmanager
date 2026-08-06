@@ -22,6 +22,8 @@ import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionOperation;
 import com.everrich.spendmanager.multitenancy.TenantContext;
 import com.everrich.spendmanager.repository.AccountBalanceRepository;
+import com.everrich.spendmanager.repository.AccountRepository;
+import com.everrich.spendmanager.repository.TransactionRepository;
 
 /**
  * Service for managing account balances.
@@ -36,6 +38,8 @@ public class AccountBalanceService {
     private static final Logger log = LoggerFactory.getLogger(AccountBalanceService.class);
 
     private final AccountBalanceRepository accountBalanceRepository;
+    private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
     private final TransactionTemplate transactionTemplate;
     
     /**
@@ -45,8 +49,12 @@ public class AccountBalanceService {
     private final ConcurrentHashMap<String, ReentrantLock> accountLocks = new ConcurrentHashMap<>();
 
     public AccountBalanceService(AccountBalanceRepository accountBalanceRepository,
+                                  AccountRepository accountRepository,
+                                  TransactionRepository transactionRepository,
                                   TransactionTemplate transactionTemplate) {
         this.accountBalanceRepository = accountBalanceRepository;
+        this.accountRepository = accountRepository;
+        this.transactionRepository = transactionRepository;
         this.transactionTemplate = transactionTemplate;
         log.info("AccountBalanceService initialized with per-account locking");
     }
@@ -652,5 +660,84 @@ public class AccountBalanceService {
      */
     public List<AccountBalance> getBalanceHistory(Long accountId) {
         return accountBalanceRepository.findByAccountIdOrderByTimestampAsc(accountId);
+    }
+
+    // ========== Balance Rebuild Methods ==========
+
+    /**
+     * Result of a balance rebuild operation.
+     */
+    public record RebuildResult(int accountsProcessed, int balancesDeleted, int balancesCreated, long durationMs) {}
+
+    /**
+     * Rebuilds all account balances from transactions.
+     * This operation:
+     * 1. Deletes all existing balance entries
+     * 2. For each account, retrieves all transactions ordered by date and ID
+     * 3. Recalculates and creates balance entries for each transaction
+     * 
+     * This is useful for recovering from data corruption or after manual database changes.
+     * 
+     * @return RebuildResult containing statistics about the rebuild operation
+     */
+    public RebuildResult rebuildAllBalances() {
+        long startTime = System.currentTimeMillis();
+        log.info("Starting balance rebuild for all accounts...");
+
+        // Get all accounts
+        List<Account> accounts = accountRepository.findAll();
+        int totalAccountsProcessed = 0;
+        int totalBalancesDeleted = 0;
+        int totalBalancesCreated = 0;
+
+        for (Account account : accounts) {
+            // Delete existing balances for this account
+            int deleted = accountBalanceRepository.deleteByAccountId(account.getId());
+            totalBalancesDeleted += deleted;
+            log.debug("Deleted {} existing balance entries for account {}", deleted, account.getId());
+
+            // Get all transactions for this account, ordered by date and ID
+            List<Transaction> transactions = transactionRepository.findByAccountIdOrderByDateAscIdAsc(account.getId());
+            
+            if (transactions.isEmpty()) {
+                log.debug("No transactions found for account {}, skipping", account.getId());
+                continue;
+            }
+
+            // Rebuild balances for this account
+            BigDecimal runningBalance = BigDecimal.ZERO;
+            for (Transaction transaction : transactions) {
+                if (transaction.getDate() == null || transaction.getOperation() == null) {
+                    log.warn("Skipping transaction {} - date or operation is null", transaction.getId());
+                    continue;
+                }
+
+                BigDecimal amount = BigDecimal.valueOf(transaction.getAmount());
+                if (transaction.getOperation() == TransactionOperation.PLUS) {
+                    runningBalance = runningBalance.add(amount);
+                } else {
+                    runningBalance = runningBalance.subtract(amount);
+                }
+
+                AccountBalance balance = new AccountBalance(
+                        account,
+                        transaction.getDate(),
+                        runningBalance,
+                        transaction
+                );
+                accountBalanceRepository.save(balance);
+                totalBalancesCreated++;
+            }
+
+            totalAccountsProcessed++;
+            log.debug("Rebuilt {} balance entries for account {} ({})", 
+                    transactions.size(), account.getId(), account.getName());
+        }
+
+        long durationMs = System.currentTimeMillis() - startTime;
+        log.info("Balance rebuild completed: {} accounts processed, {} balances deleted, {} balances created in {}ms",
+                totalAccountsProcessed, totalBalancesDeleted, totalBalancesCreated, durationMs);
+
+        return new RebuildResult(totalAccountsProcessed, totalBalancesDeleted, totalBalancesCreated, durationMs);
     }
 }

@@ -914,6 +914,187 @@
             .txn-list-table th, .txn-list-table td { padding:0.4rem 0.5rem; }
             .txn-list-table .col-category { display:none; }
         }
+        
+        /* Balance Header Row with Rebuild Button */
+        .balance-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .balance-header-row h3 {
+            margin: 0;
+        }
+        
+        .btn-rebuild {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #6B7280;
+            background: white;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .btn-rebuild:hover {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            background: #f8fafc;
+        }
+        
+        .btn-rebuild:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-rebuild.loading {
+            pointer-events: none;
+        }
+        
+        .btn-rebuild svg {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .btn-rebuild.loading svg {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Rebuild Confirmation Modal */
+        .rebuild-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1002;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .rebuild-modal-overlay.show {
+            display: flex;
+        }
+        
+        .rebuild-modal {
+            background: white;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 420px;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+        
+        .rebuild-modal-header {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            color: white;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .rebuild-modal-header svg {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        
+        .rebuild-modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .rebuild-modal-body {
+            padding: 1.25rem;
+        }
+        
+        .rebuild-modal-body p {
+            margin: 0 0 1rem 0;
+            color: #4B5563;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .rebuild-warning {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            font-size: 0.8rem;
+            color: #92400E;
+            margin-bottom: 1rem;
+        }
+        
+        .rebuild-modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+        
+        .btn-cancel {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #6B7280;
+            background: white;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .btn-cancel:hover {
+            background: #F3F4F6;
+        }
+        
+        .btn-confirm-rebuild {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: white;
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .btn-confirm-rebuild:hover {
+            filter: brightness(1.1);
+        }
+        
+        .btn-confirm-rebuild:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 767px) {
+            .balance-header-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            
+            .btn-rebuild {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 
@@ -1008,7 +1189,15 @@
             </form>
         </div>
 
-        <h3>Balance Summary</h3>
+        <div class="balance-header-row">
+            <h3>Balance Summary</h3>
+            <button type="button" id="rebuild-balances-btn" class="btn-rebuild" onclick="showRebuildConfirmation()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                Rebuild Balances
+            </button>
+        </div>
         
         <div class="data-table-wrapper">
         <table class="data-table">
@@ -1182,6 +1371,30 @@
                     <div class="total-item"><span class="total-label">Net Change</span><span class="total-value" id="modal-netchange">0 €</span></div>
                 </div>
                 <div class="modal-body" id="modal-accounts"></div>
+            </div>
+        </div>
+        
+        <!-- Rebuild Balances Confirmation Modal -->
+        <div id="rebuild-modal" class="rebuild-modal-overlay" onclick="closeRebuildModal(event)">
+            <div class="rebuild-modal" onclick="event.stopPropagation()">
+                <div class="rebuild-modal-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <h3>Rebuild Account Balances</h3>
+                </div>
+                <div class="rebuild-modal-body">
+                    <p>This will delete all existing balance entries and recalculate them from your transactions.</p>
+                    <div class="rebuild-warning">
+                        <strong>⚠️ Warning:</strong> This operation cannot be undone. Make sure no other users are actively using the system during this operation.
+                    </div>
+                    <div class="rebuild-modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeRebuildModal(event)">Cancel</button>
+                        <button type="button" id="confirm-rebuild-btn" class="btn-confirm-rebuild" onclick="executeRebuild()">Rebuild Balances</button>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1588,6 +1801,73 @@
                 container.style.maxHeight = '0';
             });
         });
+        
+        // Rebuild Balances Functions
+        function showRebuildConfirmation() {
+            document.getElementById('rebuild-modal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeRebuildModal(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('rebuild-modal').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+        
+        function executeRebuild() {
+            const rebuildBtn = document.getElementById('rebuild-balances-btn');
+            const confirmBtn = document.getElementById('confirm-rebuild-btn');
+            
+            // Disable buttons and show loading state
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Rebuilding...';
+            rebuildBtn.classList.add('loading');
+            
+            fetch('/balances/api/rebuild', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                closeRebuildModal();
+                rebuildBtn.classList.remove('loading');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Rebuild Balances';
+                
+                if (data.success) {
+                    // Show success toast
+                    if (typeof showToast === 'function') {
+                        showToast(data.message, 'success');
+                    } else {
+                        alert(data.message);
+                    }
+                    // Reload page to show updated balances
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    // Show error toast
+                    if (typeof showToast === 'function') {
+                        showToast(data.message || 'Failed to rebuild balances', 'error');
+                    } else {
+                        alert(data.message || 'Failed to rebuild balances');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error rebuilding balances:', error);
+                closeRebuildModal();
+                rebuildBtn.classList.remove('loading');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Rebuild Balances';
+                
+                if (typeof showToast === 'function') {
+                    showToast('Failed to rebuild balances. Please try again.', 'error');
+                } else {
+                    alert('Failed to rebuild balances. Please try again.');
+                }
+            });
+        }
     </script>
 </body>
 

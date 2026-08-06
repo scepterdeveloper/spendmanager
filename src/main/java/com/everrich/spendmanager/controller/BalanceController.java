@@ -14,6 +14,7 @@ import com.everrich.spendmanager.entities.AccountGroup;
 import com.everrich.spendmanager.entities.BalanceType;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.service.AccountBalanceService;
+import com.everrich.spendmanager.service.AccountBalanceService.RebuildResult;
 import com.everrich.spendmanager.service.AccountGroupService;
 import com.everrich.spendmanager.service.AccountService;
 import com.everrich.spendmanager.service.TransactionService;
@@ -234,6 +235,41 @@ public class BalanceController {
         response.put("count", transactions.size());
         
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * REST endpoint to rebuild all account balances from transactions.
+     * This deletes all existing balance entries and recalculates them from transactions.
+     * Use with caution - this is a destructive operation.
+     */
+    @PostMapping("/api/rebuild")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> rebuildBalances() {
+        log.info("Received request to rebuild all account balances");
+        
+        try {
+            RebuildResult result = accountBalanceService.rebuildAllBalances();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("accountsProcessed", result.accountsProcessed());
+            response.put("balancesDeleted", result.balancesDeleted());
+            response.put("balancesCreated", result.balancesCreated());
+            response.put("durationMs", result.durationMs());
+            response.put("message", String.format(
+                    "Successfully rebuilt balances: %d accounts processed, %d balances deleted, %d balances created in %dms",
+                    result.accountsProcessed(), result.balancesDeleted(), result.balancesCreated(), result.durationMs()));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error rebuilding balances", e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to rebuild balances: " + e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     /**
