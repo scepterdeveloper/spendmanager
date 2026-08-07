@@ -28,6 +28,7 @@ public class VectorStoreService {
     private final ChatClient chatClient;
     private final RedisAdapter redisAdapter;
     private final LlmRateLimiter llmRateLimiter;
+    private final LocalDescriptionNormalizer localNormalizer;
     private final Gson gson;
     private static final Logger log = LoggerFactory.getLogger(VectorStoreService.class);
     
@@ -39,12 +40,21 @@ public class VectorStoreService {
     
     @Value("classpath:/prompts/normalize-description-prompt-batch.st")
     private Resource normalizeDescriptionBatchPromptResource;
+    
+    /**
+     * Configuration to switch between local and LLM-based normalization.
+     * Default is true (use local normalization for better performance).
+     * Set to false to use LLM-based normalization (original behavior).
+     */
+    @Value("${spendmanager.normalization.use-local:true}")
+    private boolean useLocalNormalization;
 
     public VectorStoreService(RedisAdapter redisAdapter, ChatClient.Builder chatClientBuilder, 
-            LlmRateLimiter llmRateLimiter) {
+            LlmRateLimiter llmRateLimiter, LocalDescriptionNormalizer localNormalizer) {
         this.chatClient = chatClientBuilder.build();
         this.redisAdapter = redisAdapter;
         this.llmRateLimiter = llmRateLimiter;
+        this.localNormalizer = localNormalizer;
         this.gson = new GsonBuilder().create();
 
         if (redisAdapter == null) {
@@ -55,7 +65,7 @@ public class VectorStoreService {
             log.error("Chat Client is null while wiring VectorStore");
             return;
         }
-        log.info("VectorStore constructor through...");
+        log.info("VectorStore constructor through... (useLocalNormalization={})", useLocalNormalization);
         redisAdapter.createTransactionIndex();
     }
 
@@ -225,8 +235,9 @@ public class VectorStoreService {
     }
     
     /**
-     * Batch normalize multiple descriptions in a single LLM call.
-     * This is much more efficient than normalizing each description individually.
+     * Batch normalize multiple descriptions.
+     * Uses local normalization (fast, no API cost) when useLocalNormalization is true,
+     * otherwise falls back to LLM-based normalization.
      * 
      * @param descriptions List of descriptions to normalize
      * @return Map from original description to normalized description
@@ -238,11 +249,37 @@ public class VectorStoreService {
             return results;
         }
         
+        // Use local normalization if configured (default: true)
+        if (useLocalNormalization) {
+            long start = System.currentTimeMillis();
+            for (String desc : descriptions) {
+                results.put(desc, localNormalizer.normalize(desc));
+            }
+            long duration = System.currentTimeMillis() - start;
+            log.debug("Local batch normalization completed for {} descriptions in {} ms", 
+                    descriptions.size(), duration);
+            return results;
+        }
+        
+        // LLM-based batch normalization (legacy path)
+        return batchNormalizeDescriptionsWithLlm(descriptions);
+    }
+    
+    /**
+     * Batch normalize multiple descriptions using LLM.
+     * This is the legacy implementation, kept for backward compatibility.
+     * 
+     * @param descriptions List of descriptions to normalize
+     * @return Map from original description to normalized description
+     */
+    private Map<String, String> batchNormalizeDescriptionsWithLlm(List<String> descriptions) {
+        Map<String, String> results = new HashMap<>();
+        
         // For very small batches (1-2 items), use individual normalization
         // This avoids JSON parsing overhead for trivial cases
         if (descriptions.size() <= 2) {
             for (String desc : descriptions) {
-                results.put(desc, normalizeDescription(desc));
+                results.put(desc, normalizeDescriptionWithLlm(desc));
             }
             return results;
         }
@@ -281,25 +318,25 @@ public class VectorStoreService {
                 }
             }
             
-            log.debug("Batch normalization: Successfully normalized {} of {} descriptions", 
+            log.debug("LLM Batch normalization: Successfully normalized {} of {} descriptions", 
                     results.size(), descriptions.size());
             
             // Fill in any missing normalizations with original descriptions
             for (String desc : descriptions) {
                 if (!results.containsKey(desc)) {
-                    log.warn("Batch normalization: No result for description, using original: {}", desc);
+                    log.warn("LLM Batch normalization: No result for description, using original: {}", desc);
                     results.put(desc, desc);
                 }
             }
             
         } catch (LlmRateLimiter.LlmRateLimitException e) {
-            log.warn("Batch normalization rate limited, falling back to originals: {}", e.getMessage());
+            log.warn("LLM Batch normalization rate limited, falling back to originals: {}", e.getMessage());
             // Fall back to original descriptions
             for (String desc : descriptions) {
                 results.put(desc, desc);
             }
         } catch (Exception e) {
-            log.warn("Batch normalization failed, falling back to originals: {}", e.getMessage());
+            log.warn("LLM Batch normalization failed, falling back to originals: {}", e.getMessage());
             // Fall back to original descriptions
             for (String desc : descriptions) {
                 results.put(desc, desc);
@@ -345,8 +382,36 @@ public class VectorStoreService {
         }
     }
 
-    // LLM based
+    /**
+     * Normalizes a transaction description.
+     * Uses local normalization (fast, no API cost) when useLocalNormalization is true,
+     * otherwise falls back to LLM-based normalization.
+     * 
+     * @param transactionDescription The raw transaction description
+     * @return Normalized description
+     */
     private String normalizeDescription(String transactionDescription) {
+        if (useLocalNormalization) {
+            long start = System.currentTimeMillis();
+            String result = localNormalizer.normalize(transactionDescription);
+            long duration = System.currentTimeMillis() - start;
+            log.debug("NORMALIZE_TIMING: Local normalization took {} ms for: {}", 
+                    duration, transactionDescription);
+            return result;
+        }
+        
+        // LLM-based normalization (legacy path)
+        return normalizeDescriptionWithLlm(transactionDescription);
+    }
+    
+    /**
+     * Normalizes a transaction description using LLM.
+     * This is the legacy implementation, kept for backward compatibility.
+     * 
+     * @param transactionDescription The raw transaction description
+     * @return Normalized description
+     */
+    private String normalizeDescriptionWithLlm(String transactionDescription) {
         long start = System.currentTimeMillis();
         
         // Use the rate limiter with retry support
