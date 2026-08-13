@@ -69,6 +69,12 @@ public class StatementProcessor {
     private static final String JSON_CODE_FENCE = "```";
     private static final String JSON_MARKER = "json";
     
+    /**
+     * Maximum number of retry attempts for LLM calls that return malformed JSON.
+     * This is separate from the network-level retries in LlmRateLimiter.
+     */
+    private static final int MAX_JSON_PARSE_RETRIES = 2;
+    
     // Multiple date formatters to handle various LLM output formats
     private static final List<DateTimeFormatter> DATE_FORMATTERS = Arrays.asList(
             DateTimeFormatter.ofPattern("dd.MM.yyyy"),           // Primary format: 02.12.2025
@@ -419,6 +425,8 @@ public class StatementProcessor {
      * CSV text is sent directly to the LLM for intelligent parsing.
      * This handles varying bank formats, encodings, and column layouts.
      * 
+     * Includes retry logic for malformed JSON responses from the LLM.
+     * 
      * @param statement The CSV statement to extract transactions from
      * @return List of transactions extracted from the CSV
      */
@@ -429,16 +437,12 @@ public class StatementProcessor {
             // Convert CSV bytes to string
             String csvText = new String(statement.getContent(), java.nio.charset.StandardCharsets.UTF_8);
             
-            // Use the same LLM parsing flow as PDF
-            String parsedJson = parseTransactionsWithGemini(csvText);
-            String cleanJson = cleanLLMResponse(parsedJson);
-            log.debug("LLM parsing completed for CSV statement {}", statement.getId());
-            
-            // Deserialize to ParsedStatementDTO which contains both metadata and transactions
-            ParsedStatementDTO parsedStatement = deserializeParsedStatement(cleanJson);
+            // Parse with retry logic for malformed JSON
+            ParsedStatementDTO parsedStatement = parseAndDeserializeWithRetry(csvText, statement.getId());
             
             if (parsedStatement == null) {
-                log.warn("Failed to deserialize LLM response for CSV statement {}", statement.getId());
+                log.warn("Failed to deserialize LLM response for CSV statement {} after all retries", 
+                        statement.getId());
                 return Collections.emptyList();
             }
             
@@ -468,24 +472,23 @@ public class StatementProcessor {
      * Extracts transactions from a PDF statement and updates the statement with metadata.
      * The LLM response now includes both statement-level metadata and transactions.
      * 
+     * Includes retry logic for malformed JSON responses from the LLM.
+     * 
      * @param statement The statement to extract transactions from (will be updated with metadata)
      * @return List of transactions extracted from the statement
      */
     public List<Transaction> extractTransactionsFromPdf(Statement statement) {
 
         try {
-
             String extractedText = pdfProcessor.extractTextFromPdf(statement.getContent());
             log.debug("Extract Text from PDF: DONE");
-            String parsedJson = parseTransactionsWithGemini(extractedText);
-            String cleanJson = cleanLLMResponse(parsedJson);
-            log.debug("LLM parsing completed for statement {}", statement.getId());
             
-            // Deserialize to ParsedStatementDTO which contains both metadata and transactions
-            ParsedStatementDTO parsedStatement = deserializeParsedStatement(cleanJson);
+            // Parse with retry logic for malformed JSON
+            ParsedStatementDTO parsedStatement = parseAndDeserializeWithRetry(extractedText, statement.getId());
             
             if (parsedStatement == null) {
-                log.warn("Failed to deserialize LLM response for statement {}", statement.getId());
+                log.warn("Failed to deserialize LLM response for statement {} after all retries", 
+                        statement.getId());
                 return Collections.emptyList();
             }
             
@@ -590,14 +593,83 @@ public class StatementProcessor {
      * 
      * @param json The JSON string from the LLM
      * @return ParsedStatementDTO containing metadata and transactions
+     * @throws com.google.gson.JsonSyntaxException if JSON parsing fails
      */
     private ParsedStatementDTO deserializeParsedStatement(String json) {
-        try {
-            return gson.fromJson(json, ParsedStatementDTO.class);
-        } catch (Exception e) {
-            log.error("Error deserializing parsed statement JSON: {}", e.getMessage(), e);
-            return null;
+        return gson.fromJson(json, ParsedStatementDTO.class);
+    }
+    
+    /**
+     * Parses statement text using LLM and deserializes the result with retry logic.
+     * 
+     * When the LLM returns truncated/malformed JSON (e.g., due to output token limits),
+     * this method will retry the entire LLM call up to MAX_JSON_PARSE_RETRIES times.
+     * This is separate from the network-level retries in LlmRateLimiter which handles
+     * transient network errors.
+     * 
+     * @param statementText The raw text extracted from the statement (PDF or CSV)
+     * @param statementId The statement ID for logging purposes
+     * @return ParsedStatementDTO containing metadata and transactions, or null if all retries fail
+     */
+    private ParsedStatementDTO parseAndDeserializeWithRetry(String statementText, Long statementId) {
+        Exception lastException = null;
+        String lastRawResponse = null;
+        
+        for (int attempt = 0; attempt <= MAX_JSON_PARSE_RETRIES; attempt++) {
+            try {
+                if (attempt > 0) {
+                    log.info("Retrying LLM parsing for statement {} (attempt {}/{})", 
+                            statementId, attempt + 1, MAX_JSON_PARSE_RETRIES + 1);
+                }
+                
+                // Call LLM to parse the statement text
+                String parsedJson = parseTransactionsWithGemini(statementText);
+                lastRawResponse = parsedJson;
+                
+                // Clean and deserialize the response
+                String cleanJson = cleanLLMResponse(parsedJson);
+                ParsedStatementDTO result = deserializeParsedStatement(cleanJson);
+                
+                if (result != null) {
+                    if (attempt > 0) {
+                        log.info("Successfully parsed statement {} on retry attempt {}", 
+                                statementId, attempt + 1);
+                    }
+                    return result;
+                }
+                
+                // This shouldn't happen with the current deserialize implementation,
+                // but handle it just in case
+                log.warn("Deserialization returned null for statement {} (attempt {})", 
+                        statementId, attempt + 1);
+                
+            } catch (com.google.gson.JsonSyntaxException e) {
+                lastException = e;
+                log.warn("Malformed JSON from LLM for statement {} (attempt {}/{}): {}", 
+                        statementId, attempt + 1, MAX_JSON_PARSE_RETRIES + 1, e.getMessage());
+                
+                // Log a truncated version of the raw response for debugging
+                if (lastRawResponse != null) {
+                    String truncatedResponse = lastRawResponse.length() > 500 
+                            ? lastRawResponse.substring(0, 500) + "... [truncated, total length: " + lastRawResponse.length() + "]"
+                            : lastRawResponse;
+                    log.debug("Raw LLM response for statement {}: {}", statementId, truncatedResponse);
+                }
+                
+            } catch (Exception e) {
+                // For other exceptions (network errors, rate limits), don't retry here
+                // as LlmRateLimiter already handles those
+                log.error("Non-recoverable error parsing statement {}: {}", statementId, e.getMessage(), e);
+                throw e;
+            }
         }
+        
+        // All retries exhausted
+        log.error("Failed to parse statement {} after {} attempts. Last error: {}", 
+                statementId, MAX_JSON_PARSE_RETRIES + 1, 
+                lastException != null ? lastException.getMessage() : "unknown");
+        
+        return null;
     }
     
     /**

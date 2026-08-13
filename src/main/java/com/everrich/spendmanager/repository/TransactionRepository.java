@@ -114,4 +114,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      */
     @Query("SELECT t FROM Transaction t WHERE t.account.id = :accountId ORDER BY t.date ASC, t.id ASC")
     List<Transaction> findByAccountIdOrderByDateAscIdAsc(@Param("accountId") Long accountId);
+    
+    // ==================== AUTO-CATEGORIZATION SUCCESS RATE METHODS ====================
+    
+    /**
+     * Count total transactions for a given statement ID.
+     * Used for auto-categorization success rate calculation.
+     */
+    long countByStatementId(Long statementId);
+    
+    /**
+     * Count transactions for a given statement ID with a specific reviewed status.
+     * Used to determine if all transactions have been reviewed.
+     */
+    long countByStatementIdAndReviewed(Long statementId, boolean reviewed);
+    
+    /**
+     * Count reviewed transactions for a given statement ID with a specific categorization status.
+     * Used to calculate auto-categorization success rate.
+     */
+    long countByStatementIdAndReviewedAndCategorizationStatus(
+        Long statementId, boolean reviewed, TransactionCategorizationStatus status);
 }

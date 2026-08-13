@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +24,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.everrich.spendmanager.dto.AutoCatSuccessRateResult;
 import com.everrich.spendmanager.entities.Statement;
+import com.everrich.spendmanager.entities.StatementStatus;
 import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.service.PdfProcessor;
 import com.everrich.spendmanager.service.StatementService;
@@ -133,6 +136,15 @@ public class PdfController {
         // Fetch filtered statements
         List<Statement> statements = statementService.getFilteredStatements(selectedAccount, filterStartDate, filterEndDate);
         model.addAttribute("statements", statements);
+        
+        // Calculate auto-categorization success rates for COMPLETED statements
+        Map<Long, AutoCatSuccessRateResult> successRates = new HashMap<>();
+        for (Statement stmt : statements) {
+            if (stmt.getStatus() == StatementStatus.COMPLETED) {
+                successRates.put(stmt.getId(), transactionService.calculateAutoCatSuccessRate(stmt.getId()));
+            }
+        }
+        model.addAttribute("successRates", successRates);
         
         // Pass filter state back to view for retention
         model.addAttribute("selectedAccountId", accountId);

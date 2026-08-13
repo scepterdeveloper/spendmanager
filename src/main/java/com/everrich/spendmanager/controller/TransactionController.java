@@ -14,6 +14,7 @@ import com.everrich.spendmanager.entities.Transaction;
 import com.everrich.spendmanager.entities.TransactionCategorizationStatus;
 import com.everrich.spendmanager.service.AccountService;
 import com.everrich.spendmanager.service.CategoryService;
+import com.everrich.spendmanager.service.CategorizationRuleService;
 import com.everrich.spendmanager.service.TransactionService;
 import com.everrich.spendmanager.entities.TransactionOperation;
 
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import com.everrich.spendmanager.multitenancy.TenantContext;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,13 +43,21 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final CategoryService categoryService;
     private final AccountService accountService;
+    private final CategorizationRuleService categorizationRuleService;
+    
+    @Value("${spendmanager.categorization.use-table-based:true}")
+    private boolean useTableBasedCategorization;
 
     private static final Logger log = LoggerFactory.getLogger(TransactionController.class);
 
-    public TransactionController(TransactionService transactionService, CategoryService categoryService, AccountService accountService) {
+    public TransactionController(TransactionService transactionService, 
+                                 CategoryService categoryService, 
+                                 AccountService accountService,
+                                 CategorizationRuleService categorizationRuleService) {
         this.transactionService = transactionService;
         this.categoryService = categoryService;
         this.accountService = accountService;
+        this.categorizationRuleService = categorizationRuleService;
     }
     
     @InitBinder
@@ -286,16 +297,34 @@ public class TransactionController {
             
             transactionService.saveTransaction(transaction);
             if(transaction.getCategoryEntity() != null && (originalCategoryId == null || !transaction.getCategoryEntity().getId().equals(originalCategoryId))) {
+                // Category was set or changed - trigger learning
                 // Pass transaction data and tenantId directly to avoid race conditions with async execution
                 String accountName = transaction.getAccount() != null ? transaction.getAccount().getName() : null;
-                transactionService.updateVectorStore(
-                    transaction.getDescription(), 
-                    transaction.getCategory(),
-                    transaction.getAmount(),
-                    transaction.getOperation(),
-                    accountName,
-                    tenantId
-                );
+                
+                if (useTableBasedCategorization) {
+                    // Table-based approach: Extract keywords and save categorization rule
+                    log.info("Using table-based categorization - extracting rule for category update");
+                    if (transaction.getAccount() != null) {
+                        categorizationRuleService.extractAndSaveRuleAsync(
+                            transaction.getAccount().getId(),
+                            transaction.getOperation(),
+                            transaction.getCategoryEntity().getId(),
+                            transaction.getDescription(),
+                            tenantId
+                        );
+                    }
+                } else {
+                    // Legacy approach: Update Redis vector store
+                    log.info("Using vector store categorization - updating vector store for category update");
+                    transactionService.updateVectorStore(
+                        transaction.getDescription(), 
+                        transaction.getCategory(),
+                        transaction.getAmount(),
+                        transaction.getOperation(),
+                        accountName,
+                        tenantId
+                    );
+                }
             }
             
             String message = isNewTransaction ? "New transaction created successfully!" : "Transaction updated successfully!";
@@ -318,20 +347,39 @@ public class TransactionController {
     
     /**
      * Add filter parameters to redirect attributes, properly handling multi-value parameters.
+     * For multi-value parameters like accountIds and categoryIds, Spring's RedirectAttributes
+     * requires them to be added as array/list values to generate correct URLs like
+     * ?accountIds=1&accountIds=2
      */
     private void addFilterParamsToRedirect(HttpServletRequest request, RedirectAttributes redirectAttributes) {
-        // List of filter parameter names to include in redirect
-        List<String> filterParamNames = List.of("timeframe", "startDate", "endDate", "accountIds", "categoryIds", "reviewedFilter", "query");
+        // Single-value filter parameter names
+        List<String> singleValueParams = List.of("timeframe", "startDate", "endDate", "reviewedFilter", "query");
+        // Multi-value filter parameter names
+        List<String> multiValueParams = List.of("accountIds", "categoryIds");
         
         Map<String, String[]> parameterMap = request.getParameterMap();
         
-        for (String paramName : filterParamNames) {
+        // Handle single-value parameters
+        for (String paramName : singleValueParams) {
             String[] values = parameterMap.get(paramName);
-            if (values != null) {
+            if (values != null && values.length > 0 && values[0] != null && !values[0].trim().isEmpty()) {
+                redirectAttributes.addAttribute(paramName, values[0]);
+            }
+        }
+        
+        // Handle multi-value parameters - add as array so Spring generates correct URL
+        for (String paramName : multiValueParams) {
+            String[] values = parameterMap.get(paramName);
+            if (values != null && values.length > 0) {
+                List<String> nonEmptyValues = new ArrayList<>();
                 for (String value : values) {
                     if (value != null && !value.trim().isEmpty()) {
-                        redirectAttributes.addAttribute(paramName, value);
+                        nonEmptyValues.add(value);
                     }
+                }
+                if (!nonEmptyValues.isEmpty()) {
+                    // Add as array - Spring's UriComponentsBuilder will expand this correctly
+                    redirectAttributes.addAttribute(paramName, nonEmptyValues.toArray(new String[0]));
                 }
             }
         }

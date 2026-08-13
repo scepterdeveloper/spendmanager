@@ -121,7 +121,7 @@ public class BalanceController {
         // Pre-populate with all account groups
         List<AccountGroup> allGroups = accountGroupService.findAll();
         for (AccountGroup group : allGroups) {
-            groupedSummariesMap.put(group.getId(), new GroupedBalanceSummary(group.getId(), group.getName()));
+            groupedSummariesMap.put(group.getId(), new GroupedBalanceSummary(group.getId(), group.getDescription()));
         }
 
         for (Account account : selectedAccounts) {

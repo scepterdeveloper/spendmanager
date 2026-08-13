@@ -36,6 +36,21 @@
         .error-info-link:hover {
             color: var(--error-color);
         }
+        
+        /* Auto-Categorization Success Rate Styles */
+        .success-rate { 
+            font-weight: 600; 
+            font-size: 0.9rem; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 0.25rem; 
+        }
+        .success-rate.na { color: #6B7280; }
+        .success-rate.pending { color: #3B82F6; }
+        .success-rate.high { color: #10B981; }
+        .success-rate.medium { color: #F59E0B; }
+        .success-rate.low { color: #EF4444; }
+        .success-rate svg { width: 14px; height: 14px; }
 
         /* Action icons styling */
         .stmt-actions { display: inline-flex; gap: 0.5rem; margin-left: auto; vertical-align: middle; float: right; }
@@ -262,14 +277,15 @@
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                     <thead>
                         <tr>
-                            <th style="width: 7%;">ID</th>
-                            <th style="width: 20%;">File Name</th>
-                            <th style="width: 15%;">Account</th>
-                            <th style="width: 14%;">Uploaded</th>
-                            <th style="width: 12%;">Start Date</th>
-                            <th style="width: 12%;">End Date</th>
-                            <th style="width: 10%;">Status</th>
-                            <th style="width: 10%;">Actions</th>
+                            <th style="width: 6%;">ID</th>
+                            <th style="width: 18%;">File Name</th>
+                            <th style="width: 12%;">Account</th>
+                            <th style="width: 12%;">Uploaded</th>
+                            <th style="width: 10%;">Start Date</th>
+                            <th style="width: 10%;">End Date</th>
+                            <th style="width: 9%;">Status</th>
+                            <th style="width: 11%;">Auto-Cat %</th>
+                            <th style="width: 12%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -289,6 +305,41 @@
                                    class="error-info-link" 
                                    th:data-error="${stmt.errorMessage}"
                                    onclick="openErrorInfoModal(this.dataset.error); event.stopPropagation();">(More Info)</a>
+                            </td>
+                            <!-- Auto-Categorization Success Rate Column -->
+                            <td>
+                                <th:block th:if="${stmt.status.name() != 'COMPLETED'}">
+                                    <span class="success-rate na">N/A</span>
+                                </th:block>
+                                <th:block th:if="${stmt.status.name() == 'COMPLETED'}">
+                                    <th:block th:with="rate=${successRates.get(stmt.id)}">
+                                        <!-- Pending Review State -->
+                                        <span th:if="${rate != null and !rate.reviewComplete()}" 
+                                              class="success-rate pending" 
+                                              th:title="${rate.tooltip}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            <span th:text="${rate.displayValue}">5/12 reviewed</span>
+                                        </span>
+                                        <!-- Review Complete - High Success (>=80%) -->
+                                        <span th:if="${rate != null and rate.reviewComplete() and rate.successRate != null and rate.successRate >= 80}" 
+                                              class="success-rate high" 
+                                              th:title="${rate.tooltip}"
+                                              th:text="${rate.displayValue}">95%</span>
+                                        <!-- Review Complete - Medium Success (50-79%) -->
+                                        <span th:if="${rate != null and rate.reviewComplete() and rate.successRate != null and rate.successRate >= 50 and rate.successRate < 80}" 
+                                              class="success-rate medium" 
+                                              th:title="${rate.tooltip}"
+                                              th:text="${rate.displayValue}">65%</span>
+                                        <!-- Review Complete - Low Success (<50%) -->
+                                        <span th:if="${rate != null and rate.reviewComplete() and rate.successRate != null and rate.successRate < 50}" 
+                                              class="success-rate low" 
+                                              th:title="${rate.tooltip}"
+                                              th:text="${rate.displayValue}">35%</span>
+                                        <!-- N/A case (no transactions) -->
+                                        <span th:if="${rate == null or (rate.reviewComplete() and rate.successRate == null)}" 
+                                              class="success-rate na">N/A</span>
+                                    </th:block>
+                                </th:block>
                             </td>
                             <td>
                                 <span class="stmt-actions" style="float: none;">
@@ -315,7 +366,7 @@
                             </td>
                         </tr>
                         <tr th:if="${statements.empty}">
-                            <td colspan="8" style="text-align: center; padding: 2rem;">No statements found.</td>
+                            <td colspan="9" style="text-align: center; padding: 2rem;">No statements found.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -343,6 +394,38 @@
                         <div class="detail-item">
                             <strong>Uploaded</strong>
                             <span th:text="${#temporals.format(stmt.uploadDateTime, 'dd MMM yyyy HH:mm')}">Date</span>
+                        </div>
+                        
+                        <!-- Auto-Cat Success Rate for Mobile -->
+                        <div class="detail-item">
+                            <strong>Auto-Cat %</strong>
+                            <th:block th:if="${stmt.status.name() != 'COMPLETED'}">
+                                <span class="success-rate na">N/A</span>
+                            </th:block>
+                            <th:block th:if="${stmt.status.name() == 'COMPLETED'}">
+                                <th:block th:with="rate=${successRates.get(stmt.id)}">
+                                    <span th:if="${rate != null and !rate.reviewComplete()}" 
+                                          class="success-rate pending" 
+                                          th:title="${rate.tooltip}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        <span th:text="${rate.displayValue}">5/12</span>
+                                    </span>
+                                    <span th:if="${rate != null and rate.reviewComplete() and rate.successRate != null and rate.successRate >= 80}" 
+                                          class="success-rate high" 
+                                          th:title="${rate.tooltip}"
+                                          th:text="${rate.displayValue}">95%</span>
+                                    <span th:if="${rate != null and rate.reviewComplete() and rate.successRate != null and rate.successRate >= 50 and rate.successRate < 80}" 
+                                          class="success-rate medium" 
+                                          th:title="${rate.tooltip}"
+                                          th:text="${rate.displayValue}">65%</span>
+                                    <span th:if="${rate != null and rate.reviewComplete() and rate.successRate != null and rate.successRate < 50}" 
+                                          class="success-rate low" 
+                                          th:title="${rate.tooltip}"
+                                          th:text="${rate.displayValue}">35%</span>
+                                    <span th:if="${rate == null or (rate.reviewComplete() and rate.successRate == null)}" 
+                                          class="success-rate na">N/A</span>
+                                </th:block>
+                            </th:block>
                         </div>
                         
                         <!-- Mobile Card Actions inline -->

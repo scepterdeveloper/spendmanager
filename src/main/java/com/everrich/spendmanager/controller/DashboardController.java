@@ -7,16 +7,19 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import com.everrich.spendmanager.service.RagService;
 import com.everrich.spendmanager.service.SavedInsightService;
 
 @Controller
 public class DashboardController {
 
     private final SavedInsightService savedInsightService;
+    private final RagService ragService;
     private static final Logger log = LoggerFactory.getLogger(DashboardController.class);
 
-    public DashboardController(SavedInsightService savedInsightService) {
+    public DashboardController(SavedInsightService savedInsightService, RagService ragService) {
         this.savedInsightService = savedInsightService;
+        this.ragService = ragService;
     }
 
     @GetMapping("/")
@@ -33,7 +36,9 @@ public class DashboardController {
 
         model.addAttribute("dashBoardCharts", savedInsightService.getDashBoardCharts());
         //log.info("Fetched Dashboard Charts: " + savedInsightService.getDashBoardCharts().size());
-
+        
+        // Categorization feature flag
+        model.addAttribute("tableBasedEnabled", ragService.isTableBasedEnabled());
 
         return "dashboard";
     }

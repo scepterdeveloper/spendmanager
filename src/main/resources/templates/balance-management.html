@@ -55,6 +55,14 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            white-space: nowrap;
+        }
+        
+        /* First column (Account/Group) should have more width */
+        .data-table th:first-child,
+        .data-table td:first-child {
+            min-width: 280px;
+            width: 40%;
         }
         
         .group-toggle-icon {

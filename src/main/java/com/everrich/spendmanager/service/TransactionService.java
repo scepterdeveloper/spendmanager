@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.everrich.spendmanager.dto.AutoCatSuccessRateResult;
 import com.everrich.spendmanager.multitenancy.TenantContext;
 
 @Service
@@ -505,5 +506,51 @@ public class TransactionService {
                 .mapToDouble(Double::doubleValue)
                 .sum();
         return BigDecimal.valueOf(sum);
+    }
+    
+    // ==================== AUTO-CATEGORIZATION SUCCESS RATE ====================
+    
+    /**
+     * Calculates the auto-categorization success rate for a statement.
+     * 
+     * The success rate is calculated only from reviewed transactions:
+     * Success Rate = (Reviewed transactions with LLM_CATEGORIZED / Total reviewed transactions) × 100
+     * 
+     * If review is not complete (some transactions have reviewed=false), 
+     * returns a "pending review" result.
+     * 
+     * @param statementId The ID of the statement
+     * @return AutoCatSuccessRateResult containing review status and success rate
+     */
+    public AutoCatSuccessRateResult calculateAutoCatSuccessRate(Long statementId) {
+        if (statementId == null) {
+            return AutoCatSuccessRateResult.notApplicable();
+        }
+        
+        // Count total transactions
+        long total = transactionRepository.countByStatementId(statementId);
+        if (total == 0) {
+            log.debug("Statement {} has no transactions, returning N/A", statementId);
+            return AutoCatSuccessRateResult.notApplicable();
+        }
+        
+        // Count reviewed transactions
+        long reviewed = transactionRepository.countByStatementIdAndReviewed(statementId, true);
+        
+        // Check if review is complete
+        if (reviewed < total) {
+            log.debug("Statement {} review incomplete: {}/{} reviewed", statementId, reviewed, total);
+            return AutoCatSuccessRateResult.pendingReview((int) reviewed, (int) total);
+        }
+        
+        // All transactions are reviewed - calculate success rate
+        long llmCategorized = transactionRepository.countByStatementIdAndReviewedAndCategorizationStatus(
+            statementId, true, TransactionCategorizationStatus.LLM_CATEGORIZED);
+        
+        double rate = (reviewed > 0) ? (llmCategorized * 100.0 / reviewed) : 0.0;
+        log.debug("Statement {} success rate: {}% ({}/{} LLM categorized)", 
+                statementId, Math.round(rate), llmCategorized, reviewed);
+        
+        return AutoCatSuccessRateResult.complete((int) reviewed, rate);
     }
 }

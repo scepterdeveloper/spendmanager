@@ -36,6 +36,7 @@ public class RagService {
     private final ChatClient chatClient;
     private final CategoryService categoryService;
     private final VectorStoreService vectorStoreService;
+    private final CategorizationRuleService categorizationRuleService;
     private final TaskExecutor taskExecutor;
     private final LlmRateLimiter llmRateLimiter;
     private final Gson gson;
@@ -51,20 +52,36 @@ public class RagService {
     @Value("classpath:/prompts/category-rag-prompt-batch.st")
     private Resource categoryBatchPromptResource;
     
+    @Value("classpath:/prompts/category-table-based-prompt-batch.st")
+    private Resource categoryTableBasedBatchPromptResource;
+    
     @Value("${spendmanager.categorization.batch-size:5}")
     private int batchSize;
+    
+    @Value("${spendmanager.categorization.use-table-based:false}")
+    private boolean useTableBased;
 
     public RagService(VectorStoreService vectorStoreService, 
                       CategoryService categoryService,
+                      CategorizationRuleService categorizationRuleService,
                       ChatClient.Builder chatClientBuilder,
                       @Qualifier("transactionProcessingExecutor") TaskExecutor taskExecutor,
                       LlmRateLimiter llmRateLimiter) {
         this.vectorStoreService = vectorStoreService;
         this.chatClient = chatClientBuilder.build();
         this.categoryService = categoryService;
+        this.categorizationRuleService = categorizationRuleService;
         this.taskExecutor = taskExecutor;
         this.llmRateLimiter = llmRateLimiter;
         this.gson = new GsonBuilder().create();
+        log.info("RagService initialized (table-based categorization: {})", useTableBased);
+    }
+    
+    /**
+     * Check if table-based categorization is enabled.
+     */
+    public boolean isTableBasedEnabled() {
+        return useTableBased;
     }
 
     public String findBestCategory(Transaction transaction) {
@@ -131,6 +148,10 @@ public class RagService {
      * Categorize a single batch of transactions sequentially (not parallel).
      * This method processes one batch at a time and returns results immediately.
      * 
+     * Supports two modes:
+     * 1. Table-based: Uses categorization rules from PostgreSQL table as LLM guidance
+     * 2. Redis-based (legacy): Uses vector similarity search from Redis
+     * 
      * The caller is responsible for:
      * 1. Creating batches of transactions
      * 2. Calling this method for each batch sequentially
@@ -145,10 +166,119 @@ public class RagService {
             return new HashMap<>();
         }
         
+        // Route to appropriate implementation based on feature flag
+        if (useTableBased) {
+            return categorizeBatchWithTableBasedRules(transactions);
+        } else {
+            return categorizeBatchWithRedisVectorSearch(transactions);
+        }
+    }
+    
+    /**
+     * Table-based categorization using PostgreSQL rules as LLM guidance.
+     * This is the new approach that replaces Redis vector search.
+     */
+    private Map<Long, String> categorizeBatchWithTableBasedRules(List<Transaction> transactions) {
         long methodStart = System.currentTimeMillis();
         int batchCount = transactions.size();
         
-        log.info("LLM_TIMING: Starting SEQUENTIAL batch categorization for {} transactions", batchCount);
+        log.info("LLM_TIMING: Starting TABLE-BASED batch categorization for {} transactions", batchCount);
+        
+        // STEP 1: Get available categories
+        String availableCategories = categoryService.findAll().stream()
+                .map(c -> c.getName())
+                .collect(Collectors.joining(", "));
+        
+        // STEP 2: Build guidance table from categorization rules
+        long guidanceStart = System.currentTimeMillis();
+        String guidanceTable = categorizationRuleService.buildGuidanceTableForBatch(transactions);
+        long guidanceDuration = System.currentTimeMillis() - guidanceStart;
+        log.info("LLM_TIMING: buildGuidanceTable took {} ms for {} transactions", 
+                guidanceDuration, batchCount);
+        
+        // STEP 3: Build transactions list for prompt (using 1-based indexing for the LLM)
+        Map<Integer, Long> indexToTransactionId = new HashMap<>();
+        StringBuilder transactionsBuilder = new StringBuilder();
+        for (int i = 0; i < transactions.size(); i++) {
+            Transaction t = transactions.get(i);
+            String operationType = t.getOperation() != null ? t.getOperation().name() : "UNKNOWN";
+            String accountName = t.getAccount() != null ? t.getAccount().getName() : "Unknown";
+            transactionsBuilder.append(String.format("%d. Account: \"%s\", Description: \"%s\" (Operation: %s)%n", 
+                    i + 1, accountName, t.getDescription(), operationType));
+            indexToTransactionId.put(i + 1, t.getId());
+        }
+        String transactionsList = transactionsBuilder.toString();
+        
+        // STEP 4: Create prompt and call LLM using table-based template
+        PromptTemplate promptTemplate = new PromptTemplate(categoryTableBasedBatchPromptResource);
+        Map<String, Object> promptParameters = Map.of(
+                "guidanceTable", guidanceTable,
+                "transactions", transactionsList,
+                "categories", availableCategories,
+                "transactionCount", batchCount);
+        
+        Prompt prompt = promptTemplate.create(promptParameters);
+        
+        // Log the full prompt for debugging/optimization
+        String promptContent = prompt.getContents();
+        log.info("=== TABLE-BASED CATEGORIZATION PROMPT START ===");
+        log.info("Prompt content ({} characters, {} transactions):\n{}", 
+                promptContent.length(), batchCount, promptContent);
+        log.info("=== TABLE-BASED CATEGORIZATION PROMPT END ===");
+        
+        long llmCallStart = System.currentTimeMillis();
+        String response;
+        try {
+            response = llmRateLimiter.executeWithRetryOrThrow(() -> 
+                chatClient.prompt(prompt)
+                    .call()
+                    .content()
+            );
+        } catch (LlmRateLimiter.LlmRateLimitException e) {
+            long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+            log.error("LLM table-based batch call rate limited after {} ms for {} transactions: {}", 
+                    llmCallDuration, batchCount, e.getMessage());
+            throw new RuntimeException("LLM batch call rate limited: " + e.getMessage(), e);
+        } catch (Exception e) {
+            long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+            log.error("LLM table-based batch call failed after {} ms for {} transactions: {}", 
+                    llmCallDuration, batchCount, e.getMessage());
+            throw new RuntimeException("LLM batch call failed: " + e.getMessage(), e);
+        }
+        long llmCallDuration = System.currentTimeMillis() - llmCallStart;
+        log.info("LLM_TIMING: Table-based batch LLM call took {} ms for {} transactions", llmCallDuration, batchCount);
+        
+        log.debug("LLM table-based batch response: {}", response);
+        
+        // STEP 5: Parse response and convert indices to transaction IDs
+        Map<Integer, String> indexResults = parseBatchResponse(response, batchCount);
+        
+        Map<Long, String> results = new HashMap<>();
+        for (Map.Entry<Integer, String> entry : indexResults.entrySet()) {
+            Long transactionId = indexToTransactionId.get(entry.getKey());
+            if (transactionId != null) {
+                results.put(transactionId, entry.getValue());
+            } else {
+                log.warn("Could not find transaction ID for index {}", entry.getKey());
+            }
+        }
+        
+        long totalDuration = System.currentTimeMillis() - methodStart;
+        log.info("LLM_TIMING: categorizeBatchWithTableBasedRules total took {} ms for {} transactions", 
+                totalDuration, batchCount);
+        
+        return results;
+    }
+    
+    /**
+     * Redis-based categorization using vector similarity search (legacy approach).
+     * This is the original implementation kept for fallback.
+     */
+    private Map<Long, String> categorizeBatchWithRedisVectorSearch(List<Transaction> transactions) {
+        long methodStart = System.currentTimeMillis();
+        int batchCount = transactions.size();
+        
+        log.info("LLM_TIMING: Starting REDIS-BASED batch categorization for {} transactions", batchCount);
         
         // STEP 1: Get available categories
         String availableCategories = categoryService.findAll().stream()
@@ -189,7 +319,7 @@ public class RagService {
         
         Prompt prompt = promptTemplate.create(promptParameters);
         
-        log.debug("LLM_TIMING: Batch prompt prepared, content length: {} characters, {} transactions", 
+        log.debug("LLM_TIMING: Redis-based batch prompt prepared, content length: {} characters, {} transactions", 
                 prompt.getContents().length(), batchCount);
         
         long llmCallStart = System.currentTimeMillis();
@@ -212,7 +342,7 @@ public class RagService {
             throw new RuntimeException("LLM batch call failed: " + e.getMessage(), e);
         }
         long llmCallDuration = System.currentTimeMillis() - llmCallStart;
-        log.info("LLM_TIMING: Batch LLM call took {} ms for {} transactions", llmCallDuration, batchCount);
+        log.info("LLM_TIMING: Redis-based batch LLM call took {} ms for {} transactions", llmCallDuration, batchCount);
         
         log.debug("LLM batch response: {}", response);
         
@@ -231,7 +361,7 @@ public class RagService {
         }
         
         long totalDuration = System.currentTimeMillis() - methodStart;
-        log.info("LLM_TIMING: categorizeBatchSequential total took {} ms for {} transactions", 
+        log.info("LLM_TIMING: categorizeBatchWithRedisVectorSearch total took {} ms for {} transactions", 
                 totalDuration, batchCount);
         
         return results;
