@@ -120,7 +120,8 @@ public class InsightsController {
         }
         
         model.addAttribute("result", result);
-        // Set back URL to return to insights page, and resultId for drill-down back navigation model.addAttribute("backUrl", "/insights");
+        // Set back URL to return to insights page (Quick Analysis), and resultId for drill-down back navigation
+        model.addAttribute("backUrl", "/insights");
         model.addAttribute("resultPageUrl", "/insights/result/" + resultId);
         
         return "insight-result";
